@@ -210,12 +210,6 @@ function showAccount(u,welcome){
       <div><span>Payment</span><b>Skipped for now</b></div>
       <div><span>Staff accounts</span><b>${esc(lim(p.limits.staff)==='Not included'?'Not included':lim(p.limits.staff)==='Unlimited'?'Multiple':lim(p.limits.staff))}</b></div>
     </div></div>
-    ${!u.whatsappAlerts?`<div class="card full alertsetup"><h3>Get every new order on WhatsApp automatically</h3>
-      <p>To get every new order on your WhatsApp ${u.whatsapp?esc(u.whatsapp):''} without anyone tapping send, connect the free CallMeBot service (one time, about 2 minutes):</p>
-      <ol><li>Open <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a> and save the bot's WhatsApp number shown there to your phone contacts.</li>
-      <li>From your WhatsApp (${u.whatsapp?esc(u.whatsapp):'your shop number'}), send it this message: <b>I allow callmebot to send me messages</b></li>
-      <li>The bot replies with your API key. Click <b>Edit details</b>, paste it into “CallMeBot API key”, and save.</li></ol>
-      <p class="msg">CallMeBot is free for personal use and only sends to your own number. If the key doesn't arrive within a few minutes, try again after 24 hours.</p></div>`:''}
     <div class="card"><h3>Plan usage</h3>
       ${usage.map(([t,used,max])=>`<div class="use"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
     </div>
