@@ -33,3 +33,8 @@ Open `index.html` in a browser.
   - **Email** to the customer (reply-to = owner's email) when Resend is configured; otherwise a "Send email" button opens a pre-filled email.
   - **WhatsApp**: a new tab opens WhatsApp (app or WhatsApp Web, signed in as the owner's registered number) with the status message to the customer pre-filled; the owner taps send.
 - "Send update to customer" re-sends the current status. Each update is recorded in the order's history.
+
+## Google Apps Script (Gmail email + live Google Sheet)
+- `apps-script/Code.gs` is pasted into the "CrochetHub database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
+- Vercel env vars: `APPS_SCRIPT_URL` (the web app URL) and `APPS_SCRIPT_SECRET` (must match `SECRET` in the script).
+- With these set, new orders are emailed to the shop owner and status updates to the customer from the owner's Gmail, and every order and status change is written to the sheet. Without them, email falls back to Resend if configured.

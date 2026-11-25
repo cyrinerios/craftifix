@@ -245,7 +245,33 @@ export async function sendEmail({ to, subject, text, html, replyTo }) {
     return { sent: true };
   } catch (e) { console.error('Resend failed', e); return { sent: false, reason: 'provider_error' }; }
 }
-export const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ---------- Google Apps Script (Gmail + Google Sheet) ---------- */
+// When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
+// which also records orders and status changes in the "CrochetHub database" Google Sheet.
+// Otherwise email falls back to Resend (if configured).
+export async function deliver({ action, order, email }) {
+  const url = process.env.APPS_SCRIPT_URL;
+  if (url) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 20000);
+      const r = await fetch(url, {
+        method: 'POST', redirect: 'follow', signal: ctrl.signal,
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ secret: process.env.APPS_SCRIPT_SECRET || '', action, order, email })
+      });
+      clearTimeout(t);
+      const j = await r.json().catch(() => ({}));
+      if (!j.ok) console.error('Apps Script error', r.status, j.error);
+      return { sent: !!j.emailed, sheet: !!j.sheet, via: 'apps_script' };
+    } catch (e) { console.error('Apps Script failed', e); return { sent: false, sheet: false, via: 'apps_script' }; }
+  }
+  if (!email) return { sent: false };
+  const r = await sendEmail(email);
+  return { ...r, via: 'resend' };
+}
+
+export const escHtml =(s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export function requireUser(req, res) {
   const uid = readSession(req);

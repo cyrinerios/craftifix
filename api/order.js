@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, sendEmail, escHtml, body, send, onlyMethod, fail } from './_lib.js';
+import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/order — a shopper places an order on a shop.
 // Saves the order to the owner's account, emails the owner (when email sending is configured)
@@ -65,7 +65,11 @@ export default async function handler(req, res) {
       ${customer.notes ? `<p><b>Notes:</b> ${escHtml(customer.notes)}</p>` : ''}
       <p style="color:#6d5670;font-size:13px">Reply to this email to contact the customer. You can also see this order in your CrochetHub account.</p></div>`;
 
-    const email = await sendEmail({ to: owner.email, subject: `New order ${orderNo} — ${aed(total)}`, text, html, replyTo: customer.email });
+    const email = await deliver({
+      action: 'new_order',
+      order: { ...order, shop: uid, statusLabel: 'New' },
+      email: { to: owner.email, subject: `New order ${orderNo} — ${aed(total)}`, text, html, replyTo: customer.email, fromName: `${owner.business} orders` }
+    });
     order.emailSent = email.sent;
     if (email.sent) { orders[0] = order; await saveOrders(uid, orders.slice(0, 1000)); }
 

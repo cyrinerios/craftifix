@@ -1,4 +1,4 @@
-import { assertConfigured, requireUser, getUser, getOrders, saveOrders, sendEmail, escHtml, waLink, body, send, fail } from './_lib.js';
+import { assertConfigured, requireUser, getUser, getOrders, saveOrders, deliver, escHtml, waLink, body, send, fail } from './_lib.js';
 
 // GET /api/orders                 -> the logged-in owner's received orders
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
@@ -31,7 +31,11 @@ async function notify(order, owner) {
     ${text.split('\n').map((l) => `<p style="margin:6px 0">${escHtml(l)}</p>`).join('')}
     <table style="border-collapse:collapse;width:100%;margin-top:12px">${order.items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
     <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(order.total)}</b></td></tr></table></div>`;
-  const email = await sendEmail({ to: order.customer.email, subject, text, html, replyTo: owner.email });
+  const email = await deliver({
+    action: 'status_update',
+    order: { orderNo: order.orderNo, statusLabel: LABEL[order.status] },
+    email: { to: order.customer.email, subject, text, html, replyTo: owner.email, fromName: owner.business }
+  });
   return {
     status: order.status,
     message: text,
