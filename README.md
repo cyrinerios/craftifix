@@ -48,3 +48,8 @@ Open `index.html` in a browser.
 - Shop page → **Track order**: customers enter their order number and the email or WhatsApp number used on the order, and see the status timeline (Order received → Confirmed → Being handmade → Ready for delivery → Completed, or Cancelled), items, total and a WhatsApp button to ask the shop.
 - Direct link: `shop.html?u=<userId>&track=<orderNo>`. It is shown after ordering and included in every status update message to the customer.
 - API: `POST /api/track { shop, orderNo, contact }`; the contact must match the order.
+
+## Custom inquiries with inspiration photos
+- Shop page → **Custom inquiry** section: customers describe what they want, add up to two inspiration photos with notes (Option 1 and Option 2), optional budget and date, and their name, email and WhatsApp.
+- The inquiry is saved to the owner's account (Account → Custom inquiries: photos, notes, Reply on WhatsApp / Reply by email, status, delete), emailed to the owner with the photos, and sent to the owner's WhatsApp with photo links when CallMeBot alerts are on.
+- API: `POST /api/inquiry` (public; photos resized in the browser, stored in Vercel Blob), `GET/PUT/DELETE /api/inquiries` (owner).

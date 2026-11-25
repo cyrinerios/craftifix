@@ -229,6 +229,21 @@ export async function saveOrders(uid, list) {
   });
 }
 
+/* ---------- custom inquiries (one encrypted list per business) ---------- */
+const inquiriesPath = (uid) => 'inquiries/' + crypto.createHmac('sha256', SECRET).update('inquiries:' + uid).digest('hex') + '.json';
+export async function getInquiries(uid) {
+  let meta;
+  try { meta = await head(inquiriesPath(uid)); }
+  catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
+  const r = await fetch(meta.url + '?v=' + Date.now(), { cache: 'no-store' });
+  return r.ok ? decrypt(await r.text()) : [];
+}
+export async function saveInquiries(uid, list) {
+  await put(inquiriesPath(uid), encrypt(list), {
+    access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 60
+  });
+}
+
 /* ---------- email (Resend) ---------- */
 // Sends only when RESEND_API_KEY is set. EMAIL_FROM must be a sender on a domain verified in Resend
 // (without a domain, Resend's test sender onboarding@resend.dev can only deliver to the Resend account's own email).
