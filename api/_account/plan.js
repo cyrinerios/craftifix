@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, readSession, getUser, saveUser, publicUser, body, send, onlyMethod, fail } from './_lib.js';
+import { PLANS, assertConfigured, readSession, getUser, saveUser, publicUser, body, send, onlyMethod, fail } from '../_lib.js';
 
 // Change the logged-in user's plan. Payment is skipped for now.
 export default async function handler(req, res) {

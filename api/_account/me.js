@@ -1,4 +1,4 @@
-import { assertConfigured, readSession, getUser, getProducts, publicUser, clearSession, send, onlyMethod, fail } from './_lib.js';
+import { assertConfigured, readSession, getUser, getProducts, publicUser, clearSession, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'GET')) return;

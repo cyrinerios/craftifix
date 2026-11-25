@@ -1,4 +1,4 @@
-import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, sendOwnerWhatsApp, body, send, onlyMethod, fail } from './_lib.js';
+import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, sendOwnerWhatsApp, body, send, onlyMethod, fail } from '../_lib.js';
 
 // POST /api/profile { name, business, email, whatsapp, callmebotKey? } -> update the logged-in owner's details
 // POST /api/profile?test=whatsapp -> send a test WhatsApp alert to the owner's number

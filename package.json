@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "description": "CrochetHub website with account sign-up and log-in (Vercel Functions + Vercel Blob)",
-  "engines": { "node": ">=20" },
+  "engines": { "node": "22.x" },
   "dependencies": {
     "@vercel/blob": "^1.0.0"
   }

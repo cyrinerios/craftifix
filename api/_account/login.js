@@ -1,4 +1,4 @@
-import { assertConfigured, normId, verifyPassword, getUser, publicUser, setSession, body, send, onlyMethod, fail } from './_lib.js';
+import { assertConfigured, normId, verifyPassword, getUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;

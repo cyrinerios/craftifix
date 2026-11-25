@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from './_lib.js';
+import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;

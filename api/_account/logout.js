@@ -1,4 +1,4 @@
-import { clearSession, send, onlyMethod } from './_lib.js';
+import { clearSession, send, onlyMethod } from '../_lib.js';
 
 export default function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
