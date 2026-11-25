@@ -43,3 +43,8 @@ Open `index.html` in a browser.
 - Each owner can connect the free CallMeBot service (Account → Edit details → CallMeBot API key). New orders are then sent automatically to the owner's own WhatsApp number, with no tap needed. "Send test" checks it.
 - To get a key: save the bot number shown on callmebot.com, send it "I allow callmebot to send me messages" from the shop's WhatsApp, and paste the key it replies with.
 - CallMeBot only messages the key owner's own number, so customer status updates still open WhatsApp pre-filled for the owner to send.
+
+## Order tracking
+- Shop page → **Track order**: customers enter their order number and the email or WhatsApp number used on the order, and see the status timeline (Order received → Confirmed → Being handmade → Ready for delivery → Completed, or Cancelled), items, total and a WhatsApp button to ask the shop.
+- Direct link: `shop.html?u=<userId>&track=<orderNo>`. It is shown after ordering and included in every status update message to the customer.
+- API: `POST /api/track { shop, orderNo, contact }`; the contact must match the order.

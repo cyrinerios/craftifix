@@ -7,7 +7,7 @@ const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'completed', 'ca
 const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
 const aed = (n) => 'AED ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function customerMessage(order, owner) {
+function customerMessage(order, owner, trackUrl) {
   const first = order.customer.name.split(/\s+/)[0];
   const items = order.items.map((i) => `${i.qty} × ${i.name}`).join(', ');
   const head = `Hi ${first}, this is ${owner.business}.`;
@@ -20,11 +20,11 @@ function customerMessage(order, owner) {
     cancelled: `Your order has been cancelled.\n${ref}\nIf you have any questions, just reply to this message.`,
     new: `We've received your order and will confirm it shortly.\n${ref}`
   }[order.status];
-  return `${head}\n${body}\n\n— ${owner.business}${owner.whatsapp ? `\nWhatsApp: ${owner.whatsapp}` : ''}`;
+  return `${head}\n${body}${trackUrl ? `\nTrack your order: ${trackUrl}` : ''}\n\n— ${owner.business}${owner.whatsapp ? `\nWhatsApp: ${owner.whatsapp}` : ''}`;
 }
 
-async function notify(order, owner) {
-  const text = customerMessage(order, owner);
+async function notify(order, owner, trackUrl) {
+  const text = customerMessage(order, owner, trackUrl);
   const subject = `Your order ${order.orderNo} is ${LABEL[order.status].toLowerCase()} — ${owner.business}`;
   const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">
     <h2 style="color:#4a1d4f">Order ${escHtml(order.orderNo)}: ${escHtml(LABEL[order.status])}</h2>
@@ -65,7 +65,8 @@ export default async function handler(req, res) {
       }
       const now = new Date().toISOString();
       o.updatedAt = now;
-      const notification = o.status === 'new' && !resend ? null : await notify(o, owner);
+      const trackUrl = `https://${req.headers['x-forwarded-host'] || req.headers.host}/shop.html?u=${encodeURIComponent(uid)}&track=${o.orderNo}`;
+      const notification = o.status === 'new' && !resend ? null : await notify(o, owner, trackUrl);
       o.history = [...(o.history || []), { status: o.status, at: now, emailSent: !!notification?.emailSent }].slice(-30);
       await saveOrders(uid, orders);
       return send(res, 200, { orders, notification });

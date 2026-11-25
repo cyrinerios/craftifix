@@ -78,8 +78,10 @@ export default async function handler(req, res) {
     orders[0] = order;
     await saveOrders(uid, orders.slice(0, 1000));
 
+    const base = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
     send(res, 201, {
       orderNo, total, items,
+      trackUrl: `${base}/shop.html?u=${encodeURIComponent(uid)}&track=${orderNo}`,
       emailSent: email.sent,
       whatsappSent: wa.sent,
       whatsappUrl: owner.whatsapp ? waLink(owner.whatsapp, text) : null,
