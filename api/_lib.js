@@ -118,6 +118,97 @@ export function readSession(req) {
   } catch { return null; }
 }
 
+/* ---------- products (one encrypted list per business) ---------- */
+const productsPath = (uid) => 'products/' + crypto.createHmac('sha256', SECRET).update('products:' + uid).digest('hex') + '.json';
+
+export async function getProducts(uid) {
+  let meta;
+  try { meta = await head(productsPath(uid)); }
+  catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
+  const r = await fetch(meta.url + '?v=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) return [];
+  return decrypt(await r.text());
+}
+export async function saveProducts(uid, list) {
+  await put(productsPath(uid), encrypt(list), {
+    access: 'public', addRandomSuffix: false, allowOverwrite: true,
+    contentType: 'application/json', cacheControlMaxAge: 60
+  });
+}
+
+export const CATEGORIES = ['Flowers', 'Bouquets', 'Dolls & amigurumi', 'Bags', 'Accessories', 'Clothing', 'Home decor', 'Customized gifts', 'Other'];
+export const METHODS = ['markup', 'margin', 'hourly', 'wholesale'];
+
+const num = (v, max = 1e6) => { const n = Number(v); return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0; };
+const r2 = (v) => Math.round(v * 100) / 100;
+const roundTo = (v, step) => step > 0 ? Math.ceil(v / step) * step : r2(v);
+
+// Same maths as the calculator on the website. The server recomputes so stored prices are always consistent.
+export function calcPrice(input = {}) {
+  const c = {
+    materials: num(input.materials), accessories: num(input.accessories), packaging: num(input.packaging),
+    overheadPct: num(input.overheadPct, 100), hours: num(input.hours, 1000), rate: num(input.rate, 10000),
+    method: METHODS.includes(input.method) ? input.method : 'markup',
+    pct: num(input.pct, 500), round: [0, 1, 5, 10].includes(Number(input.round)) ? Number(input.round) : 0,
+    vat: !!input.vat
+  };
+  if (c.method === 'margin') c.pct = Math.min(c.pct, 95);
+  const extras = c.materials + c.accessories + c.packaging;
+  const labour = c.hours * c.rate;
+  const overhead = (extras + labour) * c.overheadPct / 100;
+  const cost = extras + labour + overhead;
+  let price = c.method === 'margin' ? cost / (1 - c.pct / 100) : c.method === 'hourly' ? cost : cost * (1 + c.pct / 100);
+  price = roundTo(price, c.round);
+  const retail = c.method === 'wholesale' ? roundTo(price * 2, c.round) : null;
+  const vatAmount = c.vat ? r2(price * 0.05) : 0;
+  const profit = price - cost;
+  return {
+    input: c,
+    result: {
+      extras: r2(extras), labour: r2(labour), overhead: r2(overhead), cost: r2(cost),
+      price: r2(price), retail, vatAmount, customerPrice: r2(price + vatAmount),
+      profit: r2(profit), margin: price > 0 ? r2(profit / price * 100) : 0
+    }
+  };
+}
+
+export function cleanProduct(b = {}, prev = {}) {
+  const pricing = calcPrice(b.costing || prev.costing || {});
+  const status = b.status === 'published' ? 'published' : 'draft';
+  return {
+    name: clean(b.name, 100),
+    category: CATEGORIES.includes(b.category) ? b.category : 'Other',
+    description: clean(b.description, 1500),
+    sku: clean(b.sku, 40),
+    quantity: Math.round(num(b.quantity, 100000)),
+    productionDays: Math.round(num(b.productionDays, 365)),
+    customizable: !!b.customizable,
+    image: typeof b.image === 'string' && /^https:\/\/[a-z0-9.-]+\.public\.blob\.vercel-storage\.com\//i.test(b.image) ? b.image.slice(0, 500) : (b.image === null ? '' : (prev.image || '')),
+    status,
+    costing: pricing.input,
+    pricing: pricing.result
+  };
+}
+
+export async function uploadImage(uid, dataUrl) {
+  const m = /^data:(image\/(jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) throw Object.assign(new Error('Please upload a JPG, PNG or WebP image.'), { status: 400 });
+  const buf = Buffer.from(m[3], 'base64');
+  if (buf.length > 2_500_000) throw Object.assign(new Error('Image is too large (max 2.5 MB).'), { status: 400 });
+  const folder = crypto.createHmac('sha256', SECRET).update('img:' + uid).digest('hex').slice(0, 16);
+  const ext = m[2] === 'jpeg' ? 'jpg' : m[2];
+  const blob = await put(`images/${folder}/${crypto.randomUUID()}.${ext}`, buf, {
+    access: 'public', addRandomSuffix: false, contentType: m[1], cacheControlMaxAge: 31536000
+  });
+  return blob.url;
+}
+
+export function requireUser(req, res) {
+  const uid = readSession(req);
+  if (!uid) { send(res, 401, { error: 'Please log in again.' }); return null; }
+  return uid;
+}
+
 /* ---------- request helpers ---------- */
 export function body(req) {
   if (req.body && typeof req.body === 'object') return req.body;

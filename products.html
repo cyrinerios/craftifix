@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My products — CrochetHub</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#fff7fa,#1b0f1c);--ink:light-dark(#2a1430,#f6e8f1);--mute:light-dark(#6d5670,#c6aec4);
+--plum:#4a1d4f;--blush:light-dark(#ffe3ec,#3a2040);--pink:#f48fb1;--gold:#ffb627;
+--line:light-dark(#ecd9e4,#3d2742);--panel:light-dark(#ffffff,#2a182e)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Nunito Sans",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Outfit,system-ui,sans-serif;line-height:1.1;margin:0;text-wrap:balance}
+a{color:inherit}
+.bar{background:var(--plum);color:#fff;position:sticky;top:0;z-index:10}
+.bar .in{display:flex;align-items:center;gap:6px;padding:8px max(4vw,16px);max-width:1320px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;font:800 20px Outfit,sans-serif;text-decoration:none;color:#fff;margin-right:auto}
+.bar nav{display:flex;gap:2px;overflow-x:auto}
+.bar nav a,.bar nav button{color:#fff;text-decoration:none;font:600 14.5px "Nunito Sans",sans-serif;padding:10px 12px;border-radius:999px;white-space:nowrap;background:none;border:0;cursor:pointer;min-height:44px}
+.bar nav a:hover,.bar nav button:hover{background:rgba(255,255,255,.12)}
+.bar nav .on{background:rgba(255,255,255,.18)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 20px;border-radius:999px;font:700 15px Outfit,sans-serif;text-decoration:none;border:2px solid transparent;cursor:pointer}
+.btn[disabled]{opacity:.6;cursor:wait}
+.gold{background:var(--gold);color:#2a1430}.plumb{background:var(--plum);color:#fff}
+.ghost{background:none;border-color:var(--line);color:var(--ink)}
+.danger{background:none;border-color:#e7a1b8;color:#b02a5a}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+main{max-width:1320px;margin:0 auto;padding:clamp(20px,3vw,40px) max(4vw,16px)}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:20px}
+.top h1{font-size:clamp(28px,3.6vw,40px)}
+.top p{margin:6px 0 0;color:var(--mute)}
+.usage{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.meter{width:160px;height:10px;border-radius:999px;background:var(--blush);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--pink)}
+.layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:22px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:clamp(18px,2.4vw,26px)}
+.panel h2{font-size:22px;margin-bottom:4px}
+.panel .sub{color:var(--mute);margin:0 0 16px;font-size:15px}
+fieldset{border:0;padding:0;margin:0 0 6px}
+legend{font:700 16px Outfit,sans-serif;margin-bottom:10px;padding:0}
+.sep{border-top:1px solid var(--line);margin:18px 0}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:12px}
+label>span{display:block;margin-bottom:5px}
+input,select,textarea{width:100%;font:16px "Nunito Sans",sans-serif;min-height:44px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+textarea{min-height:84px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
+.unit{position:relative}.unit input{padding-left:48px}.unit::before{content:attr(data-u);position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.seg button{min-height:42px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:700 14px Outfit,sans-serif;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--plum);border-color:var(--plum);color:#fff}
+.check{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.check input{width:22px;min-height:22px;height:22px;accent-color:var(--plum);flex:none}
+.photo{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center;margin-bottom:12px}
+.thumb{width:120px;height:120px;border-radius:14px;background:var(--blush);border:1.5px dashed var(--line);display:grid;place-items:center;overflow:hidden;color:var(--mute);font-size:13px;text-align:center}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.photo .btns{display:flex;flex-wrap:wrap;gap:8px}
+.photo .btn{min-height:40px;font-size:14px;padding:0 14px}
+.result{background:var(--plum);color:#fff;border-radius:18px;padding:18px 20px;margin:8px 0 16px}
+.result small{color:#f6c8da;font-weight:600}
+.big{font:800 clamp(34px,4vw,46px)/1 Outfit,sans-serif;margin:6px 0 2px;white-space:nowrap}
+.lines{font-size:14.5px;margin-top:12px}
+.lines div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid rgba(255,255,255,.16)}
+.lines b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.bar2{height:10px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;display:flex;margin-top:12px}
+.bar2 span{height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;margin-top:6px;color:#f6c8da}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}
+.pub{display:flex;gap:8px;margin-bottom:12px}
+.pub label{flex:1;margin:0;cursor:pointer;position:relative}
+.pub input{position:absolute;opacity:0;width:1px;height:1px}
+.pub span{display:block;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;text-align:center;font-weight:700}
+.pub small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.pub input:checked+span{border-color:var(--plum);background:var(--blush);box-shadow:0 0 0 2px var(--plum) inset}
+.pub input:focus-visible+span{outline:3px solid var(--gold)}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.actions .plumb{flex:1}
+.err{color:#c62f5f;font-size:14px;min-height:20px;margin:0 0 8px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1430;color:#fff;padding:12px 18px;border-radius:999px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:92vw;text-align:center}
+.toast.show{opacity:1}
+.listhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.filter{display:flex;gap:6px}
+.filter button{min-height:38px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:600 13.5px "Nunito Sans",sans-serif;cursor:pointer}
+.filter button[aria-pressed=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.items{display:grid;gap:12px}
+.item{display:grid;grid-template-columns:84px minmax(0,1fr);gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
+.item.editing{border-color:var(--plum);box-shadow:0 0 0 2px var(--plum) inset}
+.item .im{width:84px;height:84px;border-radius:12px;background:var(--blush);overflow:hidden;display:grid;place-items:center}
+.item .im img{width:100%;height:100%;object-fit:cover}
+.item h3{font-size:17px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag{font:700 11.5px "Nunito Sans",sans-serif;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t-pub{background:#cdeedd;color:#155c3b}.t-draft{background:#eee3e9;color:#6d5670}.t-out{background:#ffe7b0;color:#6b4300}
+.meta{font-size:13.5px;color:var(--mute);margin:3px 0 6px}
+.money{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px}
+.money b{font:800 17px Outfit,sans-serif}
+.iact{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.iact button{min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:none;color:var(--ink);font:700 13px "Nunito Sans",sans-serif;cursor:pointer}
+.iact .del{color:#b02a5a;border-color:#efc2d2}
+.empty{text-align:center;padding:30px 16px;color:var(--mute);background:var(--panel);border:1.5px dashed var(--line);border-radius:16px}
+.empty b{display:block;color:var(--ink);font:700 18px Outfit,sans-serif;margin-bottom:4px}
+.dialog{position:fixed;inset:0;background:rgba(27,15,28,.55);display:none;place-items:center;z-index:40;padding:16px}
+.dialog.open{display:grid}
+.dialog .box{background:var(--panel);border-radius:20px;padding:22px;width:min(400px,100%)}
+.dialog p{color:var(--mute)}
+.center{display:grid;place-items:center;min-height:50vh;text-align:center;color:var(--mute)}
+@media(max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.row,.row3{grid-template-columns:minmax(0,1fr)}.photo{grid-template-columns:96px minmax(0,1fr)}.thumb{width:96px;height:96px}.bar nav .hide-s{display:none}.logo span{display:none}}
+</style>
+</head>
+<body>
+<header class="bar"><div class="in">
+  <a class="logo" href="/" aria-label="CrochetHub home">
+    <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".55" stroke-width="1.8" fill="none"/><path d="M8 26 26 5" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>
+    <span>CrochetHub</span>
+  </a>
+  <nav aria-label="Workspace">
+    <a href="/account.html" class="hide-s">Account</a>
+    <a href="/products.html" class="on" aria-current="page">My products</a>
+    <a href="#" id="shopLink">My shop</a>
+    <button type="button" id="logout">Log out</button>
+  </nav>
+</div></header>
+
+<main id="main"><div class="center">Loading your products…</div></main>
+
+<div class="dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <div class="box"><h3 id="dlgT">Delete this product?</h3><p id="dlgP"></p>
+  <div class="actions"><button class="btn ghost" type="button" id="dlgNo">Keep it</button><button class="btn danger" type="button" id="dlgYes">Delete</button></div></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<template id="tpl">
+  <div class="top">
+    <div><h1>My products</h1><p id="hello"></p></div>
+    <div class="usage"><span id="useTxt"></span><div class="meter"><span id="useBar"></span></div><a class="btn gold" id="viewShop" href="#" target="_blank" rel="noopener">View my shop</a></div>
+  </div>
+  <div class="layout">
+    <form class="panel" id="pf" novalidate>
+      <h2 id="formTitle">Post a new product</h2>
+      <p class="sub">Describe your piece, work out the price with the crochet calculator, then publish it to your shop.</p>
+      <fieldset>
+        <legend>Product details</legend>
+        <div class="photo">
+          <div class="thumb" id="thumb">No photo</div>
+          <div><div class="btns"><label class="btn ghost" style="margin:0" for="file">Upload photo</label><button class="btn ghost" type="button" id="rmPhoto" hidden>Remove</button></div>
+          <input id="file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+          <small style="color:var(--mute);display:block;margin-top:6px">JPG, PNG or WebP. Resized automatically.</small></div>
+        </div>
+        <label><span>Product name *</span><input id="name" maxlength="100" required placeholder="e.g. Crochet tulip bouquet, 7 stems"></label>
+        <div class="row">
+          <label><span>Category</span><select id="category"></select></label>
+          <label><span>SKU (optional)</span><input id="sku" maxlength="40" placeholder="e.g. BQ-TUL-07"></label>
+        </div>
+        <label><span>Description</span><textarea id="description" maxlength="1500" placeholder="Colours, size, yarn type, what's customisable…"></textarea></label>
+        <div class="row">
+          <label><span>Quantity in stock</span><input id="quantity" type="number" min="0" step="1" value="1" inputmode="numeric"></label>
+          <label><span>Production time</span><div class="unit" data-u="days"><input id="productionDays" type="number" min="0" step="1" value="3" inputmode="numeric"></div></label>
+        </div>
+        <label class="check"><input type="checkbox" id="customizable"> Customers can request customisation (colours, names, size)</label>
+      </fieldset>
+      <div class="sep"></div>
+      <fieldset>
+        <legend>Crochet pricing calculator</legend>
+        <div class="row3">
+          <label><span>Yarn &amp; materials</span><div class="unit" data-u="AED"><input id="materials" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+          <label><span>Accessories</span><div class="unit" data-u="AED"><input id="accessories" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+          <label><span>Packaging</span><div class="unit" data-u="AED"><input id="packaging" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+        </div>
+        <div class="row3">
+          <label><span>Hours to make</span><div class="unit" data-u="hrs"><input id="hours" type="number" min="0" step="0.25" value="0" inputmode="decimal"></div></label>
+          <label><span>Hourly rate</span><div class="unit" data-u="AED"><input id="rate" type="number" min="0" step="1" value="20" inputmode="decimal"></div></label>
+          <label><span>Overhead</span><div class="unit" data-u="%"><input id="overheadPct" type="number" min="0" max="100" step="1" value="10" inputmode="decimal"></div></label>
+        </div>
+        <span style="display:block;font-weight:700;font-size:14px;margin-bottom:6px">Pricing method</span>
+        <div class="seg" id="method" role="group" aria-label="Pricing method"></div>
+        <div class="row">
+          <label><span id="pctLabel">Markup on cost</span><div class="unit" data-u="%"><input id="pct" type="number" min="0" max="500" step="1" value="40" inputmode="decimal"></div></label>
+          <label><span>Round price up to</span><select id="round"><option value="0">No rounding</option><option value="1">AED 1</option><option value="5" selected>AED 5</option><option value="10">AED 10</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="vat"> Add 5% UAE VAT to the customer price (if VAT registered)</label>
+      </fieldset>
+      <div class="result" aria-live="polite">
+        <small id="rLabel">Selling price</small>
+        <div class="big" id="rPrice">AED 0.00</div>
+        <small id="rNote"></small>
+        <div class="bar2" id="rBar"></div><div class="legend" id="rLeg"></div>
+        <div class="lines" id="rLines"></div>
+      </div>
+      <span style="display:block;font-weight:700;font-size:14px;margin-bottom:6px">Visibility</span>
+      <div class="pub" role="radiogroup" aria-label="Visibility">
+        <label><input type="radio" name="status" value="published" checked><span>Publish<small>Show in my shop</small></span></label>
+        <label><input type="radio" name="status" value="draft"><span>Save as draft<small>Only I can see it</small></span></label>
+      </div>
+      <div class="err" id="ferr" role="alert"></div>
+      <div class="actions">
+        <button class="btn plumb" type="submit" id="saveBtn">Post product</button>
+        <button class="btn ghost" type="button" id="cancelEdit" hidden>Cancel editing</button>
+      </div>
+    </form>
+    <section aria-labelledby="listT">
+      <div class="listhead"><h2 id="listT" style="font-size:22px">Your products</h2>
+        <div class="filter" id="filter"><button type="button" data-f="all" aria-pressed="true">All</button><button type="button" data-f="published" aria-pressed="false">Published</button><button type="button" data-f="draft" aria-pressed="false">Drafts</button></div></div>
+      <div class="items" id="items"></div>
+    </section>
+  </div>
+</template>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const CATS=['Flowers','Bouquets','Dolls & amigurumi','Bags','Accessories','Clothing','Home decor','Customized gifts','Other'];
+const METHODS=[['markup','Markup','Markup on cost'],['margin','Gross margin','Target gross margin'],['hourly','Hourly only','Profit on top of labour'],['wholesale','Wholesale + retail','Wholesale markup on cost']];
+let state={user:null,products:[],limit:null,editing:null,image:'',method:'markup',filter:'all'};
+
+async function api(path,opts={}){
+  const r=await fetch(path,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opts});
+  const j=await r.json().catch(()=>({}));
+  if(r.status===401){location.href='/account.html';throw new Error('auth')}
+  return{ok:r.ok,status:r.status,data:j};
+}
+let tt;const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2800)};
+
+/* ----- calculator (mirrors the server) ----- */
+const num=(id,max=1e6)=>Math.min(Math.max(parseFloat($(id).value)||0,0),max);
+const roundTo=(v,s)=>s>0?Math.ceil(v/s)*s:Math.round(v*100)/100;
+function costing(){return{materials:num('materials'),accessories:num('accessories'),packaging:num('packaging'),hours:num('hours',1000),rate:num('rate'),overheadPct:num('overheadPct',100),method:state.method,pct:num('pct',500),round:+$('round').value,vat:$('vat').checked}}
+function calc(c){
+  const extras=c.materials+c.accessories+c.packaging,labour=c.hours*c.rate,overhead=(extras+labour)*c.overheadPct/100,cost=extras+labour+overhead;
+  const pct=c.method==='margin'?Math.min(c.pct,95):c.pct;
+  let price=c.method==='margin'?cost/(1-pct/100):c.method==='hourly'?cost:cost*(1+pct/100);
+  price=roundTo(price,c.round);
+  const retail=c.method==='wholesale'?roundTo(price*2,c.round):null,vat=c.vat?price*.05:0,profit=price-cost;
+  return{extras,labour,overhead,cost,price,retail,vat,customer:price+vat,profit,margin:price>0?profit/price*100:0,pct};
+}
+function render(){
+  const c=costing(),r=calc(c);
+  $('rLabel').textContent=($('name').value.trim()||'Your product')+(c.method==='wholesale'?' — wholesale price':' — selling price');
+  $('rPrice').textContent=aed(r.customer);
+  const notes={markup:`${r.pct}% markup on full cost`,margin:`${r.pct}% gross margin`,hourly:'Covers costs and pays your hourly rate',wholesale:`Suggested retail ${aed(r.retail*(c.vat?1.05:1))} (2× wholesale) — shown in your shop`};
+  $('rNote').textContent=notes[c.method]+(r.vat?` · includes VAT ${aed(r.vat)}`:'');
+  const parts=[['Materials & extras',r.extras,'#f48fb1'],['Labour',r.labour,'#ffd36b'],['Overhead',r.overhead,'#c98bd0'],['Profit',Math.max(r.profit,0),'#7fe0b0']];
+  const tot=parts.reduce((s,p)=>s+p[1],0)||1;
+  $('rBar').innerHTML=parts.map(p=>`<span style="width:${p[1]/tot*100}%;background:${p[2]}"></span>`).join('');
+  $('rLeg').innerHTML=parts.map(p=>`<span><i style="background:${p[2]}"></i>${p[0]}</span>`).join('');
+  $('rLines').innerHTML=[['Materials, accessories & packaging',aed(r.extras)],[`Labour (${c.hours} h × ${aed(c.rate)})`,aed(r.labour)],[`Overhead (${c.overheadPct}%)`,aed(r.overhead)],['Total cost',aed(r.cost)],['Profit per piece',aed(r.profit)],['Profit margin',r.margin.toFixed(1)+'%']].map(([a,b])=>`<div><span>${esc(a)}</span><b>${b}</b></div>`).join('');
+}
+
+/* ----- photo ----- */
+function setThumb(url){state.image=url||'';$('thumb').innerHTML=url?`<img src="${esc(url)}" alt="Product photo">`:'No photo';$('rmPhoto').hidden=!url}
+function resize(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=1000,s=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(cv.toDataURL('image/jpeg',.82))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}
+
+/* ----- form ----- */
+function fillForm(p){
+  state.editing=p?p.id:null;
+  $('formTitle').textContent=p?'Edit product':'Post a new product';
+  $('saveBtn').textContent=p?'Save changes':'Post product';
+  $('cancelEdit').hidden=!p;$('ferr').textContent='';
+  const c=p?p.costing:{materials:0,accessories:0,packaging:0,hours:0,rate:20,overheadPct:10,method:'markup',pct:40,round:5,vat:false};
+  $('name').value=p?.name||'';$('category').value=p?.category||'Bouquets';$('sku').value=p?.sku||'';$('description').value=p?.description||'';
+  $('quantity').value=p?p.quantity:1;$('productionDays').value=p?p.productionDays:3;$('customizable').checked=!!p?.customizable;
+  for(const k of['materials','accessories','packaging','hours','rate','overheadPct','pct'])$(k).value=c[k];
+  $('round').value=String(c.round);$('vat').checked=!!c.vat;setMethod(c.method);
+  document.querySelector(`input[name=status][value="${p?.status||'published'}"]`).checked=true;
+  setThumb(p?.image||'');render();renderList();
+}
+function setMethod(m){state.method=m;for(const b of $('method').children)b.setAttribute('aria-pressed',b.dataset.m===m);$('pctLabel').textContent=METHODS.find(x=>x[0]===m)[2];$('pct').disabled=m==='hourly'}
+
+/* ----- list ----- */
+function usage(){
+  const n=state.products.length,l=state.limit;
+  $('useTxt').textContent=l===null?`${n} product${n===1?'':'s'} · unlimited on your plan`:`${n} of ${l} products used`;
+  $('useBar').style.width=l===null?'100%':Math.min(100,n/l*100)+'%';
+}
+function renderList(){
+  usage();
+  const list=state.products.filter(p=>state.filter==='all'||p.status===state.filter);
+  if(!state.products.length){$('items').innerHTML=`<div class="empty"><b>No products yet</b>Fill in the form to post your first crochet piece.</div>`;return}
+  if(!list.length){$('items').innerHTML=`<div class="empty">Nothing here with this filter.</div>`;return}
+  $('items').innerHTML=list.map(p=>{
+    const shopPrice=p.pricing.retail?p.pricing.retail*(p.costing.vat?1.05:1):p.pricing.customerPrice;
+    return `<article class="item${state.editing===p.id?' editing':''}" data-id="${esc(p.id)}">
+      <div class="im">${p.image?`<img src="${esc(p.image)}" alt="" loading="lazy">`:'<svg width="40" height="40" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="12" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0" stroke="#fff" stroke-opacity=".6" stroke-width="1.8" fill="none"/></svg>'}</div>
+      <div><h3>${esc(p.name)} <span class="tag ${p.status==='published'?'t-pub':'t-draft'}">${p.status==='published'?'Published':'Draft'}</span>${p.quantity<1?'<span class="tag t-out">Out of stock</span>':''}</h3>
+      <div class="meta">${esc(p.category)}${p.sku?' · '+esc(p.sku):''} · ${p.quantity} in stock</div>
+      <div class="money"><span>Shop price <b>${aed(shopPrice)}</b></span><span>Cost ${aed(p.pricing.cost)}</span><span>Profit ${aed(p.pricing.profit)} (${p.pricing.margin.toFixed(0)}%)</span></div>
+      <div class="iact"><button type="button" data-a="edit">Edit</button><button type="button" data-a="toggle">${p.status==='published'?'Unpublish':'Publish'}</button><button type="button" data-a="dup">Duplicate</button><button type="button" class="del" data-a="del">Delete</button></div></div>
+    </article>`}).join('');
+}
+
+function payload(status){
+  return{name:$('name').value.trim(),category:$('category').value,sku:$('sku').value.trim(),description:$('description').value.trim(),
+    quantity:Math.max(0,Math.round(+$('quantity').value||0)),productionDays:Math.max(0,Math.round(+$('productionDays').value||0)),
+    customizable:$('customizable').checked,image:state.image||null,status:status||document.querySelector('input[name=status]:checked').value,costing:costing()};
+}
+
+function mount(){
+  $('main').innerHTML='';$('main').append($('tpl').content.cloneNode(true));
+  const shopUrl='/shop.html?u='+encodeURIComponent(state.user.userId);
+  $('viewShop').href=shopUrl;$('shopLink').href=shopUrl;$('shopLink').target='_blank';
+  $('hello').textContent=`${state.user.business} · ${state.user.planDetails.name} plan`;
+  $('category').innerHTML=CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+  $('method').innerHTML=METHODS.map(([k,t])=>`<button type="button" data-m="${k}" aria-pressed="false">${t}</button>`).join('');
+  $('method').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMethod(b.dataset.m);if(b.dataset.m==='margin'&&num('pct')>90)$('pct').value=40;render()});
+  $('pf').addEventListener('input',render);$('pf').addEventListener('change',render);
+  $('file').addEventListener('change',async()=>{const f=$('file').files[0];$('file').value='';if(!f)return;
+    $('thumb').textContent='Uploading…';
+    try{const dataUrl=await resize(f);const r=await api('/api/upload',{method:'POST',body:JSON.stringify({dataUrl})});
+      if(!r.ok)throw new Error(r.data.error||'Upload failed');setThumb(r.data.url);toast('Photo uploaded')}
+    catch(e){setThumb(state.image);if(e.message!=='auth')toast(e.message||'Upload failed')}});
+  $('rmPhoto').addEventListener('click',()=>setThumb(''));
+  $('cancelEdit').addEventListener('click',()=>fillForm(null));
+  $('pf').addEventListener('submit',async e=>{e.preventDefault();
+    const p=payload(),err=m=>{$('ferr').textContent=m};
+    if(!p.name){$('name').focus();return err('Please enter a product name.')}
+    if(calc(p.costing).price<=0)return err('The price is zero — add your material costs or hours first.');
+    if(!state.editing&&state.limit!==null&&state.products.length>=state.limit)return err(`Your plan allows ${state.limit} products. Upgrade on your Account page to add more.`);
+    const b=$('saveBtn');b.disabled=true;const was=b.textContent;b.textContent='Saving…';
+    try{const r=state.editing?await api('/api/products?id='+encodeURIComponent(state.editing),{method:'PUT',body:JSON.stringify(p)}):await api('/api/products',{method:'POST',body:JSON.stringify(p)});
+      if(!r.ok){err(r.data.error||'Could not save.');return}
+      state.products=r.data.products;state.limit=r.data.limit;
+      toast(state.editing?'Product updated':p.status==='published'?'Product posted to your shop':'Draft saved');
+      fillForm(null);window.scrollTo({top:0,behavior:'smooth'})}
+    catch(e){if(e.message!=='auth')err('Network problem — please try again.')}
+    finally{b.disabled=false;b.textContent=state.editing?'Save changes':was}});
+  $('filter').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.filter=b.dataset.f;for(const x of $('filter').children)x.setAttribute('aria-pressed',x===b);renderList()});
+  $('items').addEventListener('click',async e=>{const b=e.target.closest('[data-a]');if(!b)return;
+    const id=b.closest('.item').dataset.id,p=state.products.find(x=>x.id===id);if(!p)return;
+    if(b.dataset.a==='edit'){fillForm(p);$('pf').scrollIntoView({behavior:'smooth'});$('name').focus({preventScroll:true})}
+    if(b.dataset.a==='dup'){fillForm({...p,id:null,name:p.name+' (copy)',image:'',status:'draft'});state.editing=null;$('formTitle').textContent='Post a new product';$('saveBtn').textContent='Post product';$('cancelEdit').hidden=true;$('pf').scrollIntoView({behavior:'smooth'})}
+    if(b.dataset.a==='toggle'){b.disabled=true;const r=await api('/api/products?id='+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({...p,status:p.status==='published'?'draft':'published'})});
+      if(r.ok){state.products=r.data.products;renderList();toast(p.status==='published'?'Hidden from your shop':'Published to your shop')}else{b.disabled=false;toast(r.data.error||'Could not update')}}
+    if(b.dataset.a==='del'){$('dlgP').textContent=`“${p.name}” will be removed from your shop and your product list.`;$('dlg').classList.add('open');$('dlgYes').dataset.id=id;$('dlgNo').focus()}
+  });
+  fillForm(null);
+}
+$('dlgNo').addEventListener('click',()=>$('dlg').classList.remove('open'));
+$('dlg').addEventListener('keydown',e=>{if(e.key==='Escape')$('dlg').classList.remove('open')});
+$('dlgYes').addEventListener('click',async()=>{const id=$('dlgYes').dataset.id;$('dlg').classList.remove('open');
+  const r=await api('/api/products?id='+encodeURIComponent(id),{method:'DELETE'});
+  if(r.ok){state.products=r.data.products;if(state.editing===id)fillForm(null);else renderList();toast('Product deleted')}else toast(r.data.error||'Could not delete')});
+$('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='/account.html'});
+
+(async()=>{
+  try{const me=await api('/api/me');state.user=me.data.user;
+    const r=await api('/api/products');state.products=r.data.products||[];state.limit=r.data.limit;mount()}
+  catch(e){if(e.message!=='auth')$('main').innerHTML='<div class="center">Could not load your products. Please refresh the page.</div>'}
+})();
+}
+</script>
+</body>
+</html>

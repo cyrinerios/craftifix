@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shop — CrochetHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#1b0f1c);--ink:light-dark(#2a1430,#f6e8f1);--mute:light-dark(#6d5670,#c6aec4);
+--plum:#4a1d4f;--blush:light-dark(#ffe3ec,#3a2040);--pink:#f48fb1;--gold:#ffb627;
+--line:light-dark(#ecd9e4,#3d2742);--panel:light-dark(#ffffff,#2a182e);--card:light-dark(#fff7fa,#251628)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Nunito Sans",system-ui,sans-serif;overflow-x:clip;min-height:100vh;display:flex;flex-direction:column}
+h1,h2,h3{font-family:Outfit,system-ui,sans-serif;line-height:1.1;margin:0;text-wrap:balance}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hero{background:var(--blush);padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.hero .in{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.av{width:74px;height:74px;border-radius:50%;background:var(--plum);color:#fff;display:grid;place-items:center;font:800 26px Outfit,sans-serif;flex:none}
+.hero h1{font-size:clamp(30px,4.4vw,48px)}
+.hero p{margin:4px 0 0;color:var(--mute)}
+.hero .cart{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 20px;border-radius:999px;font:700 15px Outfit,sans-serif;text-decoration:none;border:2px solid transparent;cursor:pointer}
+.plumb{background:var(--plum);color:#fff}.gold{background:var(--gold);color:#2a1430}.ghost{background:none;border-color:var(--line);color:var(--ink)}
+main{flex:1;max-width:1240px;width:100%;margin:0 auto;padding:clamp(22px,3vw,40px) max(5vw,16px)}
+.cats{display:flex;gap:6px;overflow-x:auto;margin-bottom:20px;padding-bottom:4px}
+.cats button{flex:none;min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:700 14px "Nunito Sans",sans-serif;cursor:pointer}
+.cats button[aria-pressed=true]{background:var(--plum);border-color:var(--plum);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px}
+.p{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
+.p .im{aspect-ratio:1;background:var(--card);display:grid;place-items:center;overflow:hidden}
+.p .im img{width:100%;height:100%;object-fit:cover}
+.p .tx{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
+.p h3{font-size:17px}
+.p .cat{font-size:13px;color:var(--mute)}
+.p .desc{font-size:14px;color:var(--mute);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.p .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:8px}
+.price{font:800 20px Outfit,sans-serif;white-space:nowrap}
+.p .btn{min-height:40px;padding:0 14px;font-size:14px}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blush);white-space:nowrap}
+.out{background:#ffe7b0;color:#6b4300}
+.empty,.center{text-align:center;color:var(--mute);padding:60px 16px}
+.empty b{display:block;color:var(--ink);font:700 22px Outfit,sans-serif;margin-bottom:6px}
+.drawer{position:fixed;inset:0;background:rgba(27,15,28,.5);display:none;justify-content:flex-end;z-index:20}
+.drawer.open{display:flex}
+.drawer .box{background:var(--panel);width:min(420px,100%);height:100%;padding:22px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:none;color:var(--ink);font-weight:800;cursor:pointer}
+label{display:block;font-weight:700;font-size:14px;margin-bottom:10px}
+label span{display:block;margin-bottom:4px}
+input,textarea{width:100%;font:16px "Nunito Sans",sans-serif;min-height:44px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+textarea{min-height:70px}
+.note{font-size:13.5px;color:var(--mute)}
+footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding:18px}
+</style>
+</head>
+<body>
+<header class="hero"><div class="in" id="head"><div class="av">…</div><div><h1>Loading shop…</h1></div></div></header>
+<main id="main"><div class="center">Loading products…</div></main>
+<footer>Powered by <a href="/">CrochetHub</a></footer>
+
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="cartT">
+  <div class="box">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2 id="cartT" style="font-size:24px">Your order</h2><button class="btn ghost" type="button" id="closeCart" style="min-height:40px">Close</button></div>
+    <div id="lines"></div>
+    <div style="display:flex;justify-content:space-between;font:800 20px Outfit,sans-serif"><span>Total</span><span id="total">AED 0.00</span></div>
+    <form id="order" novalidate>
+      <label><span>Your name</span><input id="oname" autocomplete="name" required></label>
+      <label><span>Phone or email</span><input id="ocontact" autocomplete="email" required></label>
+      <label><span>Notes (colours, names, delivery)</span><textarea id="onotes"></textarea></label>
+      <p class="note" id="onote"></p>
+      <button class="btn plumb" type="submit" style="width:100%">Send order by email</button>
+    </form>
+  </div>
+</div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid=new URLSearchParams(location.search).get('u')||'';
+let shop=null,products=[],cat='All';const cart=new Map();
+
+function head(){
+  const initials=shop.business.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.title=shop.business+' — Shop';
+  $('head').innerHTML=`<div class="av">${esc(initials)}</div><div><h1>${esc(shop.business)}</h1><p>Handmade crochet by ${esc(shop.owner)}</p></div>
+    <div class="cart"><button class="btn gold" type="button" id="openCart">Order · <span id="count">0</span></button></div>`;
+  $('openCart').addEventListener('click',openCart);
+}
+function grid(){
+  if(!products.length){$('main').innerHTML=`<div class="empty"><b>No products yet</b>This shop hasn't published any pieces yet — check back soon.</div>`;return}
+  const cats=['All',...new Set(products.map(p=>p.category))];
+  const list=products.filter(p=>cat==='All'||p.category===cat);
+  $('main').innerHTML=`${cats.length>2?`<div class="cats" id="cats">${cats.map(c=>`<button type="button" aria-pressed="${c===cat}">${esc(c)}</button>`).join('')}</div>`:''}
+  <div class="grid">${list.map(p=>`<article class="p">
+    <div class="im">${p.image?`<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:'<svg width="70" height="70" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="12" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".6" stroke-width="1.8" fill="none"/></svg>'}</div>
+    <div class="tx"><span class="cat">${esc(p.category)}</span><h3>${esc(p.name)}</h3>
+    ${p.description?`<p class="desc" style="margin:0">${esc(p.description)}</p>`:''}
+    <div class="tags">${p.customizable?'<span class="tag">Customisable</span>':''}${p.productionDays?`<span class="tag">Made in ${p.productionDays} day${p.productionDays===1?'':'s'}</span>`:''}${p.inStock?'':'<span class="tag out">Made to order</span>'}</div>
+    <div class="row"><span class="price">${aed(p.price)}</span><button class="btn plumb" type="button" data-add="${esc(p.id)}">Add</button></div>
+    ${p.vatIncluded?'<span class="note">Price includes 5% VAT</span>':''}</div></article>`).join('')}</div>`;
+  const c=$('cats');if(c)c.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cat=b.textContent;grid()});
+}
+function count(){let n=0;for(const q of cart.values())n+=q;$('count').textContent=n}
+function openCart(){
+  const items=[...cart].map(([id,q])=>({p:products.find(x=>x.id===id),q})).filter(x=>x.p);
+  $('lines').innerHTML=items.length?items.map(({p,q})=>`<div class="line"><div><b>${esc(p.name)}</b><div class="note">${aed(p.price)} each</div></div><div class="qty"><button type="button" data-d="${esc(p.id)}" aria-label="Less">−</button><b>${q}</b><button type="button" data-i="${esc(p.id)}" aria-label="More">+</button></div></div>`).join(''):'<p class="note">Your order is empty. Add a product first.</p>';
+  $('total').textContent=aed(items.reduce((s,x)=>s+x.p.price*x.q,0));
+  $('onote').textContent=`Your email app will open with the order addressed to ${shop.email}. The shop will confirm price, delivery and payment with you.`;
+  $('drawer').classList.add('open');
+}
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-add]');if(a){cart.set(a.dataset.add,(cart.get(a.dataset.add)||0)+1);count();a.textContent='Added ✓';setTimeout(()=>a.textContent='Add',1000)}
+  const i=e.target.closest('[data-i]');if(i){cart.set(i.dataset.i,cart.get(i.dataset.i)+1);count();openCart()}
+  const d=e.target.closest('[data-d]');if(d){const q=cart.get(d.dataset.d)-1;q>0?cart.set(d.dataset.d,q):cart.delete(d.dataset.d);count();openCart()}
+});
+$('closeCart').addEventListener('click',()=>$('drawer').classList.remove('open'));
+$('drawer').addEventListener('click',e=>{if(e.target===$('drawer'))$('drawer').classList.remove('open')});
+$('order').addEventListener('submit',e=>{e.preventDefault();
+  const items=[...cart].map(([id,q])=>({p:products.find(x=>x.id===id),q})).filter(x=>x.p);
+  if(!items.length)return;
+  const name=$('oname').value.trim(),contact=$('ocontact').value.trim();
+  if(!name||!contact){$('onote').textContent='Please add your name and a phone number or email.';return}
+  const body=[`New order from ${name} (${contact})`,'',...items.map(x=>`${x.q} × ${x.p.name} — ${aed(x.p.price*x.q)}`),'',`Total: ${aed(items.reduce((s,x)=>s+x.p.price*x.q,0))}`,'',`Notes: ${$('onotes').value.trim()||'—'}`].join('\n');
+  location.href=`mailto:${encodeURIComponent(shop.email)}?subject=${encodeURIComponent('Order for '+shop.business)}&body=${encodeURIComponent(body)}`;
+});
+(async()=>{
+  try{const r=await fetch('/api/shop?u='+encodeURIComponent(uid));const j=await r.json();
+    if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();grid()}
+  catch(e){$('head').innerHTML='<div><h1>Shop not found</h1><p>Check the link and try again.</p></div>';$('main').innerHTML='<div class="center"><a class="btn plumb" href="/">Go to CrochetHub</a></div>'}
+})();
+}
+</script>
+</body>
+</html>
