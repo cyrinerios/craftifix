@@ -206,6 +206,24 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .err{color:#c62f5f;font-size:14px;min-height:20px;margin:-4px 0 8px}
 .ok{text-align:center;padding:20px 6px}
 .ok b{font:800 24px Outfit,sans-serif;display:block;margin-bottom:6px}
+.hint{display:block;font-weight:400;font-size:13px;color:var(--mute);margin-top:4px}
+.lbl{display:block;font-weight:700;font-size:14.5px;margin-bottom:6px}
+.pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.pick label{margin:0;cursor:pointer;position:relative}
+.pick input{position:absolute;opacity:0;width:1px;height:1px}
+.pick span{display:block;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;text-align:center;min-height:64px;margin:0}
+.pick b{display:block;font:700 15px Outfit,sans-serif}
+.pick small{color:var(--mute);font-weight:600;white-space:nowrap}
+.pick input:checked+span{border-color:var(--plum);background:var(--blush);box-shadow:0 0 0 2px var(--plum) inset}
+.pick input:focus-visible+span{outline:3px solid var(--gold);outline-offset:2px}
+.paynote{font-size:14px;background:#fff1c9;color:#5b3d00;border-radius:10px;padding:8px 12px;margin:4px 0 10px}
+.have{text-align:center;font-size:14.5px;margin:12px 0 0;color:var(--mute)}
+.have a{color:var(--ink);font-weight:700}
+.btn[disabled]{opacity:.6;cursor:wait}
+.login{color:#fff;font-weight:700;text-decoration:none;padding:10px 6px;white-space:nowrap;flex:none}
+@media(max-width:860px){.login{margin-left:auto}.bar .btn{margin-left:0!important}}
+@media(max-width:480px){.pick{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:430px){.bar .btn.gold{display:none}}
 @media(max-width:860px){.join .wrap{grid-template-columns:minmax(0,1fr)}}
 
 footer{background:#2f1233;color:#e7c5d5;font-size:14.5px}
@@ -228,6 +246,7 @@ footer a:hover{color:#fff}
     <nav class="links" aria-label="Main">
       <a href="#features">Features</a><a href="#calculator">Pricing calculator</a><a href="#how">How it works</a><a href="#storefront">Storefront</a><a href="#plans">Plans</a><a href="#faq">FAQ</a>
     </nav>
+    <a class="login" href="/account.html" id="navAcct">Log in</a>
     <a class="btn gold" href="#join">Start free trial</a>
   </div>
 </header>
@@ -378,13 +397,23 @@ footer a:hover{color:#fff}
       <p class="l">Create your account, pick a plan and set up your business profile and logo. Then start adding products and pricing them properly.</p>
     </div>
     <div class="sform" id="sbox">
-      <form id="signup" novalidate>
-        <label><span>Your name</span><input id="sn" autocomplete="name" required></label>
-        <label><span>Business name</span><input id="sb" autocomplete="organization" required></label>
-        <label><span>Email</span><input id="se" type="email" autocomplete="email" required></label>
-        <label><span>Plan</span><select id="sp"><option>Starter — AED 29/month</option><option selected>Professional — AED 59/month</option><option>Business — AED 99/month</option></select></label>
+      <form id="signup" novalidate autocomplete="on">
+        <div class="row">
+          <label><span>Your name</span><input id="sn" name="name" autocomplete="name" required maxlength="80"></label>
+          <label><span>Business name</span><input id="sb" name="business" autocomplete="organization" required maxlength="80"></label>
+        </div>
+        <label><span>Email</span><input id="se" name="email" type="email" autocomplete="email" required></label>
+        <label><span>User ID</span><input id="su" name="userId" autocomplete="username" required minlength="3" maxlength="20" placeholder="e.g. rosiesloops" autocapitalize="none" spellcheck="false"><small class="hint">3–20 characters: letters, numbers, dot, dash or underscore</small></label>
+        <div class="row">
+          <label><span>Password</span><input id="spw" name="password" type="password" autocomplete="new-password" required minlength="8"><small class="hint">At least 8 characters, with a letter and a number</small></label>
+          <label><span>Confirm password</span><input id="spw2" type="password" autocomplete="new-password" required minlength="8"></label>
+        </div>
+        <span class="lbl">Choose your plan</span>
+        <div class="pick" id="pick" role="radiogroup" aria-label="Plan"></div>
+        <p class="paynote">Payment is skipped for now — your plan is activated as soon as you create the account.</p>
         <div class="err" id="serr" role="alert"></div>
-        <button class="btn plumb" type="submit">Create my account</button>
+        <button class="btn plumb" type="submit" id="sbtn">Create my account</button>
+        <p class="have">Already have an account? <a href="/account.html">Log in</a></p>
       </form>
     </div>
   </div>
@@ -471,7 +500,7 @@ $('saveBtn').addEventListener('click',()=>{$('toast').textContent='Saved to “'
 calc();
 
 /* flows */
-const flows=[['Get set up',['Sign up with your email','Verify your email address','Choose a plan and pay securely','Add your business profile and logo','Open your dashboard and add products']],
+const flows=[['Get set up',['Sign up with your email','Verify your email address','Choose your plan','Add your business profile and logo','Open your dashboard and add products']],
  ['Add a product',['Go to Products → Add product','Enter details and upload photos','Open the pricing calculator','Check the suggested price and save it','Publish to your storefront']],
  ['Quote to invoice',['Pick a customer and add items','Send the branded quotation PDF','Mark it accepted when they say yes','Convert it to an invoice in one click','Record payment — status updates itself']]];
 $('flows').innerHTML=flows.map(([t,s])=>`<div class="flow"><h3>${t}</h3><ol class="st8">${s.map(x=>`<li>${x}</li>`).join('')}</ol></div>`).join('');
@@ -492,7 +521,7 @@ const plans=[
  ['Professional',59,'For growing shops with steady orders.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management & reports',1],['Full inventory',1],['Basic production tracking',1],['Staff accounts',0]],1],
  ['Business',99,'For studios with a team.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management',1],['Advanced inventory & sales reports',1],['Full production tracking',1],['Multiple staff accounts',1]]]];
 $('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p">AED ${p}<small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
-$('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const s=$('sp');if(s)[...s.options].forEach(o=>o.selected=o.text.startsWith(a.dataset.plan))});
+$('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const r=document.querySelector(`#pick input[value="${a.dataset.plan.toLowerCase()}"]`);if(r)r.checked=true});
 
 /* roadmap */
 const road=[['Phase 1','The essentials','Accounts, subscriptions, products, pricing calculator, quotations, invoices and dashboard.','#f48fb1'],['Phase 2','Selling online','Storefronts, public catalogue, cart, checkout, orders and customer database.','#ffb627'],['Phase 3','Running the studio','Yarn inventory, production, expenses, advanced reports and staff accounts.','#a8437c'],['Phase 4','Going further','Marketing and email tools, more currencies, custom domains and more payment options.','#4a1d4f']];
@@ -507,12 +536,28 @@ const faqs=[['Who is CrochetHub for?','Crocheters, handmade product creators and
  ['Can I use it on my phone?','Yes. CrochetHub and your storefront work in current versions of Chrome, Edge, Firefox and Safari on phones, tablets and computers.']];
 $('faqs').innerHTML=faqs.map(([q,a],i)=>`<details${i===0?' open':''}><summary>${q}</summary><p>${a}</p></details>`).join('');
 
-/* signup */
-$('signup').addEventListener('submit',e=>{e.preventDefault();
-  const n=$('sn').value.trim(),b=$('sb').value.trim(),em=$('se').value.trim();
-  if(!n||!b){$('serr').textContent='Please enter your name and business name.';return}
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){$('serr').textContent='Please enter a valid email address.';$('se').focus();return}
-  $('sbox').innerHTML=`<div class="ok"><b>Welcome, ${esc(n)}!</b><p>We'd send a verification link to <strong>${esc(em)}</strong> to set up <strong>${esc(b)}</strong> on the ${esc($('sp').value.split(' —')[0])} plan.</p><p style="color:var(--mute);font-size:14px">This is a website preview — no account was created and no email was sent.</p></div>`});
+/* signup — creates a real account through /api/signup (payment skipped) */
+$('pick').innerHTML=plans.map(([n,p,,,pop])=>`<label><input type="radio" name="plan" value="${n.toLowerCase()}"${pop?' checked':''}><span><b>${n}</b><small>AED ${p}/mo</small></span></label>`).join('');
+const fields={userId:'su',password:'spw',name:'sn',business:'sb',email:'se'};
+$('signup').addEventListener('submit',async e=>{e.preventDefault();
+  const err=m=>{$('serr').textContent=m};
+  const d={name:$('sn').value.trim(),business:$('sb').value.trim(),email:$('se').value.trim(),userId:$('su').value.trim().toLowerCase(),password:$('spw').value,plan:(document.querySelector('#pick input:checked')||{}).value};
+  if(!d.name||!d.business)return err('Please enter your name and business name.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){$('se').focus();return err('Please enter a valid email address.')}
+  if(!/^[a-z0-9][a-z0-9._-]{2,19}$/.test(d.userId)){$('su').focus();return err('User ID must be 3–20 characters: letters, numbers, dot, dash or underscore.')}
+  if(d.password.length<8||!/[a-zA-Z]/.test(d.password)||!/[0-9]/.test(d.password)){$('spw').focus();return err('Password must be at least 8 characters with a letter and a number.')}
+  if(d.password!==$('spw2').value){$('spw2').focus();return err('The two passwords don’t match.')}
+  if(!d.plan)return err('Please choose a plan.');
+  err('');const btn=$('sbtn');btn.disabled=true;btn.textContent='Creating your account…';
+  try{
+    const r=await fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d),credentials:'same-origin'});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){err(j.error||'Could not create the account. Please try again.');if(j.field&&fields[j.field])$(fields[j.field]).focus();return}
+    location.href='/account.html?welcome=1';
+  }catch(x){err('Network problem — please check your connection and try again.')}
+  finally{btn.disabled=false;btn.textContent='Create my account'}
+});
+fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.user)$('navAcct').textContent='My account'}).catch(()=>{});
 }
 </script>
 </body>
