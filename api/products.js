@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const limit = plan.limits.products;
     const id = String(req.query?.id || '');
 
-    if (req.method === 'GET') return send(res, 200, { products: list, limit, plan: plan.id });
+    if (req.method === 'GET') return send(res, 200, { products: list, limit, plan: plan.id, currency: user.currency || 'AED' });
 
     if (req.method === 'POST') {
       if (limit !== null && list.length >= limit)

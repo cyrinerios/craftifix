@@ -90,7 +90,7 @@ export async function saveUser(rec, { create = false } = {}) {
 
 export function publicUser(rec) {
   const { passwordHash, callmebotKey, ...rest } = rec;
-  return { ...rest, whatsappAlerts: !!callmebotKey, planDetails: PLANS[rec.plan] || PLANS.starter };
+  return { ...rest, currency: rec.currency || 'AED', whatsappAlerts: !!callmebotKey, planDetails: PLANS[rec.plan] || PLANS.starter };
 }
 
 /* ---------- sessions (HMAC-signed cookie) ---------- */
@@ -235,6 +235,14 @@ export function normSocial(kind, v) {
   return /^[A-Za-z0-9._-]{1,60}$/.test(h) ? cfg.make(h) : null;
 }
 export const isBlobUrl = (u) => typeof u === 'string' && /^https:\/\/[a-z0-9.-]+\.public\.blob\.vercel-storage\.com\//i.test(u);
+
+export const CURRENCIES = ['AED', 'SAR', 'QAR', 'KWD', 'BHD', 'OMR', 'USD', 'EUR', 'GBP', 'PHP', 'INR', 'PKR', 'EGP', 'JOD', 'LKR', 'NPR', 'BDT', 'CAD', 'AUD'];
+export const validCurrency = (c) => CURRENCIES.includes(String(c || '').toUpperCase()) ? String(c).toUpperCase() : null;
+export function money(n, cur = 'AED') {
+  const c = validCurrency(cur) || 'AED';
+  try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: c, currencyDisplay: 'code' }).format(Number(n) || 0).replace(/\u00a0/g, ' '); }
+  catch { return c + ' ' + (Number(n) || 0).toFixed(2); }
+}
 
 export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
 

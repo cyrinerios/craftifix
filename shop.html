@@ -148,7 +148,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
       <div class="inqfields">
         <label><span>What would you like made? <span class="req">*</span></span><textarea id="inqMsg" maxlength="1500" required placeholder="e.g. A bouquet of 12 crochet roses in navy and white for my mum's birthday"></textarea></label>
         <div class="row2">
-          <label><span>Budget (optional)</span><input id="inqBudget" maxlength="40" placeholder="e.g. AED 150–200"></label>
+          <label><span>Budget (optional)</span><input id="inqBudget" maxlength="40" placeholder="e.g. 150–200"></label>
           <label><span>Needed by (optional)</span><input id="inqDate" type="date"></label>
         </div>
         <div class="row2">
@@ -185,7 +185,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
   <div class="box">
     <div style="display:flex;justify-content:space-between;align-items:center"><h2 id="cartT" style="font-size:24px;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="26" height="26"><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M2.5 3h2.6l2.4 11.6a1.5 1.5 0 0 0 1.5 1.2h8.8a1.5 1.5 0 0 0 1.5-1.1L21.5 7H6.1"/></svg>Your cart</h2><button class="btn ghost" type="button" id="closeCart" style="min-height:40px">Close</button></div>
     <div id="lines"></div>
-    <div style="display:flex;justify-content:space-between;font:800 20px Outfit,sans-serif"><span>Total</span><span id="total">AED 0.00</span></div>
+    <div style="display:flex;justify-content:space-between;font:800 20px Outfit,sans-serif"><span>Total</span><span id="total"></span></div>
     <div id="formWrap"><form id="order" novalidate>
       <h3 style="font-size:18px;margin:6px 0 10px">Your details</h3>
       <label><span>Full name <span class="req">*</span></span><input id="oname" autocomplete="name" required maxlength="80"></label>
@@ -205,7 +205,8 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtMoney=(n,c)=>{try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'AED',currencyDisplay:'code'}).format(Number(n)||0).replace(/\u00a0/g,' ')}catch{return (c||'AED')+' '+(Number(n)||0).toFixed(2)}};
+const aed=n=>fmtMoney(n,shop&&shop.currency);
 const ADDI='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M2.5 3h2.6l2.4 11.6a1.5 1.5 0 0 0 1.5 1.2h8.8a1.5 1.5 0 0 0 1.5-1.1L21.5 7H6.1"/></svg>Add to cart';
 const uid=new URLSearchParams(location.search).get('u')||'';
 let shop=null,products=[],cat='All';const cart=new Map();

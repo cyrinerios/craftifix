@@ -1,13 +1,13 @@
-import { assertConfigured, requireUser, getUser, getOrders, saveOrders, deliver, escHtml, waLink, body, send, fail } from './_lib.js';
+import { money, assertConfigured, requireUser, getUser, getOrders, saveOrders, deliver, escHtml, waLink, body, send, fail } from './_lib.js';
 
 // GET /api/orders                 -> the logged-in owner's received orders
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
 // PUT /api/orders?id=...&notify=1 -> re-send the customer update for the current status
 const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'completed', 'cancelled'];
 export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
-const aed = (n) => 'AED ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function customerMessage(order, owner, trackUrl) {
+  const aed = (n) => money(n, order.currency || owner.currency);
   const first = order.customer.name.split(/\s+/)[0];
   const items = order.items.map((i) => `${i.qty} × ${i.name}`).join(', ');
   const head = `Hi ${first}, this is ${owner.business}.`;
@@ -24,6 +24,7 @@ export function customerMessage(order, owner, trackUrl) {
 }
 
 export async function notify(order, owner, trackUrl) {
+  const aed = (n) => money(n, order.currency || owner.currency);
   const text = customerMessage(order, owner, trackUrl);
   const subject = `Your order ${order.orderNo} is ${LABEL[order.status].toLowerCase()} — ${owner.business}`;
   const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">

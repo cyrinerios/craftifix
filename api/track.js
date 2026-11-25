@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         customerName: o.customer.name.split(/\s+/)[0], deliveryArea: o.customer.address,
         history
       },
-      shop: { business: owner.business, whatsapp: owner.whatsapp || null }
+      shop: { business: owner.business, whatsapp: owner.whatsapp || null, currency: o.currency || owner.currency || 'AED' }
     });
   } catch (e) { fail(res, e); }
 }

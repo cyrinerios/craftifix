@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { del } from '@vercel/blob';
-import { assertConfigured, requireUser, getUser, getInquiries, saveInquiries, getOrders, saveOrders, deliver, waLink, escHtml, clean, body, send, fail } from './_lib.js';
+import { money, assertConfigured, requireUser, getUser, getInquiries, saveInquiries, getOrders, saveOrders, deliver, waLink, escHtml, clean, body, send, fail } from './_lib.js';
 import { notify, LABEL as ORDER_LABEL } from './orders.js';
 
 // GET    /api/inquiries                         -> the logged-in owner's custom inquiries
@@ -10,8 +10,7 @@ import { notify, LABEL as ORDER_LABEL } from './orders.js';
 // DELETE /api/inquiries?id=...                  -> delete an inquiry and its photos
 const STATUSES = ['new', 'replied', 'quoted', 'accepted', 'converted', 'closed'];
 export const LABEL = { new: 'New', replied: 'Replied', quoted: 'Quoted', accepted: 'Customer accepted', converted: 'Converted to order', closed: 'Closed' };
-const aed = (n) => 'AED ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const money = (v) => { const n = Math.round(Number(v) * 100) / 100; return Number.isFinite(n) && n >= 0 && n <= 1e6 ? n : null; };
+const amount = (v) => { const n = Math.round(Number(v) * 100) / 100; return Number.isFinite(n) && n >= 0 && n <= 1e6 ? n : null; };
 const host = (req) => `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
 
 export default async function handler(req, res) {
@@ -48,9 +47,10 @@ export default async function handler(req, res) {
     if (req.method === 'POST' && action === 'reply') {
       const owner = await getUser(uid);
       if (!owner) return send(res, 401, { error: 'Please log in again.' });
+      const aed = (n) => money(n, owner.currency);
       const b = body(req);
       const message = clean(b.message, 1500);
-      const price = b.price === '' || b.price == null ? null : money(b.price);
+      const price = b.price === '' || b.price == null ? null : amount(b.price);
       const readyBy = /^\d{4}-\d{2}-\d{2}$/.test(String(b.readyBy || '')) ? b.readyBy : '';
       if (message.length < 2) return send(res, 400, { error: 'Please write your reply.', field: 'message' });
       if (b.price !== '' && b.price != null && price === null) return send(res, 400, { error: 'Please enter a valid price.', field: 'price' });
@@ -95,7 +95,7 @@ export default async function handler(req, res) {
       for (const it of (Array.isArray(b.items) ? b.items : []).slice(0, 20)) {
         const name = clean(it?.name, 120);
         const qty = Math.min(99, Math.max(1, Math.round(Number(it?.qty) || 0)));
-        const unitPrice = money(it?.unitPrice);
+        const unitPrice = amount(it?.unitPrice);
         if (!name) continue;
         if (unitPrice === null || unitPrice <= 0) return send(res, 400, { error: `Please enter a price for “${name}”.` });
         items.push({ productId: null, name, qty, unitPrice, lineTotal: Math.round(unitPrice * qty * 100) / 100 });
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       const order = {
         id: crypto.randomUUID(), orderNo, status: 'confirmed',
         customer: { ...q.customer, address, notes: clean(b.notes, 800) },
-        items, total: Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100, currency: 'AED',
+        items, total: Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100, currency: owner.currency || 'AED',
         source: { type: 'inquiry', inqNo: q.inqNo, inquiryId: q.id },
         createdAt: now.toISOString(), updatedAt: now.toISOString(),
         history: [{ status: 'confirmed', at: now.toISOString() }]

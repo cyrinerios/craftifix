@@ -1,10 +1,9 @@
 import crypto from 'node:crypto';
-import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
+import { money, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/order — a shopper places an order on a shop.
 // Saves the order to the owner's account, emails the owner (when email sending is configured)
 // and returns a WhatsApp link addressed to the owner with the order filled in.
-const aed = (n) => 'AED ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -16,6 +15,8 @@ export default async function handler(req, res) {
     const owner = await getUser(uid);
     if (!owner || owner.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
 
+    const cur = owner.currency || 'AED';
+    const aed = (n) => money(n, cur);
     const c = b.customer || {};
     const customer = {
       name: clean(c.name, 80), email: clean(c.email, 254).toLowerCase(),
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
 
     const now = new Date();
     const orderNo = 'CH-' + now.toISOString().slice(2, 10).replace(/-/g, '') + '-' + crypto.randomBytes(2).toString('hex').toUpperCase();
-    const order = { id: crypto.randomUUID(), orderNo, status: 'new', customer, items, total, currency: 'AED', createdAt: now.toISOString() };
+    const order = { id: crypto.randomUUID(), orderNo, status: 'new', customer, items, total, currency: cur, createdAt: now.toISOString() };
 
     const orders = await getOrders(uid);
     orders.unshift(order);
@@ -80,7 +81,7 @@ export default async function handler(req, res) {
 
     const base = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
     send(res, 201, {
-      orderNo, total, items,
+      orderNo, total, items, currency: cur,
       trackUrl: `${base}/shop.html?u=${encodeURIComponent(uid)}&track=${orderNo}`,
       emailSent: email.sent,
       whatsappSent: wa.sent,

@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
+import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -12,6 +12,8 @@ export default async function handler(req, res) {
     const email = clean(b.email, 254).toLowerCase();
     const plan = String(b.plan || '').toLowerCase();
     const whatsapp = normWhatsApp(b.whatsapp);
+    const currency = validCurrency(b.currency || 'AED');
+    if (!currency) return send(res, 400, { error: 'Please choose your shop currency.', field: 'currency' });
     const social = {};
     for (const k of ['instagram', 'facebook', 'tiktok']) {
       const v = normSocial(k, b[k]);
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
 
     const now = new Date().toISOString();
     const rec = {
-      userId, name, business, email, whatsapp, plan, social,
+      userId, name, business, email, whatsapp, plan, social, currency,
       passwordHash: await hashPassword(password),
       subscription: { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now },
       createdAt: now, updatedAt: now

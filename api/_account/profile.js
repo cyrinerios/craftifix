@@ -1,4 +1,4 @@
-import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail } from '../_lib.js';
+import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, validCurrency, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail } from '../_lib.js';
 
 // POST /api/profile { name, business, email, whatsapp, callmebotKey? } -> update the logged-in owner's details
 // POST /api/profile?test=whatsapp -> send a test WhatsApp alert to the owner's number
@@ -33,6 +33,11 @@ export default async function handler(req, res) {
         if (v) social[k] = v;
       }
       rec.social = social;
+    }
+    if (b.currency !== undefined) {
+      const c = validCurrency(b.currency);
+      if (!c) return send(res, 400, { error: 'Please choose a valid currency.', field: 'currency' });
+      rec.currency = c;
     }
     if (b.logo === '' || b.logo === null) delete rec.logo;
     else if (isBlobUrl(b.logo)) rec.logo = b.logo;

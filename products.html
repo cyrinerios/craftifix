@@ -179,26 +179,26 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
       <fieldset>
         <legend>Crochet pricing calculator</legend>
         <div class="row3">
-          <label><span>Yarn &amp; materials</span><div class="unit" data-u="AED"><input id="materials" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
-          <label><span>Accessories</span><div class="unit" data-u="AED"><input id="accessories" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
-          <label><span>Packaging</span><div class="unit" data-u="AED"><input id="packaging" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+          <label><span>Yarn &amp; materials</span><div class="unit" data-u="AED" data-cur><input id="materials" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+          <label><span>Accessories</span><div class="unit" data-u="AED" data-cur><input id="accessories" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
+          <label><span>Packaging</span><div class="unit" data-u="AED" data-cur><input id="packaging" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div></label>
         </div>
         <div class="row3">
           <label><span>Hours to make</span><div class="unit" data-u="hrs"><input id="hours" type="number" min="0" step="0.25" value="0" inputmode="decimal"></div></label>
-          <label><span>Hourly rate</span><div class="unit" data-u="AED"><input id="rate" type="number" min="0" step="1" value="20" inputmode="decimal"></div></label>
+          <label><span>Hourly rate</span><div class="unit" data-u="AED" data-cur><input id="rate" type="number" min="0" step="1" value="20" inputmode="decimal"></div></label>
           <label><span>Overhead</span><div class="unit" data-u="%"><input id="overheadPct" type="number" min="0" max="100" step="1" value="10" inputmode="decimal"></div></label>
         </div>
         <span style="display:block;font-weight:700;font-size:14px;margin-bottom:6px">Pricing method</span>
         <div class="seg" id="method" role="group" aria-label="Pricing method"></div>
         <div class="row">
           <label><span id="pctLabel">Markup on cost</span><div class="unit" data-u="%"><input id="pct" type="number" min="0" max="500" step="1" value="40" inputmode="decimal"></div></label>
-          <label><span>Round price up to</span><select id="round"><option value="0">No rounding</option><option value="1">AED 1</option><option value="5" selected>AED 5</option><option value="10">AED 10</option></select></label>
+          <label><span>Round price up to</span><select id="round"><option value="0">No rounding</option><option value="1" data-r="1">AED 1</option><option value="5" data-r="5" selected>AED 5</option><option value="10" data-r="10">AED 10</option></select></label>
         </div>
         <label class="check"><input type="checkbox" id="vat"> Add 5% UAE VAT to the customer price (if VAT registered)</label>
       </fieldset>
       <div class="result" aria-live="polite">
         <small id="rLabel">Selling price</small>
-        <div class="big" id="rPrice">AED 0.00</div>
+        <div class="big" id="rPrice"></div>
         <small id="rNote"></small>
         <div class="bar2" id="rBar"></div><div class="legend" id="rLeg"></div>
         <div class="lines" id="rLines"></div>
@@ -226,7 +226,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
 {
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtMoney=(n,c)=>{try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'AED',currencyDisplay:'code'}).format(Number(n)||0).replace(/\u00a0/g,' ')}catch{return (c||'AED')+' '+(Number(n)||0).toFixed(2)}};
+let CUR='AED';const aed=n=>fmtMoney(n,CUR);
 const CATS=['Flowers','Bouquets','Dolls & amigurumi','Bags','Accessories','Clothing','Home decor','Customized gifts','Other'];
 const METHODS=[['markup','Markup','Markup on cost'],['margin','Gross margin','Target gross margin'],['hourly','Hourly only','Profit on top of labour'],['wholesale','Wholesale + retail','Wholesale markup on cost']];
 let state={user:null,products:[],limit:null,editing:null,image:'',method:'markup',filter:'all'};
@@ -363,7 +364,8 @@ $('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method
 
 (async()=>{
   try{const me=await api('/api/me');state.user=me.data.user;
-    const r=await api('/api/products');state.products=r.data.products||[];state.limit=r.data.limit;mount()}
+    const r=await api('/api/products');state.products=r.data.products||[];state.limit=r.data.limit;CUR=state.user.currency||r.data.currency||'AED';mount();
+    for(const el of document.querySelectorAll('[data-cur]'))el.dataset.u=CUR;for(const o of document.querySelectorAll('#round option[data-r]'))o.textContent=CUR+' '+o.dataset.r;render()}
   catch(e){if(e.message!=='auth')$('main').innerHTML='<div class="center">Could not load your products. Please refresh the page.</div>'}
 })();
 }

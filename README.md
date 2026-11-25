@@ -63,3 +63,7 @@ Open `index.html` in a browser.
 ## Business logo and social links
 - Sign-up (optional): business logo upload and Instagram, Facebook and TikTok links (a full link or just the @username). Existing owners add or change them in Settings → Edit details.
 - The logo becomes the shop's icon (header circle, browser tab icon and home-screen icon); the social links show as icons under the shop name.
+
+## Shop currency
+- Chosen at sign-up (default AED; GCC currencies, USD, EUR, GBP, PHP, INR, PKR, EGP and more) and changeable in Settings → Edit details.
+- Used everywhere in that owner's shop: product prices and the pricing calculator, the shop, cart, orders, tracking, inquiries and quotes, emails, WhatsApp messages and analytics. Changing it relabels existing prices; it does not convert them. CrochetHub subscription prices stay in AED.

@@ -34,7 +34,7 @@ main{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:clamp(24px,4vw,56p
 .box p{color:var(--mute);margin:0 0 18px}
 label{display:block;font-weight:700;font-size:14.5px;margin-bottom:12px}
 label span{display:block;margin-bottom:5px}
-input,textarea{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+input,textarea,select{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
 input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
 .err{color:#c62f5f;font-size:14px;min-height:20px;margin:-4px 0 8px}
 .box .btn{width:100%}
@@ -238,6 +238,7 @@ function showAccount(u,welcome){
       <div><span>Email</span><b>${esc(u.email)}</b></div>
       <div><span>WhatsApp</span><b>${u.whatsapp?esc(u.whatsapp):'<span style="color:#c62f5f">Not set</span>'}</b></div>
       <div><span>WhatsApp order alerts</span><b>${u.whatsappAlerts?'<span style="color:#2f9e6b">On</span> <button class="mini" type="button" id="waTest">Send test</button>':'<span style="color:#8a5a00">Off</span>'}</b></div>
+      <div><span>Shop currency</span><b>${esc(u.currency||'AED')}</b></div>
       <div><span>Logo</span><b>${u.logo?`<img class="mylogo" src="${esc(u.logo)}" alt="Your logo">`:'<span style="color:var(--mute);font-weight:600">Not added</span>'}</b></div>
       <div><span>Shop links</span><b class="soclinks">${['instagram','facebook','tiktok'].filter(k=>u.social&&u.social[k]).map(k=>`<a href="${esc(u.social[k])}" target="_blank" rel="noopener">${({instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok'})[k]}</a>`).join(' · ')||'<span style="color:var(--mute);font-weight:600">Not added</span>'}</b></div>
       <div><span>Member since</span><b>${esc(since)}</b></div>
@@ -247,6 +248,7 @@ function showAccount(u,welcome){
         <label><span>Business name</span><input id="eBiz" value="${esc(u.business)}" maxlength="80"></label>
         <label><span>Email</span><input id="eEmail" type="email" value="${esc(u.email)}"></label>
         <label><span>WhatsApp number</span><input id="eWa" type="tel" inputmode="tel" value="${esc(u.whatsapp||'')}" placeholder="+971 55 123 4567"></label>
+        <label><span>Shop currency</span><select id="eCur">${CURS.map(([c,n])=>`<option value="${c}"${c===(u.currency||'AED')?' selected':''}>${c} — ${n}</option>`).join('')}</select><small class="hint2">Changing this relabels your existing prices; it does not convert them. Update product prices afterwards if needed.</small></label>
         <span style="display:block;font-weight:700;font-size:14.5px;margin-bottom:5px">Business logo</span>
         <div class="logoup"><label class="logobox" for="eLogoFile" id="eLogoBox">${u.logo?`<img src="${esc(u.logo)}" alt="Your logo">`:'<span>Upload logo</span>'}</label>
           <div><input type="file" id="eLogoFile" accept="image/png,image/jpeg,image/webp" hidden><small class="msg">Used as your shop's icon.</small><br><button type="button" class="linkbtn" id="eLogoRm"${u.logo?'':' hidden'}>Remove logo</button></div></div>
@@ -296,7 +298,7 @@ function showAccount(u,welcome){
     catch(x){$('eLogoBox').innerHTML=editLogo?`<img src="${esc(editLogo)}" alt="Your logo">`:'<span>Upload logo</span>';$('eErr').textContent=x.message||'Upload failed'}});
   $('eLogoRm').addEventListener('click',()=>{editLogo='';$('eLogoBox').innerHTML='<span>Upload logo</span>';$('eLogoRm').hidden=true});
   $('editForm').addEventListener('submit',async e=>{e.preventDefault();
-    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined,social:{instagram:$('eIg').value,facebook:$('eFb').value,tiktok:$('eTt').value},logo:editLogo})}).catch(()=>({ok:false,data:{}}));
+    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined,currency:$('eCur').value,social:{instagram:$('eIg').value,facebook:$('eFb').value,tiktok:$('eTt').value},logo:editLogo})}).catch(()=>({ok:false,data:{}}));
     if(r.ok)showAccount({...r.data.user,productCount:u.productCount},false);
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else $('eErr').textContent=r.data.error||'Could not save.'});
@@ -388,7 +390,9 @@ function renderAnalytics(){
 window.addEventListener('hashchange',()=>{if(curUser&&!location.hash.startsWith('#ord-')){showAccount(curUser,false);window.scrollTo(0,0)}});
 
 const ST=[['new','New'],['confirmed','Confirmed'],['in_production','In production'],['ready','Ready for delivery'],['completed','Completed'],['cancelled','Cancelled']];
-const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtMoney=(n,c)=>{try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'AED',currencyDisplay:'code'}).format(Number(n)||0).replace(/\u00a0/g,' ')}catch{return (c||'AED')+' '+(Number(n)||0).toFixed(2)}};
+const CURS=[["AED", "UAE dirham"], ["SAR", "Saudi riyal"], ["QAR", "Qatari riyal"], ["KWD", "Kuwaiti dinar"], ["BHD", "Bahraini dinar"], ["OMR", "Omani rial"], ["USD", "US dollar"], ["EUR", "Euro"], ["GBP", "British pound"], ["PHP", "Philippine peso"], ["INR", "Indian rupee"], ["PKR", "Pakistani rupee"], ["EGP", "Egyptian pound"], ["JOD", "Jordanian dinar"], ["LKR", "Sri Lankan rupee"], ["NPR", "Nepalese rupee"], ["BDT", "Bangladeshi taka"], ["CAD", "Canadian dollar"], ["AUD", "Australian dollar"]];
+const aed=n=>fmtMoney(n,curUser&&curUser.currency);
 const wa=n=>'https://wa.me/'+String(n).replace(/\D/g,'');
 async function loadOrders(){
   const r=await api('/api/orders').catch(()=>({ok:false,data:{}}));
@@ -477,7 +481,7 @@ function renderInquiries(list){
       ${conv?`<div class="convok">Converted to order <b>${esc(q.orderNo)}</b>. You'll find it on the Orders page.<br><a href="#ord-${esc(q.orderId)}" class="mini" data-goorder="${esc(q.orderId)}" style="margin-top:6px">View order</a></div>`:`
       <form class="replyf" data-reply="${esc(q.id)}" novalidate>
         <label><span>Reply to ${esc(first)}</span><textarea name="message" maxlength="1500" required>${esc(`Hi ${first}, thank you for your custom inquiry! `)}</textarea></label>
-        <div class="row2"><label><span>Quoted price (AED, optional)</span><input name="price" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label><label><span>Ready by (optional)</span><input name="readyBy" type="date" value="${q.quote?.readyBy||''}"></label></div>
+        <div class="row2"><label><span>Quoted price (${esc(curUser.currency||'AED')}, optional)</span><input name="price" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label><label><span>Ready by (optional)</span><input name="readyBy" type="date" value="${q.quote?.readyBy||''}"></label></div>
         <button class="btn plumb" type="submit" style="width:100%">Send reply</button>
         <p class="msg" style="margin:6px 0 0">Emailed to the customer, and WhatsApp opens with your reply ready to send. The status changes to Replied, or Quoted when you add a price.</p>
       </form>
@@ -487,7 +491,7 @@ function renderInquiries(list){
         <form class="convf" data-convert="${esc(q.id)}" novalidate>
           <p class="msg">Use this once ${esc(first)} has confirmed the agreed item and price. It creates a confirmed order, moves it to Orders, and sends the confirmation with a tracking link.</p>
           <label><span>Item</span><input name="name" maxlength="120" value="${esc('Custom order: '+q.message.slice(0,80))}"></label>
-          <div class="row2"><label><span>Qty</span><input name="qty" type="number" min="1" max="99" step="1" value="1"></label><label><span>Price each (AED)</span><input name="unitPrice" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label></div>
+          <div class="row2"><label><span>Qty</span><input name="qty" type="number" min="1" max="99" step="1" value="1"></label><label><span>Price each (${esc(curUser.currency||'AED')})</span><input name="unitPrice" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label></div>
           <label><span>Delivery address</span><textarea name="address" maxlength="400" placeholder="Building, street, area, city, emirate">${esc(q.suggestedAddress||'')}</textarea>${q.suggestedAddress?`<small class="hint2">${q.addressFrom==='inquiry'?'From the customer’s inquiry':'From the customer’s previous order '+esc(q.addressFrom)} — edit if needed</small>`:'<small class="hint2">No address on file for this customer — ask them and type it here</small>'}</label>
           <label><span>Order notes (optional)</span><textarea name="notes" maxlength="800">${esc([q.options.map(o=>o.note&&o.label+': '+o.note).filter(Boolean).join('; '),q.neededBy?'Needed by '+q.neededBy:''].filter(Boolean).join(' · '))}</textarea></label>
           <div class="err" role="alert"></div>
