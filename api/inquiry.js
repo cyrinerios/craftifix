@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       <p style="color:#6d5670;font-size:13px">Reply to this email to answer the customer. You can also see this inquiry in your CrochetHub account.</p></div>`;
 
     const [email, wa] = await Promise.all([
-      deliver({ action: 'new_inquiry', email: { to: owner.email, subject: `New custom inquiry ${inqNo} from ${customer.name}`, text, html, replyTo: customer.email, fromName: `${owner.business} inquiries` } }),
+      deliver({ action: 'new_inquiry', inquiry: { ...inq, shop: uid, statusLabel: 'New' }, email: { to: owner.email, subject: `New custom inquiry ${inqNo} from ${customer.name}`, text, html, replyTo: customer.email, fromName: `${owner.business} inquiries` } }),
       sendOwnerWhatsApp(owner, '💡 ' + text)
     ]);
     inq.emailSent = email.sent; inq.whatsappSent = wa.sent;

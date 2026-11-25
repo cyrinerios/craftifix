@@ -12,6 +12,9 @@
  *                    to the Orders and Order items tabs
  *   - status_update: emails the status update to the customer and updates the
  *                    order's status in the Orders tab
+ *   - new_inquiry:   emails the custom inquiry (with inspiration photos) to the shop owner
+ *                    and adds it to the Inquiries tab, with photo previews
+ *   - inquiry_status: updates the inquiry's status in the Inquiries tab
  *
  * SECRET must match APPS_SCRIPT_SECRET in Vercel. Do not share it.
  */
@@ -37,6 +40,11 @@ function doPost(e) {
       result.sheet = true;
     } else if (data.action === 'status_update' && data.order) {
       result.sheet = updateStatus_(data.order.orderNo, data.order.statusLabel);
+    } else if (data.action === 'new_inquiry' && data.inquiry) {
+      addInquiry_(data.inquiry);
+      result.sheet = true;
+    } else if (data.action === 'inquiry_status' && data.inquiry) {
+      result.sheet = updateInquiryStatus_(data.inquiry.inqNo, data.inquiry.statusLabel);
     }
 
     if (data.email && data.email.to) {
@@ -52,6 +60,7 @@ function doPost(e) {
         });
         result.emailed = true;
         if (data.action === 'new_order' && data.order) markEmailSent_(data.order.orderNo);
+        if (data.action === 'new_inquiry' && data.inquiry) markInquiryEmailSent_(data.inquiry.inqNo);
       } else {
         result.error = 'Daily Gmail sending limit reached';
       }
@@ -107,6 +116,40 @@ function markEmailSent_(orderNo) {
   const orders = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Orders');
   const r = orders ? findRow_(orders, orderNo) : -1;
   if (r > 0) orders.getRange(r, 11).setValue('Yes');
+}
+
+const INQ_HEADERS = ['Inquiry no.', 'Shop (user ID)', 'Date', 'Status', 'Customer', 'Email', 'WhatsApp', 'Request', 'Budget', 'Needed by',
+  'Option 1 notes', 'Option 1 photo', 'Option 1 photo link', 'Option 2 notes', 'Option 2 photo', 'Option 2 photo link', 'Email sent'];
+
+function addInquiry_(q) {
+  const sh = sheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Inquiries', INQ_HEADERS);
+  if (findRow_(sh, q.inqNo) > 0) return; // already recorded
+  const r = sh.getLastRow() + 1;
+  const opt = function (i) { return (q.options || [])[i] || {}; };
+  const img = function (url) { return url ? '=IMAGE("' + String(url).replace(/"/g, '') + '")' : ''; };
+  sh.getRange(r, 1, 1, 17).setValues([[
+    q.inqNo, q.shop, new Date(q.createdAt), q.statusLabel || 'New',
+    q.customer.name, q.customer.email, "'" + q.customer.whatsapp, q.message, q.budget || '', q.neededBy || '',
+    opt(0).note || '', img(opt(0).image), opt(0).image || '',
+    opt(1).note || '', img(opt(1).image), opt(1).image || '', 'No'
+  ]]);
+  sh.getRange(r, 3).setNumberFormat('yyyy-mm-dd hh:mm');
+  if (opt(0).image || opt(1).image) sh.setRowHeight(r, 120);
+}
+
+function updateInquiryStatus_(inqNo, statusLabel) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inquiries');
+  if (!sh) return false;
+  const r = findRow_(sh, inqNo);
+  if (r < 1) return false;
+  sh.getRange(r, 4).setValue(statusLabel);
+  return true;
+}
+
+function markInquiryEmailSent_(inqNo) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inquiries');
+  const r = sh ? findRow_(sh, inqNo) : -1;
+  if (r > 0) sh.getRange(r, 17).setValue('Yes');
 }
 
 function findRow_(sheet, orderNo) {

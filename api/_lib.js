@@ -283,7 +283,7 @@ export async function sendOwnerWhatsApp(owner, text) {
 // When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
 // which also records orders and status changes in the "CrochetHub database" Google Sheet.
 // Otherwise email falls back to Resend (if configured).
-export async function deliver({ action, order, email }) {
+export async function deliver({ action, order, inquiry, email }) {
   const url = process.env.APPS_SCRIPT_URL;
   if (url) {
     try {
@@ -292,7 +292,7 @@ export async function deliver({ action, order, email }) {
       const r = await fetch(url, {
         method: 'POST', redirect: 'follow', signal: ctrl.signal,
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ secret: process.env.APPS_SCRIPT_SECRET || '', action, order, email })
+        body: JSON.stringify({ secret: process.env.APPS_SCRIPT_SECRET || '', action, order, inquiry, email })
       });
       clearTimeout(t);
       const j = await r.json().catch(() => ({}));

@@ -1,10 +1,11 @@
 import { del } from '@vercel/blob';
-import { assertConfigured, requireUser, getInquiries, saveInquiries, body, send, fail } from './_lib.js';
+import { assertConfigured, requireUser, getInquiries, saveInquiries, deliver, body, send, fail } from './_lib.js';
 
 // GET    /api/inquiries          -> the logged-in owner's custom inquiries
 // PUT    /api/inquiries?id=...   -> { status } update an inquiry's status
 // DELETE /api/inquiries?id=...   -> delete an inquiry and its photos
 const STATUSES = ['new', 'replied', 'quoted', 'accepted', 'closed'];
+const LABEL = { new: 'New', replied: 'Replied', quoted: 'Quoted', accepted: 'Accepted', closed: 'Closed' };
 
 export default async function handler(req, res) {
   try {
@@ -19,6 +20,7 @@ export default async function handler(req, res) {
       if (!STATUSES.includes(status)) return send(res, 400, { error: 'Unknown status.' });
       list[i].status = status; list[i].updatedAt = new Date().toISOString();
       await saveInquiries(uid, list);
+      await deliver({ action: 'inquiry_status', inquiry: { inqNo: list[i].inqNo, statusLabel: LABEL[status] } }); // keeps the Google Sheet in step
       return send(res, 200, { inquiries: list });
     }
     if (req.method === 'DELETE') {
