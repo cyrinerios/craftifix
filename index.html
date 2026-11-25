@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CrochetHub — Your Crochet Business</title>
+<meta name="description" content="CrochetHub: the all-in-one business platform for crocheters — storefront, pricing calculator, quotations, invoices, orders, inventory and reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: warm and handmade, but confident software — a real SaaS for small crochet businesses.
+   IDEA: a yarn shop window — products, stitches and a working business desk behind the glass.
+   PICTURE: a live-looking business dashboard with a yarn ball and hook resting on it.
+   COLOUR and TYPE: deep plum, blush pink, marigold accent; Outfit headings, Nunito Sans body.
+   LAYOUT: plum hero with dashboard, white feature bands, working calculator, plans, signup, plum footer. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#1b0f1c);--ink:light-dark(#2a1430,#f6e8f1);--mute:light-dark(#6d5670,#c6aec4);
+--plum:#4a1d4f;--blush:light-dark(#ffe3ec,#3a2040);--pink:#f48fb1;--gold:#ffb627;
+--line:light-dark(#ecd9e4,#3d2742);--card:light-dark(#fff7fa,#251628);--panel:light-dark(#ffffff,#2a182e)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.6 "Nunito Sans",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:Outfit,system-ui,sans-serif;line-height:1.08;text-wrap:balance;margin:0}
+h2{font-size:clamp(30px,4vw,46px)}
+h3{font-size:20px}
+p{margin:0 0 12px}
+a{color:inherit}
+.band{padding:clamp(40px,6vw,88px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+.head{max-width:720px;margin-bottom:clamp(24px,3vw,40px)}
+.head p{font-size:18.5px;color:var(--mute);margin-top:12px}
+.alt{background:var(--card)}
+html{scroll-padding-top:76px;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:999px;font:700 16px Outfit,sans-serif;text-decoration:none;border:2px solid transparent;cursor:pointer;transition:transform .15s}
+.btn:hover{transform:translateY(-1px)}
+.gold{background:var(--gold);color:#2a1430}
+.ghost{border-color:currentColor;background:none;color:inherit}
+.plumb{background:var(--plum);color:#fff}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* top bar */
+.bar{position:sticky;top:0;z-index:10;background:var(--plum);color:#fff;border-bottom:1px solid rgba(255,255,255,.12)}
+.bar .wrap{display:flex;align-items:center;gap:20px;padding:10px max(5vw,16px);max-width:none}
+.logo{display:flex;align-items:center;gap:10px;font:800 21px Outfit,sans-serif;text-decoration:none;color:#fff;flex:none}
+.links{display:flex;gap:4px;margin-left:auto;overflow-x:auto}
+.links a{text-decoration:none;font-weight:600;font-size:15px;padding:10px 12px;border-radius:999px;white-space:nowrap}
+.links a:hover{background:rgba(255,255,255,.12)}
+.bar .btn{min-height:42px;padding:0 18px;flex:none}
+@media(max-width:860px){.links{display:none}.bar .btn{margin-left:auto}}
+
+/* hero */
+.hero{background:var(--plum);color:#fff;padding-top:clamp(36px,5vw,72px);overflow:hidden}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,4vw,60px);align-items:center}
+.hero h1{font-size:clamp(40px,5.6vw,64px);font-weight:800}
+.hero h1 em{font-style:normal;color:var(--pink)}
+.hero .sub{font-size:clamp(18px,1.8vw,21px);color:#f6d3e2;margin:18px 0 28px;max-width:34em}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.hero .ghost{color:#fff}
+.trust{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:26px;font-size:14.5px;color:#f1c4d6}
+.trust span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:8px;vertical-align:1px}
+
+/* dashboard mock */
+.stage{position:relative;padding:20px 0 30px}
+.dash{background:var(--panel);color:var(--ink);border-radius:20px;box-shadow:0 30px 60px rgba(0,0,0,.35);overflow:hidden;position:relative;z-index:1}
+.dtop{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font:700 14px Outfit,sans-serif}
+.dtop i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dtop b{margin-left:8px}.dtop small{margin-left:auto;color:var(--mute);font:600 12.5px "Nunito Sans",sans-serif}
+.dbody{display:grid;grid-template-columns:132px minmax(0,1fr)}
+.side{background:var(--card);padding:12px 8px;font-size:13.5px;border-right:1px solid var(--line)}
+.side div{padding:7px 10px;border-radius:8px;color:var(--mute);white-space:nowrap}
+.side .on{background:var(--plum);color:#fff;font-weight:700}
+.main{padding:14px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.kpi small{display:block;font-size:12px;color:var(--mute)}
+.kpi b{font:800 18px Outfit,sans-serif;white-space:nowrap}
+.kpi em{font-style:normal;font-size:12px;color:#2f9e6b;font-weight:700}
+.chart{display:flex;align-items:flex-end;gap:6px;height:118px;margin:14px 0 6px;padding:0 2px;border-bottom:1px solid var(--line)}
+.chart div{flex:1;border-radius:6px 6px 0 0;background:var(--pink);transform-origin:bottom;animation:grow .9s ease-out both}
+.chart div:nth-child(2n){background:#d9669a}.chart div:last-child{background:var(--gold)}
+@keyframes grow{from{transform:scaleY(0)}}
+.months{display:flex;gap:6px;font-size:11.5px;color:var(--mute)}.months span{flex:1;text-align:center}
+.orders{margin-top:12px;font-size:13.5px}
+.orders div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.st{font-size:12px;font-weight:700;padding:1px 9px;border-radius:999px;white-space:nowrap}
+.s1{background:#ffe7b0;color:#6b4300}.s2{background:#f9d0e0;color:#7a1f4c}.s3{background:#cdeedd;color:#155c3b}
+.yarn{position:absolute;left:-46px;bottom:-14px;width:min(160px,27%);z-index:2;filter:drop-shadow(0 14px 18px rgba(0,0,0,.35))}
+.sample{font-size:12.5px;color:#f1c4d6;margin-top:6px;text-align:right}
+@media(max-width:860px){.hero .wrap{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.dbody{grid-template-columns:minmax(0,1fr)}.side{display:none}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.yarn{display:none}}
+
+/* features */
+.feat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.f{border:1px solid var(--line);border-radius:18px;padding:22px;background:var(--bg)}
+.ico{width:46px;height:46px;border-radius:14px;background:var(--blush);display:grid;place-items:center;margin-bottom:14px}
+.ico svg{width:24px;height:24px;stroke:var(--plum);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+:root[data-theme=dark] .ico svg{stroke:var(--pink)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .ico svg{stroke:var(--pink)}}
+.f h3{margin-bottom:8px}.f p{color:var(--mute);margin:0}
+.f ul{margin:10px 0 0;padding-left:18px;color:var(--mute);font-size:15px}
+@media(max-width:980px){.feat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.feat{grid-template-columns:minmax(0,1fr)}}
+
+/* calculator */
+.calc{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:24px;align-items:start}
+.form{background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:22px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+label{display:block;font-weight:700;font-size:14.5px;margin-bottom:12px}
+label span{display:block;margin-bottom:5px}
+input,select{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+input:focus,select:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
+.unit{position:relative}.unit input{padding-left:50px}.unit::before{content:attr(data-u);position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13.5px;font-weight:700;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.seg button{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:700 14.5px Outfit,sans-serif;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--plum);border-color:var(--plum);color:#fff}
+.check{display:flex;align-items:center;gap:10px;font-weight:600;margin:4px 0 0}
+.check input{width:22px;min-height:22px;height:22px;accent-color:var(--plum)}
+.result{background:var(--plum);color:#fff;border-radius:20px;padding:24px;position:sticky;top:90px}
+.result small{color:#f6c8da;font-weight:600}
+.big{font:800 clamp(40px,5vw,56px)/1 Outfit,sans-serif;margin:6px 0 4px;white-space:nowrap}
+.lines{margin:18px 0 0;font-size:15px}
+.lines div{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.16)}
+.lines b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.meter{height:12px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;display:flex;margin-top:16px}
+.meter span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-top:8px;color:#f6c8da}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.result .btn{margin-top:18px;width:100%}
+.toast{min-height:22px;font-size:14px;color:var(--gold);margin-top:8px;text-align:center}
+@media(max-width:860px){.calc{grid-template-columns:minmax(0,1fr)}.result{position:static}}
+@media(max-width:480px){.row{grid-template-columns:minmax(0,1fr)}}
+
+/* how */
+.steps3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.flow{background:var(--bg);border-radius:18px;padding:22px;border:1px solid var(--line)}
+.flow h3{margin-bottom:14px}
+ol.st8{list-style:none;counter-reset:s;padding:0;margin:0}
+ol.st8 li{counter-increment:s;position:relative;padding:0 0 12px 40px;font-size:15.5px}
+ol.st8 li::before{content:counter(s);position:absolute;left:0;top:0;width:27px;height:27px;border-radius:50%;background:var(--pink);color:#2a1430;font:800 13.5px/27px Outfit,sans-serif;text-align:center}
+ol.st8 li:not(:last-child)::after{content:"";position:absolute;left:13px;top:29px;bottom:2px;border-left:2px dashed var(--pink)}
+@media(max-width:900px){.steps3{grid-template-columns:minmax(0,1fr)}}
+
+/* storefront */
+.shop{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:clamp(24px,4vw,56px);align-items:center}
+.store{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--panel);box-shadow:0 20px 40px rgba(74,29,79,.14)}
+.shead{background:var(--blush);padding:14px 18px;display:flex;align-items:center;gap:12px}
+.shead .av{width:40px;height:40px;border-radius:50%;background:var(--plum);color:#fff;display:grid;place-items:center;font:800 15px Outfit,sans-serif;flex:none}
+.shead b{font:700 17px Outfit,sans-serif;display:block}.shead small{color:var(--mute)}
+.shead .cart{margin-left:auto;font-weight:700;font-size:14px;background:var(--plum);color:#fff;border-radius:999px;padding:6px 12px;white-space:nowrap}
+.prods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px}
+.prod{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.prod svg{display:block;width:100%;height:auto;background:var(--card)}
+.prod div{padding:8px 10px;font-size:14px}
+.prod b{display:block;font-size:14.5px}
+.prod button{margin-top:6px;width:100%;min-height:38px;border-radius:999px;border:0;background:var(--gold);color:#2a1430;font:700 13.5px Outfit,sans-serif;cursor:pointer}
+.points{list-style:none;padding:0;margin:18px 0 0}
+.points li{padding-left:28px;position:relative;margin:10px 0}
+.points li::before{content:"";position:absolute;left:0;top:.45em;width:14px;height:14px;border-radius:50%;border:3px solid var(--pink)}
+@media(max-width:860px){.shop{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:480px){.prods{grid-template-columns:repeat(2,minmax(0,1fr))}.prods .prod:nth-child(3){display:none}}
+
+/* plans */
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.plan{border:1.5px solid var(--line);border-radius:22px;padding:26px;background:var(--bg);display:flex;flex-direction:column}
+.plan.pop{border-color:var(--gold);box-shadow:0 18px 40px rgba(255,182,39,.25);position:relative}
+.badge{position:absolute;top:-13px;left:24px;background:var(--gold);color:#2a1430;font:700 13px Outfit,sans-serif;padding:4px 12px;border-radius:999px}
+.plan .p{font:800 44px/1 Outfit,sans-serif;margin:14px 0 4px;white-space:nowrap}
+.plan .p small{font:600 16px "Nunito Sans",sans-serif;color:var(--mute)}
+.plan .for{color:var(--mute);font-size:15px;min-height:3em}
+.plan ul{list-style:none;padding:0;margin:16px 0 22px;flex:1}
+.plan li{padding:7px 0 7px 26px;border-top:1px solid var(--line);position:relative;font-size:15px}
+.plan li::before{content:"";position:absolute;left:2px;top:13px;width:12px;height:7px;border-left:2.5px solid #2f9e6b;border-bottom:2.5px solid #2f9e6b;transform:rotate(-45deg)}
+.plan li.x{color:var(--mute)}.plan li.x::before{border:0;width:12px;height:2.5px;background:var(--mute);transform:none;top:16px}
+.fine{font-size:14px;color:var(--mute);margin-top:18px}
+@media(max-width:900px){.plans{grid-template-columns:minmax(0,1fr)}}
+
+/* roles + roadmap */
+.roles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.role{border-radius:18px;padding:22px;color:#fff}
+.role h3{margin-bottom:8px}.role p{margin:0;opacity:.92}
+.road{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:30px;border-top:4px solid var(--line)}
+.ph{padding:18px 16px 0 0;position:relative}
+.ph::before{content:"";position:absolute;top:-12px;left:0;width:20px;height:20px;border-radius:50%;background:var(--c);border:4px solid var(--bg)}
+.ph small{font:700 13.5px Outfit,sans-serif;color:var(--mute)}
+.ph h3{margin:2px 0 6px}.ph p{font-size:15px;color:var(--mute)}
+@media(max-width:900px){.roles{grid-template-columns:minmax(0,1fr)}.road{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:26px}}
+@media(max-width:480px){.road{grid-template-columns:minmax(0,1fr);border-top:0;border-left:4px solid var(--line);margin-left:8px}.ph{padding:0 0 18px 24px}.ph::before{top:2px;left:-12px}}
+
+/* faq */
+.faq{max-width:860px}
+details{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;padding:18px 40px 18px 0;font:700 18px Outfit,sans-serif;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:6px;top:12px;font-size:28px;color:var(--pink)}
+details[open] summary::after{content:"–"}
+details p{color:var(--mute);padding-bottom:16px;margin:0}
+
+/* signup */
+.join{background:var(--plum);color:#fff}
+.join .wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,4vw,60px);align-items:center}
+.join p.l{font-size:18.5px;color:#f6d3e2;margin-top:12px}
+.sform{background:var(--panel);color:var(--ink);border-radius:20px;padding:24px}
+.sform .btn{width:100%;margin-top:6px}
+.err{color:#c62f5f;font-size:14px;min-height:20px;margin:-4px 0 8px}
+.ok{text-align:center;padding:20px 6px}
+.ok b{font:800 24px Outfit,sans-serif;display:block;margin-bottom:6px}
+@media(max-width:860px){.join .wrap{grid-template-columns:minmax(0,1fr)}}
+
+footer{background:#2f1233;color:#e7c5d5;font-size:14.5px}
+footer .wrap{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:24px}
+footer h4{font:700 15px Outfit,sans-serif;color:#fff;margin:0 0 10px}
+footer a{display:block;text-decoration:none;padding:3px 0}
+footer a:hover{color:#fff}
+.legal{max-width:1240px;margin:26px auto 0;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+@media(max-width:760px){footer .wrap{grid-template-columns:repeat(2,minmax(0,1fr))}footer .wrap>div:first-child{grid-column:1/-1}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="CrochetHub home">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".55" stroke-width="1.8" fill="none"/><path d="M8 26 26 5" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>
+      CrochetHub
+    </a>
+    <nav class="links" aria-label="Main">
+      <a href="#features">Features</a><a href="#calculator">Pricing calculator</a><a href="#how">How it works</a><a href="#storefront">Storefront</a><a href="#plans">Plans</a><a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn gold" href="#join">Start free trial</a>
+  </div>
+</header>
+
+<section class="hero band" id="top">
+  <div class="wrap">
+    <div>
+      <h1>Your crochet business. <em>One platform.</em></h1>
+      <p class="sub">Price every piece properly, send branded quotations and invoices, run your own online shop, and see exactly how your business is doing — all from one workspace made for crocheters and handmade makers.</p>
+      <div class="cta">
+        <a class="btn gold" href="#join">Start your free trial</a>
+        <a class="btn ghost" href="#calculator">Try the pricing calculator</a>
+      </div>
+      <div class="trust"><span>Prices in AED</span><span>VAT optional</span><span>Works on phone, tablet and desktop</span></div>
+    </div>
+    <div class="stage">
+      <div class="dash" aria-label="Preview of the CrochetHub business dashboard">
+        <div class="dtop"><i></i><i></i><i></i><b>Dashboard</b><small>This month</small></div>
+        <div class="dbody">
+          <div class="side"><div class="on">Dashboard</div><div>Products</div><div>Pricing</div><div>Quotations</div><div>Invoices</div><div>Orders</div><div>Inventory</div><div>Reports</div></div>
+          <div class="main">
+            <div class="kpis" id="kpis"></div>
+            <div class="chart" id="bars"></div>
+            <div class="months" id="months"></div>
+            <div class="orders" id="orders"></div>
+          </div>
+        </div>
+      </div>
+      <svg class="yarn" viewBox="0 0 200 200" aria-hidden="true">
+        <defs><radialGradient id="yb" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#ffc3d8"/><stop offset=".55" stop-color="#f48fb1"/><stop offset="1" stop-color="#b94a7a"/></radialGradient><clipPath id="yc"><circle cx="100" cy="105" r="78"/></clipPath></defs>
+        <circle cx="100" cy="105" r="78" fill="url(#yb)"/>
+        <g clip-path="url(#yc)" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="3"><path d="M24 70c40 26 110 32 150 4"/><path d="M22 96c44 26 116 30 156 2"/><path d="M24 122c44 22 110 26 152-4"/><path d="M36 148c40 18 96 18 130-6"/><path d="M80 28c-34 40-38 120 0 156" stroke-opacity=".22"/></g>
+        <ellipse cx="72" cy="66" rx="20" ry="11" fill="#fff" opacity=".25" transform="rotate(-30 72 66)"/>
+        <path d="M20 170 178 22" stroke="#e59400" stroke-width="9" stroke-linecap="round"/><path d="M20 170 178 22" stroke="#ffd36b" stroke-width="4" stroke-linecap="round"/>
+        <path d="M178 22c8-8 18-2 12 6" stroke="#e59400" stroke-width="7" fill="none" stroke-linecap="round"/>
+      </svg>
+      <div class="sample">Sample shop data, for illustration</div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="features">
+  <div class="wrap">
+    <div class="head"><h2>Everything a handmade business runs on</h2><p>Each business gets its own secure workspace and storefront. Your products, customers and money records are kept separate from every other shop on the platform.</p></div>
+    <div class="feat" id="feat"></div>
+  </div>
+</section>
+
+<section class="band alt" id="calculator">
+  <div class="wrap">
+    <div class="head"><h2>What should you charge for that bouquet?</h2><p>Add your yarn, extras, packaging and the hours you spent. CrochetHub adds overhead, applies your pricing method and shows a selling price you can save straight to the product.</p></div>
+    <div class="calc">
+      <form class="form" id="calcForm" onsubmit="return false">
+        <label><span>Product name</span><input id="pname" value="Custom crochet rose bouquet (12 stems)"></label>
+        <div class="row">
+          <label><span>Yarn &amp; materials</span><div class="unit" data-u="AED"><input id="mat" type="number" min="0" step="0.5" value="38" inputmode="decimal"></div></label>
+          <label><span>Accessories (wire, beads…)</span><div class="unit" data-u="AED"><input id="acc" type="number" min="0" step="0.5" value="12" inputmode="decimal"></div></label>
+        </div>
+        <div class="row">
+          <label><span>Packaging &amp; wrapping</span><div class="unit" data-u="AED"><input id="pack" type="number" min="0" step="0.5" value="15" inputmode="decimal"></div></label>
+          <label><span>Overhead (tools, electricity, fees)</span><div class="unit" data-u="%"><input id="ovh" type="number" min="0" max="100" step="1" value="10" inputmode="decimal"></div></label>
+        </div>
+        <div class="row">
+          <label><span>Hours to make</span><div class="unit" data-u="hrs"><input id="hrs" type="number" min="0" step="0.25" value="6" inputmode="decimal"></div></label>
+          <label><span>Your hourly rate</span><div class="unit" data-u="AED"><input id="rate" type="number" min="0" step="1" value="20" inputmode="decimal"></div></label>
+        </div>
+        <span style="display:block;font-weight:700;font-size:14.5px;margin-bottom:6px">Pricing method</span>
+        <div class="seg" id="method" role="group" aria-label="Pricing method"></div>
+        <div class="row">
+          <label><span id="pctLabel">Markup on cost</span><div class="unit" data-u="%"><input id="pct" type="number" min="0" max="500" step="1" value="40" inputmode="decimal"></div></label>
+          <label><span>Round price to nearest</span><select id="round"><option value="0">No rounding</option><option value="1">AED 1</option><option value="5" selected>AED 5</option><option value="10">AED 10</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" id="vat"> Add 5% UAE VAT to the customer price (if you are VAT registered)</label>
+      </form>
+      <aside class="result" aria-live="polite">
+        <small id="rName">Suggested selling price</small>
+        <div class="big" id="rPrice">AED 0</div>
+        <small id="rSub"></small>
+        <div class="meter" id="meter"></div>
+        <div class="legend" id="legend"></div>
+        <div class="lines" id="rLines"></div>
+        <button class="btn gold" type="button" id="saveBtn">Save price to product</button>
+        <div class="toast" id="toast"></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="how">
+  <div class="wrap">
+    <div class="head"><h2>From first stitch to paid invoice</h2><p>Three everyday flows, each a few clicks.</p></div>
+    <div class="steps3" id="flows"></div>
+  </div>
+</section>
+
+<section class="band alt" id="storefront">
+  <div class="wrap shop">
+    <div>
+      <h2>Your own shop, ready to share</h2>
+      <p style="font-size:18.5px;color:var(--mute);margin-top:12px">Every subscriber gets an independent public storefront with their logo and colours. Customers browse, ask about customisation, add to cart and send orders that land straight in your order list.</p>
+      <ul class="points">
+        <li>Product catalogue with photos, descriptions and prices</li>
+        <li>Customisation requests and inquiries</li>
+        <li>Cart, order submission and contact links</li>
+        <li>You control what's visible and what's available</li>
+      </ul>
+    </div>
+    <div class="store">
+      <div class="shead"><div class="av">CR</div><div><b>Rosie's Loops</b><small>Handmade crochet gifts · Dubai</small></div><span class="cart" id="cart">Cart · 0</span></div>
+      <div class="prods" id="prods"></div>
+      <div style="padding:0 16px 14px;font-size:12.5px;color:var(--mute)">Example storefront with a made-up shop.</div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="plans">
+  <div class="wrap">
+    <div class="head"><h2>Simple monthly plans</h2><p>Start small and upgrade as your shop grows. Annual billing is also available. Introductory prices.</p></div>
+    <div class="plans" id="planGrid"></div>
+    <p class="fine">Prices are introductory and may change. Upgrade, downgrade or cancel from your account at any time.</p>
+  </div>
+</section>
+
+<section class="band alt" id="team">
+  <div class="wrap">
+    <div class="head"><h2>Built for the whole team</h2><p>Grow from a solo maker to a small studio without changing tools.</p></div>
+    <div class="roles">
+      <div class="role" style="background:var(--plum)"><h3>Business owner</h3><p>Runs the shop: products, pricing, storefront, customers, quotations, invoices, orders, inventory, reports and billing.</p></div>
+      <div class="role" style="background:#a8437c"><h3>Staff members</h3><p>On the Business plan, add helpers and choose exactly what each can manage — products, orders, customers, quotations, invoices or inventory.</p></div>
+      <div class="role" style="background:#d9669a;color:#2a1430"><h3>Your customers</h3><p>Browse your storefront, request custom pieces and receive polished, branded quotations, invoices and receipts.</p></div>
+    </div>
+    <h3 style="margin-top:46px;font-size:24px">What's coming</h3>
+    <div class="road" id="road"></div>
+  </div>
+</section>
+
+<section class="band" id="faq">
+  <div class="wrap">
+    <div class="head"><h2>Questions makers ask</h2></div>
+    <div class="faq" id="faqs"></div>
+  </div>
+</section>
+
+<section class="band join" id="join">
+  <div class="wrap">
+    <div>
+      <h2>Open your CrochetHub workspace</h2>
+      <p class="l">Create your account, pick a plan and set up your business profile and logo. Then start adding products and pricing them properly.</p>
+    </div>
+    <div class="sform" id="sbox">
+      <form id="signup" novalidate>
+        <label><span>Your name</span><input id="sn" autocomplete="name" required></label>
+        <label><span>Business name</span><input id="sb" autocomplete="organization" required></label>
+        <label><span>Email</span><input id="se" type="email" autocomplete="email" required></label>
+        <label><span>Plan</span><select id="sp"><option>Starter — AED 29/month</option><option selected>Professional — AED 59/month</option><option>Business — AED 99/month</option></select></label>
+        <div class="err" id="serr" role="alert"></div>
+        <button class="btn plumb" type="submit">Create my account</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="band" style="padding-bottom:24px">
+  <div class="wrap">
+    <div><div class="logo" style="margin-bottom:10px">CrochetHub</div><p style="max-width:34ch">The business platform for crocheters and handmade entrepreneurs. Starting in the UAE.</p></div>
+    <div><h4>Product</h4><a href="#features">Features</a><a href="#calculator">Pricing calculator</a><a href="#storefront">Storefront</a><a href="#plans">Plans</a></div>
+    <div><h4>Get started</h4><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="#join">Start free trial</a></div>
+    <div><h4>Company</h4><a href="#team">Roadmap</a><a href="#faq">Support</a><a href="#faq">Privacy</a></div>
+  </div>
+  <div class="legal"><span>© 2026 CrochetHub</span><span>Made for makers in the UAE and beyond</span></div>
+</footer>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const aed=n=>'AED '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* dashboard mock */
+$('kpis').innerHTML=[['Revenue','AED 8,420','+12%'],['Net profit','AED 3,110','+8%'],['Orders','46','+5'],['Unpaid','AED 640','3 inv']].map(([a,b,c])=>`<div class="kpi"><small>${a}</small><b>${b}</b> <em>${c}</em></div>`).join('');
+const rev=[42,55,48,63,58,71,66,84];
+$('bars').innerHTML=rev.map((v,i)=>`<div style="height:${v}%;animation-delay:${i*60}ms"></div>`).join('');
+$('months').innerHTML=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'].map(m=>`<span>${m}</span>`).join('');
+$('orders').innerHTML=[['#1042 · Rose bouquet','In Production','s2'],['#1041 · Name frame','Ready for Delivery','s1'],['#1039 · Amigurumi bunny','Completed','s3']].map(([a,b,c])=>`<div><span>${a}</span><span class="st ${c}">${b}</span></div>`).join('');
+
+/* features */
+const I={
+ store:'<path d="M3 9l2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/>',
+ calc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M8 18h2M12 18h4"/>',
+ doc:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+ box:'<path d="M4 7l8-4 8 4v10l-8 4-8-4z"/><path d="M4 7l8 4 8-4M12 11v10"/>',
+ users:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 15c3 0 5 2 5 4"/>',
+ chart:'<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+ yarn:'<circle cx="12" cy="12" r="8"/><path d="M5 9c4 2 10 2 14 0M4.5 13c5 2 10 2 15 0M7 17c3 1 7 1 10 0"/>',
+ truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+ tag:'<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>'};
+const feats=[
+ ['store','Online storefront','Your own branded shop with catalogue, cart, custom requests and order submission.'],
+ ['calc','Crochet pricing calculator','Materials, accessories, packaging, labour and overhead, with cost-plus, markup, margin, hourly, wholesale and retail pricing.'],
+ ['tag','Product management','SKU, category, photos, costs, stock, production time and customisation options for bouquets, dolls, bags, clothing and gifts.'],
+ ['doc','Quotations & invoices','Branded PDFs with your logo. Track Sent, Accepted and Paid, turn an accepted quote into an invoice in one click, and record part payments.'],
+ ['truck','Order tracking','Follow every order from Pending and In Production through Quality Checking to Ready for Delivery and Completed.'],
+ ['yarn','Yarn & inventory','Track yarn by brand, colour, quantity, cost and supplier, with low-stock alerts before you run out mid-project.'],
+ ['users','Customers','Contact details, delivery addresses, notes, purchase history and outstanding balances in one place.'],
+ ['chart','Dashboard & reports','Revenue, expenses, profit, best sellers and unpaid invoices at a glance. Export monthly and yearly reports to PDF or Excel.'],
+ ['box','Subscriptions that fit','Monthly or annual billing, upgrade or downgrade any time, and a free trial to get started.']];
+$('feat').innerHTML=feats.map(([i,t,d])=>`<article class="f"><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${I[i]}</svg></div><h3>${t}</h3><p>${d}</p></article>`).join('');
+
+/* calculator */
+const methods=[['markup','Markup','Markup on cost'],['margin','Gross margin','Target gross margin'],['hourly','Hourly only','Profit on top of labour'],['wholesale','Wholesale + retail','Wholesale markup on cost']];
+let method='markup';
+$('method').innerHTML=methods.map(([k,t])=>`<button type="button" data-m="${k}" aria-pressed="${k===method}">${t}</button>`).join('');
+const num=id=>Math.max(0,parseFloat($(id).value)||0);
+const roundTo=(v,r)=>r>0?Math.ceil(v/r)*r:Math.round(v*100)/100;
+function calc(){
+  const mat=num('mat'),acc=num('acc'),pack=num('pack'),labour=num('hrs')*num('rate');
+  const direct=mat+acc+pack+labour,ovh=direct*num('ovh')/100,cost=direct+ovh;
+  let pct=num('pct'),price,note='',extra='';
+  if(method==='margin'){pct=Math.min(pct,95);price=cost/(1-pct/100);note=`${pct}% gross margin on full cost`}
+  else if(method==='hourly'){price=cost;note='Covers costs and pays your hourly rate; profit comes from your rate'}
+  else{price=cost*(1+pct/100);note=`${pct}% markup on full cost`}
+  const r=+$('round').value;price=roundTo(price,r);
+  if(method==='wholesale'){const retail=roundTo(price*2,r);extra=retail;note=`Wholesale price · suggested retail ${aed(retail)} (2× wholesale)`}
+  const vat=$('vat').checked?price*0.05:0,profit=price-cost,m=price>0?profit/price*100:0;
+  $('rName').textContent=($('pname').value.trim()||'Your product')+(method==='wholesale'?' — wholesale':' — selling price');
+  $('rPrice').textContent=aed(price+vat);
+  $('rSub').textContent=note+(vat?` · includes VAT ${aed(vat)}`:'');
+  const parts=[['Materials & extras',mat+acc+pack,'#f48fb1'],['Your labour',labour,'#ffd36b'],['Overhead',ovh,'#c98bd0'],['Profit',Math.max(profit,0),'#7fe0b0']];
+  const tot=parts.reduce((s,p)=>s+p[1],0)||1;
+  $('meter').innerHTML=parts.map(p=>`<span style="width:${p[1]/tot*100}%;background:${p[2]}"></span>`).join('');
+  $('legend').innerHTML=parts.map(p=>`<span><i style="background:${p[2]}"></i>${p[0]}</span>`).join('');
+  $('rLines').innerHTML=[['Materials, accessories & packaging',aed(mat+acc+pack)],['Labour ('+num('hrs')+' h × '+aed(num('rate'))+')',aed(labour)],['Overhead ('+num('ovh')+'%)',aed(ovh)],['Total cost',aed(cost)],['Profit per piece',aed(profit)],['Profit margin',m.toFixed(1)+'%']].map(([a,b])=>`<div><span>${esc(a)}</span><b>${b}</b></div>`).join('');
+}
+$('method').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;method=b.dataset.m;
+  for(const x of $('method').children)x.setAttribute('aria-pressed',x===b);
+  const lab=methods.find(m=>m[0]===method)[2];$('pctLabel').textContent=lab;
+  $('pct').disabled=method==='hourly';
+  if(method==='margin'&&num('pct')>90)$('pct').value=40;calc()});
+$('calcForm').addEventListener('input',calc);
+$('saveBtn').addEventListener('click',()=>{$('toast').textContent='Saved to “'+($('pname').value.trim()||'Your product')+'” — in the app this updates the product listing.';});
+calc();
+
+/* flows */
+const flows=[['Get set up',['Sign up with your email','Verify your email address','Choose a plan and pay securely','Add your business profile and logo','Open your dashboard and add products']],
+ ['Add a product',['Go to Products → Add product','Enter details and upload photos','Open the pricing calculator','Check the suggested price and save it','Publish to your storefront']],
+ ['Quote to invoice',['Pick a customer and add items','Send the branded quotation PDF','Mark it accepted when they say yes','Convert it to an invoice in one click','Record payment — status updates itself']]];
+$('flows').innerHTML=flows.map(([t,s])=>`<div class="flow"><h3>${t}</h3><ol class="st8">${s.map(x=>`<li>${x}</li>`).join('')}</ol></div>`).join('');
+
+/* storefront */
+const prodArt=[
+ '<g transform="translate(60 52)"><path d="M0 40 -8 90M0 40 8 90M0 40 0 92" stroke="#3f8a5b" stroke-width="3"/><path d="M-26 58h52l-12 34h-28z" fill="#ffb627"/>'+[[-16,22,'#f48fb1'],[16,22,'#d9669a'],[0,6,'#f48fb1'],[-4,34,'#fff0f5'],[18,40,'#f9c1d6']].map(([x,y,c])=>`<circle cx="${x}" cy="${y}" r="14" fill="${c}"/><circle cx="${x}" cy="${y}" r="6" fill="#00000018"/>`).join('')+'</g>',
+ '<g transform="translate(60 60)"><ellipse cx="0" cy="36" rx="30" ry="6" fill="#0002"/><ellipse cx="-12" cy="-30" rx="7" ry="20" fill="#fff0f5" stroke="#e6b7c9"/><ellipse cx="12" cy="-30" rx="7" ry="20" fill="#fff0f5" stroke="#e6b7c9"/><circle cx="0" cy="0" r="22" fill="#fff0f5" stroke="#e6b7c9"/><ellipse cx="0" cy="26" rx="20" ry="14" fill="#fff0f5" stroke="#e6b7c9"/><circle cx="-8" cy="-2" r="2.5" fill="#2a1430"/><circle cx="8" cy="-2" r="2.5" fill="#2a1430"/><circle cx="-13" cy="6" r="4" fill="#f9c1d6"/><circle cx="13" cy="6" r="4" fill="#f9c1d6"/></g>',
+ '<g transform="translate(60 60)"><rect x="-38" y="-38" width="76" height="76" rx="6" fill="#ffb627"/><rect x="-30" y="-30" width="60" height="60" rx="3" fill="#fff"/><path d="M-20 4c4-10 8-10 10 0s6 10 10 0 8-10 10 0" stroke="#d9669a" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="-10" cy="-14" r="5" fill="#f48fb1"/><circle cx="12" cy="-14" r="4" fill="#4a1d4f"/></g>'];
+const prods=[['Rose bouquet, 12 stems',185],['Amigurumi bunny',95],['Crochet name in frame',120]];
+let cart=0;
+$('prods').innerHTML=prods.map(([n,p],i)=>`<div class="prod"><svg viewBox="0 0 120 120" aria-hidden="true">${prodArt[i]}</svg><div><b>${n}</b>AED ${p}<button type="button" data-add>Add to cart</button></div></div>`).join('');
+$('prods').addEventListener('click',e=>{if(e.target.matches('[data-add]')){cart++;$('cart').textContent='Cart · '+cart;e.target.textContent='Added ✓';setTimeout(()=>e.target.textContent='Add to cart',1200)}});
+
+/* plans */
+const plans=[
+ ['Starter',29,'For makers just starting to sell.',[['20 product listings',1],['Basic dashboard & pricing calculator',1],['10 quotations & 10 invoices a month',1],['Basic online store',1],['Basic customer list & sales reports',1],['Limited inventory',1],['Production tracking',0],['Staff accounts',0]]],
+ ['Professional',59,'For growing shops with steady orders.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management & reports',1],['Full inventory',1],['Basic production tracking',1],['Staff accounts',0]],1],
+ ['Business',99,'For studios with a team.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management',1],['Advanced inventory & sales reports',1],['Full production tracking',1],['Multiple staff accounts',1]]]];
+$('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p">AED ${p}<small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
+$('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const s=$('sp');if(s)[...s.options].forEach(o=>o.selected=o.text.startsWith(a.dataset.plan))});
+
+/* roadmap */
+const road=[['Phase 1','The essentials','Accounts, subscriptions, products, pricing calculator, quotations, invoices and dashboard.','#f48fb1'],['Phase 2','Selling online','Storefronts, public catalogue, cart, checkout, orders and customer database.','#ffb627'],['Phase 3','Running the studio','Yarn inventory, production, expenses, advanced reports and staff accounts.','#a8437c'],['Phase 4','Going further','Marketing and email tools, more currencies, custom domains and more payment options.','#4a1d4f']];
+$('road').innerHTML=road.map(([a,b,c,col])=>`<div class="ph" style="--c:${col}"><small>${a}</small><h3>${b}</h3><p>${c}</p></div>`).join('');
+
+/* faq */
+const faqs=[['Who is CrochetHub for?','Crocheters, handmade product creators and small craft businesses who want one place to price, sell, invoice and track their work. We are starting in the UAE, with international support planned.'],
+ ['Is my business data private?','Yes. Every business has its own isolated workspace. Your products, customers, orders and financial records can only be seen by you and the staff you give access to.'],
+ ['Do I need to be VAT registered?','No. Tax is optional and configurable. If you are VAT registered you can add your details and VAT appears on quotations and invoices; if not, it stays off.'],
+ ['Can I change plans later?','Yes. You can upgrade, downgrade or cancel from your account. Monthly and annual billing are both available, and new accounts can start with a free trial.'],
+ ['How does the pricing calculator work?','You enter materials, accessories, packaging, hours and your hourly rate. CrochetHub adds your overhead and applies the method you choose — markup, gross margin, hourly, wholesale or retail — then you save the price to the product.'],
+ ['Can I use it on my phone?','Yes. CrochetHub and your storefront work in current versions of Chrome, Edge, Firefox and Safari on phones, tablets and computers.']];
+$('faqs').innerHTML=faqs.map(([q,a],i)=>`<details${i===0?' open':''}><summary>${q}</summary><p>${a}</p></details>`).join('');
+
+/* signup */
+$('signup').addEventListener('submit',e=>{e.preventDefault();
+  const n=$('sn').value.trim(),b=$('sb').value.trim(),em=$('se').value.trim();
+  if(!n||!b){$('serr').textContent='Please enter your name and business name.';return}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){$('serr').textContent='Please enter a valid email address.';$('se').focus();return}
+  $('sbox').innerHTML=`<div class="ok"><b>Welcome, ${esc(n)}!</b><p>We'd send a verification link to <strong>${esc(em)}</strong> to set up <strong>${esc(b)}</strong> on the ${esc($('sp').value.split(' —')[0])} plan.</p><p style="color:var(--mute);font-size:14px">This is a website preview — no account was created and no email was sent.</p></div>`});
+}
+</script>
+</body>
+</html>
