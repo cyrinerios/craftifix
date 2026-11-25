@@ -63,6 +63,20 @@ input:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,
 .msg{min-height:22px;font-size:14px;margin-top:10px;color:var(--mute)}
 .wide{grid-column:span 2}
 .loading{color:var(--mute);text-align:center;padding:60px 0}
+.mini{font:700 13px "Nunito Sans",sans-serif;border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
+.full{grid-column:1/-1}
+.pill{font:700 13px "Nunito Sans",sans-serif;color:var(--mute)}
+.ord{border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+.ord summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto auto;gap:6px 14px;align-items:center;padding:12px 14px}
+.ord summary::-webkit-details-marker{display:none}
+.ord summary small{grid-column:1/-1;color:var(--mute);margin-top:-4px}
+.ord summary span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ob{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:4px 14px 14px;border-top:1px solid var(--line)}
+.cust{font-size:14.5px;line-height:1.6;padding-top:8px}
+.cust select{width:100%;min-height:42px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:15px "Nunito Sans",sans-serif;padding:0 10px}
+.st{font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--blush)}
+.st-new{background:#ffe7b0;color:#6b4300}.st-completed{background:#cdeedd;color:#155c3b}.st-cancelled{background:#eee3e9;color:#6d5670}
+@media(max-width:700px){.ord summary{grid-template-columns:minmax(0,1fr) auto}.ob{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.wide{grid-column:auto}.welcome{grid-template-columns:minmax(0,1fr)}}
 
 footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding:18px}
@@ -127,6 +141,7 @@ function showAccount(u,welcome){
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Products',u.productCount||0,p.limits.products],['Quotations this month',0,p.limits.quotationsPerMonth],['Invoices this month',0,p.limits.invoicesPerMonth]];
   main.innerHTML=`
+  ${!u.whatsapp?`<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Add your WhatsApp number (Edit details) so customer orders from your shop reach you on WhatsApp too.</div>`:''}
   ${welcome?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.</div>`:''}
   <section class="welcome">
     <div><h1>Hi ${esc(u.name.split(' ')[0])}, welcome to ${esc(u.business)}</h1>
@@ -138,13 +153,24 @@ function showAccount(u,welcome){
     </div>
   </section>
   <div class="grid">
-    <div class="card"><h3>Account</h3><div class="kv">
+    <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center">Account <button class="mini" type="button" id="editBtn">Edit details</button></h3>
+      <div class="kv" id="kvView">
       <div><span>User ID</span><b>${esc(u.userId)}</b></div>
       <div><span>Name</span><b>${esc(u.name)}</b></div>
       <div><span>Business</span><b>${esc(u.business)}</b></div>
       <div><span>Email</span><b>${esc(u.email)}</b></div>
+      <div><span>WhatsApp</span><b>${u.whatsapp?esc(u.whatsapp):'<span style="color:#c62f5f">Not set</span>'}</b></div>
       <div><span>Member since</span><b>${esc(since)}</b></div>
-    </div></div>
+      </div>
+      <form id="editForm" hidden novalidate>
+        <label><span>Name</span><input id="eName" value="${esc(u.name)}" maxlength="80"></label>
+        <label><span>Business name</span><input id="eBiz" value="${esc(u.business)}" maxlength="80"></label>
+        <label><span>Email</span><input id="eEmail" type="email" value="${esc(u.email)}"></label>
+        <label><span>WhatsApp number</span><input id="eWa" type="tel" inputmode="tel" value="${esc(u.whatsapp||'')}" placeholder="+971 55 123 4567"></label>
+        <div class="err" id="eErr" role="alert"></div>
+        <div style="display:flex;gap:8px"><button class="btn plumb" type="submit" style="flex:1">Save</button><button class="btn ghost" type="button" id="eCancel" style="color:var(--ink);border-color:var(--line)">Cancel</button></div>
+      </form>
+    </div>
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
       <div><span>Price</span><b>AED ${p.price} / month</b></div>
@@ -162,6 +188,9 @@ function showAccount(u,welcome){
       <div class="plans" id="plans">${ALL.map(([id,n,pr])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>AED ${pr}/month</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
       <div class="msg" id="pmsg" role="status"></div>
     </div>
+    <div class="card full"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Orders from your shop <span class="pill" id="ocount"></span></h3>
+      <div id="orders"><p class="msg">Loading orders…</p></div>
+    </div>
   </div>`;
   $('plans').addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b)return;
     b.disabled=true;b.textContent='Switching…';
@@ -170,8 +199,38 @@ function showAccount(u,welcome){
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else{$('pmsg').textContent=r.data.error||'Could not change plan.';b.disabled=false;b.textContent='Switch'}
   });
+  $('editBtn').addEventListener('click',()=>{$('kvView').hidden=true;$('editForm').hidden=false;$('editBtn').hidden=true;$('eWa').focus()});
+  $('eCancel').addEventListener('click',()=>{$('kvView').hidden=false;$('editForm').hidden=true;$('editBtn').hidden=false});
+  $('editForm').addEventListener('submit',async e=>{e.preventDefault();
+    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value})}).catch(()=>({ok:false,data:{}}));
+    if(r.ok)showAccount({...r.data.user,productCount:u.productCount},false);
+    else if(r.status===401)showLogin('Your session ended. Please log in again.');
+    else $('eErr').textContent=r.data.error||'Could not save.'});
+  loadOrders();
 }
 
+const ST=[['new','New'],['confirmed','Confirmed'],['in_production','In production'],['ready','Ready for delivery'],['completed','Completed'],['cancelled','Cancelled']];
+const aed=n=>'AED '+Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const wa=n=>'https://wa.me/'+String(n).replace(/\D/g,'');
+async function loadOrders(){
+  const r=await api('/api/orders').catch(()=>({ok:false,data:{}}));
+  if(!$('orders'))return;
+  if(!r.ok){$('orders').innerHTML='<p class="msg">Could not load orders.</p>';return}
+  renderOrders(r.data.orders||[]);
+}
+function renderOrders(list){
+  const open=list.filter(o=>!['completed','cancelled'].includes(o.status)).length;
+  $('ocount').textContent=list.length?`${open} open · ${list.length} total`:'';
+  if(!list.length){$('orders').innerHTML='<p class="msg">No orders yet. Share your shop link with customers — their orders will appear here, in your email and on WhatsApp.</p>';return}
+  $('orders').innerHTML=list.map(o=>`<details class="ord"${o.status==='new'?' open':''}><summary><b>${esc(o.orderNo)}</b><span>${esc(o.customer.name)}</span><span>${aed(o.total)}</span><span class="st st-${esc(o.status)}">${esc((ST.find(s=>s[0]===o.status)||['','New'])[1])}</span><small>${esc(new Date(o.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</small></summary>
+    <div class="ob"><div><div class="kv">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}<div><span><b>Total</b></span><b>${aed(o.total)}</b></div></div></div>
+    <div class="cust"><b>${esc(o.customer.name)}</b><br><a href="mailto:${esc(o.customer.email)}">${esc(o.customer.email)}</a><br><a href="${wa(o.customer.whatsapp)}" target="_blank" rel="noopener">WhatsApp ${esc(o.customer.whatsapp)}</a><br><span>${esc(o.customer.address)}</span>${o.customer.notes?`<br><i>“${esc(o.customer.notes)}”</i>`:''}
+    <label style="margin-top:10px"><span>Status</span><select data-o="${esc(o.id)}">${ST.map(([k,t])=>`<option value="${k}"${k===o.status?' selected':''}>${t}</option>`).join('')}</select></label></div></div></details>`).join('');
+  $('orders').onchange=async e=>{const sel=e.target.closest('select[data-o]');if(!sel)return;sel.disabled=true;
+    const r=await api('/api/orders?id='+encodeURIComponent(sel.dataset.o),{method:'PUT',body:JSON.stringify({status:sel.value})}).catch(()=>({ok:false,data:{}}));
+    if(r.ok)renderOrders(r.data.orders);else{sel.disabled=false;alertMsg('Could not update the order.')}};
+}
+function alertMsg(m){const p=$('pmsg');if(p)p.textContent=m}
 $('logout').addEventListener('click',async()=>{await api('/api/logout',{method:'POST'}).catch(()=>{});showLogin('You have logged out.')});
 
 (async()=>{

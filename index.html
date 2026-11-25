@@ -403,7 +403,11 @@ footer a:hover{color:#fff}
           <label><span>Your name</span><input id="sn" name="name" autocomplete="name" required maxlength="80"></label>
           <label><span>Business name</span><input id="sb" name="business" autocomplete="organization" required maxlength="80"></label>
         </div>
-        <label><span>Email</span><input id="se" name="email" type="email" autocomplete="email" required></label>
+        <div class="row">
+          <label><span>Email</span><input id="se" name="email" type="email" autocomplete="email" required></label>
+          <label><span>WhatsApp number</span><input id="sw" name="whatsapp" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+971 55 123 4567"></label>
+        </div>
+        <small class="hint" style="margin:-6px 0 12px">Customer orders from your shop are sent to this email and WhatsApp number.</small>
         <label><span>User ID</span><input id="su" name="userId" autocomplete="username" required minlength="3" maxlength="20" placeholder="e.g. rosiesloops" autocapitalize="none" spellcheck="false"><small class="hint">3–20 characters: letters, numbers, dot, dash or underscore</small></label>
         <div class="row">
           <label><span>Password</span><input id="spw" name="password" type="password" autocomplete="new-password" required minlength="8"><small class="hint">At least 8 characters, with a letter and a number</small></label>
@@ -539,12 +543,14 @@ $('faqs').innerHTML=faqs.map(([q,a],i)=>`<details${i===0?' open':''}><summary>${
 
 /* signup — creates a real account through /api/signup (payment skipped) */
 $('pick').innerHTML=plans.map(([n,p,,,pop])=>`<label><input type="radio" name="plan" value="${n.toLowerCase()}"${pop?' checked':''}><span><b>${n}</b><small>AED ${p}/mo</small></span></label>`).join('');
-const fields={userId:'su',password:'spw',name:'sn',business:'sb',email:'se'};
+const fields={userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw'};
+const normWA=v=>{let x=String(v||'').trim().replace(/[\s\-().]/g,'');if(x.startsWith('00'))x='+'+x.slice(2);if(/^05\d{8}$/.test(x))x='+971'+x.slice(1);return/^\+\d{8,15}$/.test(x)?x:''};
 $('signup').addEventListener('submit',async e=>{e.preventDefault();
   const err=m=>{$('serr').textContent=m};
-  const d={name:$('sn').value.trim(),business:$('sb').value.trim(),email:$('se').value.trim(),userId:$('su').value.trim().toLowerCase(),password:$('spw').value,plan:(document.querySelector('#pick input:checked')||{}).value};
+  const d={name:$('sn').value.trim(),business:$('sb').value.trim(),email:$('se').value.trim(),whatsapp:normWA($('sw').value),userId:$('su').value.trim().toLowerCase(),password:$('spw').value,plan:(document.querySelector('#pick input:checked')||{}).value};
   if(!d.name||!d.business)return err('Please enter your name and business name.');
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){$('se').focus();return err('Please enter a valid email address.')}
+  if(!d.whatsapp){$('sw').focus();return err('Please enter your WhatsApp number with country code, e.g. +971 55 123 4567.')}
   if(!/^[a-z0-9][a-z0-9._-]{2,19}$/.test(d.userId)){$('su').focus();return err('User ID must be 3–20 characters: letters, numbers, dot, dash or underscore.')}
   if(d.password.length<8||!/[a-zA-Z]/.test(d.password)||!/[0-9]/.test(d.password)){$('spw').focus();return err('Password must be at least 8 characters with a letter and a number.')}
   if(d.password!==$('spw2').value){$('spw2').focus();return err('The two passwords don’t match.')}

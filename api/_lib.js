@@ -203,6 +203,50 @@ export async function uploadImage(uid, dataUrl) {
   return blob.url;
 }
 
+/* ---------- WhatsApp numbers ---------- */
+// Accepts +971 55 741 2445, 00971557412445 or UAE local 0557412445. Returns "+971557412445" or "".
+export function normWhatsApp(v) {
+  let s = String(v || '').trim().replace(/[\s\-().]/g, '');
+  if (s.startsWith('00')) s = '+' + s.slice(2);
+  if (/^05\d{8}$/.test(s)) s = '+971' + s.slice(1);
+  if (/^\+\d{8,15}$/.test(s)) return s;
+  return '';
+}
+export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
+
+/* ---------- orders (one encrypted list per business) ---------- */
+const ordersPath = (uid) => 'orders/' + crypto.createHmac('sha256', SECRET).update('orders:' + uid).digest('hex') + '.json';
+export async function getOrders(uid) {
+  let meta;
+  try { meta = await head(ordersPath(uid)); }
+  catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
+  const r = await fetch(meta.url + '?v=' + Date.now(), { cache: 'no-store' });
+  return r.ok ? decrypt(await r.text()) : [];
+}
+export async function saveOrders(uid, list) {
+  await put(ordersPath(uid), encrypt(list), {
+    access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 60
+  });
+}
+
+/* ---------- email (Resend) ---------- */
+// Sends only when RESEND_API_KEY is set. EMAIL_FROM must be a sender on a domain verified in Resend
+// (without a domain, Resend's test sender onboarding@resend.dev can only deliver to the Resend account's own email).
+export async function sendEmail({ to, subject, text, html, replyTo }) {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return { sent: false, reason: 'not_configured' };
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: process.env.EMAIL_FROM || 'CrochetHub Orders <onboarding@resend.dev>', to: [].concat(to), subject, text, html, reply_to: replyTo || undefined })
+    });
+    if (!r.ok) { console.error('Resend error', r.status, await r.text().catch(() => '')); return { sent: false, reason: 'provider_error' }; }
+    return { sent: true };
+  } catch (e) { console.error('Resend failed', e); return { sent: false, reason: 'provider_error' }; }
+}
+export const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 export function requireUser(req, res) {
   const uid = readSession(req);
   if (!uid) { send(res, 401, { error: 'Please log in again.' }); return null; }

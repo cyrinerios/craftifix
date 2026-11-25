@@ -18,6 +18,6 @@ export default async function handler(req, res) {
         vatIncluded: !!p.costing.vat,
         inStock: p.quantity > 0, quantity: p.quantity, customizable: p.customizable, productionDays: p.productionDays
       }));
-    send(res, 200, { shop: { userId: user.userId, business: user.business, owner: user.name, email: user.email }, products });
+    send(res, 200, { shop: { userId: user.userId, business: user.business, owner: user.name, hasWhatsApp: !!user.whatsapp }, products });
   } catch (e) { fail(res, e); }
 }
