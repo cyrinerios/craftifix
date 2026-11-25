@@ -21,6 +21,11 @@ a{color:inherit}
 .bar{background:var(--plum);color:#fff;position:sticky;top:0;z-index:10}
 .bar .in{display:flex;align-items:center;gap:6px;padding:8px max(4vw,16px);max-width:1320px;margin:0 auto}
 .logo{display:flex;align-items:center;gap:10px;font:800 20px Outfit,sans-serif;text-decoration:none;color:#fff;margin-right:auto}
+.planpill{display:inline-flex;align-items:center;gap:6px;flex:none;background:#ffb627;color:#2a1430;font:700 13px Outfit,sans-serif;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap}
+.planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.planpill:hover{filter:brightness(1.05)}
+@media(max-width:640px){.planpill .pst{display:none}}
+.who{font-size:14.5px;color:#f6c8da;white-space:nowrap;margin-right:4px}
 .bar nav{display:flex;gap:2px;overflow-x:auto}
 .bar nav a,.bar nav button{color:#fff;text-decoration:none;font:600 14.5px "Nunito Sans",sans-serif;padding:10px 12px;border-radius:999px;white-space:nowrap;background:none;border:0;cursor:pointer;min-height:44px}
 .bar nav a:hover,.bar nav button:hover{background:rgba(255,255,255,.12)}
@@ -111,7 +116,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
 .dialog p{color:var(--mute)}
 .center{display:grid;place-items:center;min-height:50vh;text-align:center;color:var(--mute)}
 @media(max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:560px){.row,.row3{grid-template-columns:minmax(0,1fr)}.photo{grid-template-columns:96px minmax(0,1fr)}.thumb{width:96px;height:96px}.bar nav .hide-s{display:none}.logo span{display:none}}
+@media(max-width:560px){.row,.row3{grid-template-columns:minmax(0,1fr)}.photo{grid-template-columns:96px minmax(0,1fr)}.thumb{width:96px;height:96px}.bar .in{flex-wrap:wrap;row-gap:2px}.bar nav{order:3;width:100%;justify-content:space-between}.bar nav .hide-s{display:none}.who{display:none}.planpill{font-size:12px;padding:4px 9px}}
 </style>
 </head>
 <body>
@@ -120,6 +125,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
     <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".55" stroke-width="1.8" fill="none"/><path d="M8 26 26 5" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>
     <span>CrochetHub</span>
   </a>
+  <span class="who" id="who"></span>
+  <a class="planpill" id="planPill" href="/account.html#settings" hidden title="Your plan — open Settings"></a>
   <nav aria-label="Workspace">
     <a href="/account.html" class="hide-s">Dashboard</a>
     <a href="/products.html" class="on" aria-current="page">My products</a>
@@ -308,6 +315,8 @@ function mount(){
   const shopUrl='/shop.html?u='+encodeURIComponent(state.user.userId);
   $('viewShop').href=shopUrl;$('shopLink').href=shopUrl;$('shopLink').target='_blank';
   $('hello').textContent=`${state.user.business} · ${state.user.planDetails.name} plan`;
+  $('who').textContent='@'+state.user.userId;
+  {const st=state.user.subscription?.status||'active';$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${st==='active'?'#2f9e6b':'#c62f5f'}"></i>${esc(state.user.planDetails.name)}<span class="pst"> · ${st==='active'?'Active':esc(st[0].toUpperCase()+st.slice(1))}</span>`}
   $('category').innerHTML=CATS.map(c=>`<option>${esc(c)}</option>`).join('');
   $('method').innerHTML=METHODS.map(([k,t])=>`<button type="button" data-m="${k}" aria-pressed="false">${t}</button>`).join('');
   $('method').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;setMethod(b.dataset.m);if(b.dataset.m==='margin'&&num('pct')>90)$('pct').value=40;render()});

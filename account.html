@@ -62,13 +62,18 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .pl .btn{min-height:40px;font-size:14px;padding:0 16px}
 .msg{min-height:22px;font-size:14px;margin-top:10px;color:var(--mute)}
 .wide{grid-column:span 2}
+.planpill{display:inline-flex;align-items:center;gap:6px;flex:none;background:#ffb627;color:#2a1430;font:700 13px Outfit,sans-serif;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap}
+.planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.planpill:hover{filter:brightness(1.05)}
+@media(max-width:640px){.planpill .pst{display:none}}
 .wnav{display:flex;gap:2px;overflow-x:auto}
 .wnav a{color:#fff;font-weight:700;text-decoration:none;padding:9px 12px;border-radius:999px;white-space:nowrap;font-size:14.5px}
 .wnav a:hover{background:rgba(255,255,255,.12)}.wnav a.on{background:rgba(255,255,255,.2)}
 .sethead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:6px}
 .sethead h1{font-size:clamp(28px,3.6vw,40px)}.sethead p{margin:6px 0 0;color:var(--mute)}
-@media(max-width:640px){.bar .in{flex-wrap:wrap;row-gap:4px}.bar .who{display:none}#logout{margin-left:auto}.wnav{order:3;width:100%;justify-content:space-between}.wnav a{padding:8px 10px;font-size:14.5px}}
+@media(max-width:640px){.bar .in{flex-wrap:wrap;row-gap:4px}.bar .who{display:none}#logout{margin-left:auto;min-height:36px!important;padding:0 14px;font-size:14px}.planpill{font-size:12px;padding:4px 9px}.bar .logo{font-size:18px;gap:8px}.bar .in{gap:8px}.wnav{order:3;width:100%;justify-content:space-between}.wnav a{padding:8px 10px;font-size:14.5px}}
 #logout{white-space:nowrap}
+@media(max-width:420px){.bar .logo{font-size:0!important;gap:0!important}}
 .loading{color:var(--mute);text-align:center;padding:60px 0}
 .mini{font:700 13px "Nunito Sans",sans-serif;border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
 .full{grid-column:1/-1}
@@ -126,6 +131,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
     CrochetHub
   </a>
   <span class="who" id="who"></span>
+  <a class="planpill" id="planPill" href="/account.html#settings" hidden title="Your plan — open Settings"></a>
   <nav id="wnav" class="wnav" hidden aria-label="Workspace"><a href="/account.html" data-v="dashboard">Dashboard</a><a href="/products.html" data-v="products">My products</a><a href="/account.html#settings" data-v="settings">Settings</a></nav>
   <button class="btn ghost" id="logout" type="button" hidden style="min-height:40px;color:#fff">Log out</button>
 </div></header>
@@ -149,7 +155,7 @@ async function api(path,opts={}){
 }
 
 function showLogin(note){
-  $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;
+  $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;$('planPill').hidden=true;
   main.innerHTML=`<div class="center"><form class="box" id="lf" novalidate>
     <h1>Log in</h1><p>Welcome back to your CrochetHub workspace.</p>
     ${note?`<div class="ribbon">${esc(note)}</div>`:''}
@@ -181,6 +187,7 @@ function showAccount(u,welcome){
   const p=u.planDetails;
   const view=location.hash==='#settings'?'settings':'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
+  const st=(u.subscription?.status||'active');$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${st==='active'?'#2f9e6b':'#c62f5f'}"></i>${esc(p.name)}<span class="pst"> · ${st==='active'?'Active':esc(st[0].toUpperCase()+st.slice(1))}</span>`;
   document.title=(view==='settings'?'Settings':'Dashboard')+' — CrochetHub';
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Products',u.productCount||0,p.limits.products],['Quotations this month',0,p.limits.quotationsPerMonth],['Invoices this month',0,p.limits.invoicesPerMonth]];
