@@ -27,3 +27,9 @@ Open `index.html` in a browser.
 - The order is saved to the owner's account (Account page → Orders from your shop, with status updates), emailed to the owner, and WhatsApp opens on the customer's phone with the order addressed to the owner's WhatsApp number (customer taps send).
 - WhatsApp number is required at sign-up and editable on the Account page.
 - **Email sending** uses [Resend](https://resend.com). Set `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `CrochetHub Orders <orders@yourdomain.com>`, on a domain verified in Resend) in Vercel → Project → Settings → Environment Variables, then redeploy. Without them, orders are still saved and sent by WhatsApp, and the customer is offered an "Also send by email" button instead.
+
+## Customer status updates
+- On Account → Orders, changing an order's status (Confirmed, In production, Ready for delivery, Completed, Cancelled) notifies the customer:
+  - **Email** to the customer (reply-to = owner's email) when Resend is configured; otherwise a "Send email" button opens a pre-filled email.
+  - **WhatsApp**: a new tab opens WhatsApp (app or WhatsApp Web, signed in as the owner's registered number) with the status message to the customer pre-filled; the owner taps send.
+- "Send update to customer" re-sends the current status. Each update is recorded in the order's history.
