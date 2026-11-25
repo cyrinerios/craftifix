@@ -34,8 +34,8 @@ main{flex:1;width:100%;max-width:1240px;margin:0 auto;padding:clamp(24px,4vw,56p
 .box p{color:var(--mute);margin:0 0 18px}
 label{display:block;font-weight:700;font-size:14.5px;margin-bottom:12px}
 label span{display:block;margin-bottom:5px}
-input{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
-input:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
+input,textarea{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
 .err{color:#c62f5f;font-size:14px;min-height:20px;margin:-4px 0 8px}
 .box .btn{width:100%}
 .small{text-align:center;font-size:14.5px;color:var(--mute);margin-top:14px}
@@ -65,6 +65,19 @@ input:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,
 .loading{color:var(--mute);text-align:center;padding:60px 0}
 .mini{font:700 13px "Nunito Sans",sans-serif;border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
 .full{grid-column:1/-1}
+.sub4{font:700 15px Outfit,sans-serif;margin:14px 0 6px}
+.thread{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.thread li{background:var(--blush);border-radius:12px;padding:8px 12px;font-size:14.5px}
+.thread p{margin:2px 0;white-space:pre-wrap}.thread small{color:var(--mute)}
+.replyf textarea{min-height:90px;resize:vertical}
+.convf textarea{min-height:64px;resize:vertical}
+.replyf .row2,.convf .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.convert{margin-top:12px}.convert>summary{list-style:none;cursor:pointer}.convert>summary::-webkit-details-marker{display:none}
+.convf{margin-top:10px;border:1.5px solid var(--gold);border-radius:14px;padding:12px}
+.convok{margin-top:10px;background:#cdeedd;color:#155c3b;border-radius:12px;padding:10px 12px}
+.srctag{font-size:12px;font-weight:700;background:#e2dcfb;color:#3b2a8a;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.flash{animation:fl 2s ease-out}@keyframes fl{0%{box-shadow:0 0 0 4px var(--gold)}100%{box-shadow:none}}
+.st-in_production{background:#ffe7b0;color:#6b4300}
 .iqmsg{white-space:pre-wrap;margin:10px 0 6px;font-size:15px}
 .iqopts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
 .iqopts figure{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel)}
@@ -252,7 +265,7 @@ function renderOrders(list){
   const open=list.filter(o=>!['completed','cancelled'].includes(o.status)).length;
   $('ocount').textContent=list.length?`${open} open · ${list.length} total`:'';
   if(!list.length){$('orders').innerHTML='<p class="msg">No orders yet. Share your shop link with customers — their orders will appear here, in your email and on WhatsApp.</p>';return}
-  $('orders').innerHTML=list.map(o=>`<details class="ord"${o.status==='new'||notes.has(o.id)?' open':''}><summary><b>${esc(o.orderNo)}</b><span>${esc(o.customer.name)}</span><span>${aed(o.total)}</span><span class="st st-${esc(o.status)}">${esc((ST.find(s=>s[0]===o.status)||['','New'])[1])}</span><small>${esc(new Date(o.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))} · Email ${o.emailSent?'✓':'✗'} · WhatsApp ${o.whatsappSent?'✓':'✗'}</small></summary>
+  $('orders').innerHTML=list.map(o=>`<details class="ord" id="ord-${esc(o.id)}"${o.status==='new'||notes.has(o.id)?' open':''}><summary><b>${esc(o.orderNo)}</b><span>${esc(o.customer.name)}${o.source?.inqNo?` <span class="srctag">Custom · ${esc(o.source.inqNo)}</span>`:''}</span><span>${aed(o.total)}</span><span class="st st-${esc(o.status)}">${esc((ST.find(s=>s[0]===o.status)||['','New'])[1])}</span><small>${esc(new Date(o.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))} ${o.source?.inqNo?' · Created from inquiry':` · Email ${o.emailSent?'✓':'✗'} · WhatsApp ${o.whatsappSent?'✓':'✗'}`}</small></summary>
     <div class="ob"><div><div class="kv">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}<div><span><b>Total</b></span><b>${aed(o.total)}</b></div></div></div>
     <div class="cust"><b>${esc(o.customer.name)}</b><br><a href="mailto:${esc(o.customer.email)}">${esc(o.customer.email)}</a><br><a href="${wa(o.customer.whatsapp)}" target="_blank" rel="noopener">WhatsApp ${esc(o.customer.whatsapp)}</a><br><span>${esc(o.customer.address)}</span>${o.customer.notes?`<br><i>“${esc(o.customer.notes)}”</i>`:''}
     <label style="margin-top:10px"><span>Status — the customer is notified when you change it</span><select data-o="${esc(o.id)}">${ST.map(([k,t])=>`<option value="${k}"${k===o.status?' selected':''}>${t}</option>`).join('')}</select></label>${o.status!=='new'?`<button class="mini" type="button" data-resend="${esc(o.id)}" style="margin-top:4px">Send update to customer</button>`:''}<div id="n-${esc(o.id)}"></div>${o.history&&o.history.length?`<p class="hist">Last update: ${esc((ST.find(s=>s[0]===o.history[o.history.length-1].status)||['',''])[1])} · ${esc(new Date(o.history[o.history.length-1].at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</p>`:''}</div></div></details>`).join('');
@@ -287,7 +300,11 @@ function showNote(id,n){
     <div class="nrow"><span class="ok">${n.whatsappUrl?(n.auto?'✓ WhatsApp opened with the message':'WhatsApp message ready'):'No customer WhatsApp number'}</span>${n.whatsappUrl?`<a class="mini wa" href="${esc(n.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp</a>`:''}</div>
     <details class="msgprev"><summary>See message</summary><pre>${esc(n.message)}</pre></details></div>`;
 }
-const IST=[['new','New'],['replied','Replied'],['quoted','Quoted'],['accepted','Accepted'],['closed','Closed']];
+const IST=[['new','New'],['replied','Replied'],['quoted','Quoted'],['accepted','Customer accepted'],['converted','Converted to order'],['closed','Closed']];
+const istClass={new:'new',replied:'confirmed',quoted:'confirmed',accepted:'in_production',converted:'completed',closed:'cancelled'};
+const fmtDT=d=>new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const iqOpen=new Set();
+let inqCache=[];
 async function loadInquiries(){
   const r=await api('/api/inquiries').catch(()=>({ok:false,data:{}}));
   if(!$('inquiries'))return;
@@ -295,27 +312,89 @@ async function loadInquiries(){
   renderInquiries(r.data.inquiries||[]);
 }
 function renderInquiries(list){
-  const open=list.filter(q=>!['closed','accepted'].includes(q.status)).length;
+  inqCache=list;
+  const open=list.filter(q=>!['closed','converted'].includes(q.status)).length;
   $('icount').textContent=list.length?`${open} open · ${list.length} total`:'';
   if(!list.length){$('inquiries').innerHTML='<p class="msg">No inquiries yet. Customers can send custom requests with inspiration photos from the “Custom inquiry” section of your shop.</p>';return}
-  const reply=q=>`Hi ${q.customer.name.split(/\s+/)[0]}, thank you for your custom inquiry ${q.inqNo}! `;
-  $('inquiries').innerHTML=list.map(q=>`<details class="ord"${q.status==='new'?' open':''}><summary><b>${esc(q.inqNo)}</b><span>${esc(q.customer.name)}</span><span>${q.options.filter(o=>o.image).length} photo${q.options.filter(o=>o.image).length===1?'':'s'}</span><span class="st st-${q.status==='new'?'new':q.status==='closed'?'cancelled':q.status==='accepted'?'completed':'confirmed'}">${esc((IST.find(s=>s[0]===q.status)||['','New'])[1])}</span><small>${esc(new Date(q.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))} · Email ${q.emailSent?'✓':'✗'} · WhatsApp ${q.whatsappSent?'✓':'✗'}</small></summary>
+  $('inquiries').innerHTML=list.map(q=>{
+    const photos=q.options.filter(o=>o.image).length,first=q.customer.name.split(/\s+/)[0];
+    const replies=q.replies||[];
+    const conv=q.status==='converted';
+    return `<details class="ord" data-qid="${esc(q.id)}"${q.status==='new'||iqOpen.has(q.id)?' open':''}><summary><b>${esc(q.inqNo)}</b><span>${esc(q.customer.name)}</span><span>${q.quote?aed(q.quote.price):photos+' photo'+(photos===1?'':'s')}</span><span class="st st-${istClass[q.status]||'new'}">${esc((IST.find(s=>s[0]===q.status)||['','New'])[1])}</span><small>${esc(fmtDT(q.createdAt))} · ${replies.length?`Last reply ${esc(fmtDT(replies[replies.length-1].at))}`:'Not replied yet'}${conv?' · Order '+esc(q.orderNo):''}</small></summary>
     <div class="ob"><div>
       <p class="iqmsg">${esc(q.message)}</p>
       ${q.budget||q.neededBy?`<p class="msg">${q.budget?'Budget: <b>'+esc(q.budget)+'</b>':''}${q.budget&&q.neededBy?' · ':''}${q.neededBy?'Needed by: <b>'+esc(q.neededBy)+'</b>':''}</p>`:''}
       <div class="iqopts">${q.options.map(o=>`<figure>${o.image?`<a href="${esc(o.image)}" target="_blank" rel="noopener"><img src="${esc(o.image)}" alt="${esc(o.label)} inspiration photo" loading="lazy"></a>`:'<div class="noimg">No photo</div>'}<figcaption><b>${esc(o.label)}</b>${o.note?'<br>'+esc(o.note):''}</figcaption></figure>`).join('')||'<p class="msg">No photos attached.</p>'}</div>
+      <h4 class="sub4">Replies to customer</h4>
+      ${replies.length?`<ol class="thread">${replies.map(r=>`<li><small>${esc(fmtDT(r.at))}${r.emailSent?' · emailed':''}</small><p>${esc(r.message)}</p>${r.price!=null?`<b>Quoted ${aed(r.price)}</b>`:''}${r.readyBy?` <span class="msg">· ready by ${esc(r.readyBy)}</span>`:''}</li>`).join('')}</ol>`:'<p class="msg">You haven\'t replied yet.</p>'}
     </div>
-    <div class="cust"><b>${esc(q.customer.name)}</b><br><a href="mailto:${esc(q.customer.email)}?subject=${encodeURIComponent('Your custom inquiry '+q.inqNo)}">${esc(q.customer.email)}</a><br>WhatsApp ${esc(q.customer.whatsapp)}
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"><a class="mini wa" target="_blank" rel="noopener" href="${esc(wa(q.customer.whatsapp))}?text=${encodeURIComponent(reply(q))}">Reply on WhatsApp</a><a class="mini" href="mailto:${esc(q.customer.email)}?subject=${encodeURIComponent('Your custom inquiry '+q.inqNo)}&body=${encodeURIComponent(reply(q))}">Reply by email</a></div>
-      <label style="margin-top:10px"><span>Status</span><select data-q="${esc(q.id)}">${IST.map(([k,t])=>`<option value="${k}"${k===q.status?' selected':''}>${t}</option>`).join('')}</select></label>
-      <button class="mini" type="button" data-qdel="${esc(q.id)}" style="color:#b02a5a">Delete inquiry</button></div></div></details>`).join('');
+    <div class="cust"><b>${esc(q.customer.name)}</b><br><a href="mailto:${esc(q.customer.email)}">${esc(q.customer.email)}</a><br>WhatsApp ${esc(q.customer.whatsapp)}
+      ${conv?`<div class="convok">Converted to order <b>${esc(q.orderNo)}</b>. You'll find it in Orders from your shop.<br><a href="#ord-${esc(q.orderId)}" class="mini" data-goorder="${esc(q.orderId)}" style="margin-top:6px">View order</a></div>`:`
+      <form class="replyf" data-reply="${esc(q.id)}" novalidate>
+        <label><span>Reply to ${esc(first)}</span><textarea name="message" maxlength="1500" required>${esc(`Hi ${first}, thank you for your custom inquiry! `)}</textarea></label>
+        <div class="row2"><label><span>Quoted price (AED, optional)</span><input name="price" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label><label><span>Ready by (optional)</span><input name="readyBy" type="date" value="${q.quote?.readyBy||''}"></label></div>
+        <button class="btn plumb" type="submit" style="width:100%">Send reply</button>
+        <p class="msg" style="margin:6px 0 0">Emailed to the customer, and WhatsApp opens with your reply ready to send. The status changes to Replied, or Quoted when you add a price.</p>
+      </form>
+      <div class="nbox" id="qn-${esc(q.id)}"></div>
+      <label style="margin-top:12px"><span>Status</span><select data-q="${esc(q.id)}">${IST.filter(([k])=>k!=='converted').map(([k,t])=>`<option value="${k}"${k===q.status?' selected':''}>${t}</option>`).join('')}</select></label>
+      <details class="convert"${q.status==='accepted'?' open':''}><summary class="btn gold" style="width:100%">Convert to order</summary>
+        <form class="convf" data-convert="${esc(q.id)}" novalidate>
+          <p class="msg">Use this once ${esc(first)} has confirmed the agreed item and price. It creates a confirmed order, moves it to Orders, and sends the confirmation with a tracking link.</p>
+          <label><span>Item</span><input name="name" maxlength="120" value="${esc('Custom order: '+q.message.slice(0,80))}"></label>
+          <div class="row2"><label><span>Qty</span><input name="qty" type="number" min="1" max="99" step="1" value="1"></label><label><span>Price each (AED)</span><input name="unitPrice" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label></div>
+          <label><span>Delivery address</span><textarea name="address" maxlength="400" placeholder="Building, street, area, city, emirate"></textarea></label>
+          <label><span>Order notes (optional)</span><textarea name="notes" maxlength="800">${esc([q.options.map(o=>o.note&&o.label+': '+o.note).filter(Boolean).join('; '),q.neededBy?'Needed by '+q.neededBy:''].filter(Boolean).join(' · '))}</textarea></label>
+          <div class="err" role="alert"></div>
+          <button class="btn plumb" type="submit" style="width:100%">Create confirmed order</button>
+        </form>
+      </details>`}
+      <button class="mini" type="button" data-qdel="${esc(q.id)}" style="color:#b02a5a;margin-top:10px">Delete inquiry</button></div></div></details>`}).join('');
+  for(const d of $('inquiries').querySelectorAll('details.ord'))d.addEventListener('toggle',()=>{d.open?iqOpen.add(d.dataset.qid):iqOpen.delete(d.dataset.qid)});
   $('inquiries').onchange=async e=>{const sel=e.target.closest('select[data-q]');if(!sel)return;sel.disabled=true;
     const r=await api('/api/inquiries?id='+encodeURIComponent(sel.dataset.q),{method:'PUT',body:JSON.stringify({status:sel.value})}).catch(()=>({ok:false,data:{}}));
-    if(r.ok)renderInquiries(r.data.inquiries);else{sel.disabled=false;alertMsg('Could not update the inquiry.')}};
-  $('inquiries').onclick=async e=>{const b=e.target.closest('[data-qdel]');if(!b)return;
+    if(r.ok)renderInquiries(r.data.inquiries);else{sel.disabled=false;alertMsg(r.data.error||'Could not update the inquiry.')}};
+  $('inquiries').onclick=async e=>{
+    const g=e.target.closest('[data-goorder]');if(g){e.preventDefault();const o=document.getElementById('ord-'+g.dataset.goorder);if(o){o.open=true;o.scrollIntoView({behavior:'smooth',block:'start'})}return}
+    const b=e.target.closest('[data-qdel]');if(!b)return;
     if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='Tap again to delete';setTimeout(()=>{b.dataset.confirm='';b.textContent='Delete inquiry'},3000);return}
     b.disabled=true;const r=await api('/api/inquiries?id='+encodeURIComponent(b.dataset.qdel),{method:'DELETE'}).catch(()=>({ok:false,data:{}}));
     if(r.ok)renderInquiries(r.data.inquiries);else{b.disabled=false;alertMsg('Could not delete the inquiry.')}};
+  $('inquiries').onsubmit=async e=>{
+    const f=e.target;e.preventDefault();
+    if(f.dataset.reply){
+      const id=f.dataset.reply,btn=f.querySelector('button[type=submit]');
+      const d={message:f.message.value.trim(),price:f.price.value,readyBy:f.readyBy.value};
+      if(d.message.length<2){f.message.focus();return}
+      const w=window.open('about:blank','_blank');btn.disabled=true;btn.textContent='Sending…';
+      const r=await api('/api/inquiries?id='+encodeURIComponent(id)+'&action=reply',{method:'POST',body:JSON.stringify(d)}).catch(()=>({ok:false,data:{}}));
+      if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Send reply';const nb=$('qn-'+id);if(nb)nb.innerHTML=`<p class="nerr">${esc(r.data.error||'Could not send the reply.')}</p>`;return}
+      iqOpen.add(id);renderInquiries(r.data.inquiries);
+      const n=r.data.notification;if(w){if(n.whatsappUrl)w.location.href=n.whatsappUrl;else w.close()}
+      showReplyNote(id,{...n,auto:!!w});
+    }
+    if(f.dataset.convert){
+      const id=f.dataset.convert,btn=f.querySelector('button[type=submit]'),er=f.querySelector('.err');
+      const d={items:[{name:f.name.value.trim(),qty:+f.qty.value||1,unitPrice:+f.unitPrice.value}],address:f.address.value.trim(),notes:f.notes.value.trim()};
+      if(!d.items[0].name){f.name.focus();return er.textContent='Describe the item.'}
+      if(!(d.items[0].unitPrice>0)){f.unitPrice.focus();return er.textContent='Enter the agreed price.'}
+      if(d.address.length<8){f.address.focus();return er.textContent='Enter the delivery address.'}
+      const w=window.open('about:blank','_blank');btn.disabled=true;btn.textContent='Creating order…';
+      const r=await api('/api/inquiries?id='+encodeURIComponent(id)+'&action=convert',{method:'POST',body:JSON.stringify(d)}).catch(()=>({ok:false,data:{}}));
+      if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Create confirmed order';er.textContent=r.data.error||'Could not create the order.';return}
+      const o=r.data.order,n=r.data.notification;
+      renderInquiries(r.data.inquiries);
+      notes.set(o.id,{...n,auto:!!w});renderOrders(r.data.orders);
+      if(w){if(n&&n.whatsappUrl)w.location.href=n.whatsappUrl;else w.close()}
+      const el=document.getElementById('ord-'+o.id);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.add('flash')}
+    }
+  };
+}
+function showReplyNote(id,n){
+  const box=$('qn-'+id);if(!box)return;
+  box.innerHTML=`<div class="note-ok"><b>Reply sent</b>
+    <div class="nrow"><span class="${n.emailSent?'ok':'warn'}">${n.emailSent?'✓ Emailed to customer':'Email not sent automatically'}</span>${n.mailtoUrl?`<a class="mini" href="${esc(n.mailtoUrl)}">Send email</a>`:''}</div>
+    <div class="nrow"><span class="ok">${n.whatsappUrl?(n.auto?'✓ WhatsApp opened with your reply':'WhatsApp reply ready'):'No customer WhatsApp number'}</span>${n.whatsappUrl?`<a class="mini wa" href="${esc(n.whatsappUrl)}" target="_blank" rel="noopener">Open WhatsApp</a>`:''}</div></div>`;
 }
 function alertMsg(m){const p=$('pmsg');if(p)p.textContent=m}
 $('logout').addEventListener('click',async()=>{await api('/api/logout',{method:'POST'}).catch(()=>{});showLogin('You have logged out.')});

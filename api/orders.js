@@ -4,10 +4,10 @@ import { assertConfigured, requireUser, getUser, getOrders, saveOrders, deliver,
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
 // PUT /api/orders?id=...&notify=1 -> re-send the customer update for the current status
 const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'completed', 'cancelled'];
-const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
+export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
 const aed = (n) => 'AED ' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function customerMessage(order, owner, trackUrl) {
+export function customerMessage(order, owner, trackUrl) {
   const first = order.customer.name.split(/\s+/)[0];
   const items = order.items.map((i) => `${i.qty} × ${i.name}`).join(', ');
   const head = `Hi ${first}, this is ${owner.business}.`;
@@ -23,7 +23,7 @@ function customerMessage(order, owner, trackUrl) {
   return `${head}\n${body}${trackUrl ? `\nTrack your order: ${trackUrl}` : ''}\n\n— ${owner.business}${owner.whatsapp ? `\nWhatsApp: ${owner.whatsapp}` : ''}`;
 }
 
-async function notify(order, owner, trackUrl) {
+export async function notify(order, owner, trackUrl) {
   const text = customerMessage(order, owner, trackUrl);
   const subject = `Your order ${order.orderNo} is ${LABEL[order.status].toLowerCase()} — ${owner.business}`;
   const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">

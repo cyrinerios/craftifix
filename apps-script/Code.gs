@@ -14,7 +14,8 @@
  *                    order's status in the Orders tab
  *   - new_inquiry:   emails the custom inquiry (with inspiration photos) to the shop owner
  *                    and adds it to the Inquiries tab, with photo previews
- *   - inquiry_status: updates the inquiry's status in the Inquiries tab
+ *   - inquiry_status: updates the inquiry's status, last reply, quoted price and
+ *                    order number in the Inquiries tab (and emails the customer a reply)
  *
  * SECRET must match APPS_SCRIPT_SECRET in Vercel. Do not share it.
  */
@@ -44,7 +45,7 @@ function doPost(e) {
       addInquiry_(data.inquiry);
       result.sheet = true;
     } else if (data.action === 'inquiry_status' && data.inquiry) {
-      result.sheet = updateInquiryStatus_(data.inquiry.inqNo, data.inquiry.statusLabel);
+      result.sheet = updateInquiryStatus_(data.inquiry);
     }
 
     if (data.email && data.email.to) {
@@ -119,7 +120,8 @@ function markEmailSent_(orderNo) {
 }
 
 const INQ_HEADERS = ['Inquiry no.', 'Shop (user ID)', 'Date', 'Status', 'Customer', 'Email', 'WhatsApp', 'Request', 'Budget', 'Needed by',
-  'Option 1 notes', 'Option 1 photo', 'Option 1 photo link', 'Option 2 notes', 'Option 2 photo', 'Option 2 photo link', 'Email sent'];
+  'Option 1 notes', 'Option 1 photo', 'Option 1 photo link', 'Option 2 notes', 'Option 2 photo', 'Option 2 photo link', 'Email sent',
+  'Last reply', 'Quoted price (AED)', 'Order no.'];
 
 function addInquiry_(q) {
   const sh = sheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Inquiries', INQ_HEADERS);
@@ -137,12 +139,15 @@ function addInquiry_(q) {
   if (opt(0).image || opt(1).image) sh.setRowHeight(r, 120);
 }
 
-function updateInquiryStatus_(inqNo, statusLabel) {
+function updateInquiryStatus_(q) {
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inquiries');
   if (!sh) return false;
-  const r = findRow_(sh, inqNo);
+  const r = findRow_(sh, q.inqNo);
   if (r < 1) return false;
-  sh.getRange(r, 4).setValue(statusLabel);
+  if (q.statusLabel) sh.getRange(r, 4).setValue(q.statusLabel);
+  if (q.lastReply) sh.getRange(r, 18).setValue(q.lastReply);
+  if (q.price !== undefined && q.price !== null) sh.getRange(r, 19).setValue(q.price).setNumberFormat('#,##0.00');
+  if (q.orderNo) sh.getRange(r, 20).setValue(q.orderNo);
   return true;
 }
 

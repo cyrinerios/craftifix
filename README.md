@@ -53,3 +53,9 @@ Open `index.html` in a browser.
 - Shop page → **Custom inquiry** section: customers describe what they want, add up to two inspiration photos with notes (Option 1 and Option 2), optional budget and date, and their name, email and WhatsApp.
 - The inquiry is saved to the owner's account (Account → Custom inquiries: photos, notes, Reply on WhatsApp / Reply by email, status, delete), emailed to the owner with the photos, and sent to the owner's WhatsApp with photo links when CallMeBot alerts are on.
 - API: `POST /api/inquiry` (public; photos resized in the browser, stored in Vercel Blob), `GET/PUT/DELETE /api/inquiries` (owner).
+
+## Inquiry replies and converting inquiries to orders
+- Account → Custom inquiries: **Send reply** with an optional quoted price and ready-by date. The reply is emailed to the customer and WhatsApp opens with it ready to send; the reply history is kept on the inquiry; status becomes Replied, or Quoted when a price is given.
+- Statuses: New, Replied, Quoted, Customer accepted, Converted to order, Closed.
+- **Convert to order** (once the customer confirms): item, qty, agreed price, delivery address and notes. Creates a Confirmed order (tagged "Custom · IQ-…") in Orders, marks the inquiry Converted with the order number, sends the customer the confirmation with a tracking link, and records both in the Google Sheet (Inquiries tab: Last reply, Quoted price, Order no.).
+- API: `POST /api/inquiries?id=&action=reply`, `POST /api/inquiries?id=&action=convert`.
