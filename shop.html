@@ -78,7 +78,9 @@ label span.req{display:inline;color:#c62f5f;margin:0}
 .socs{display:flex;gap:8px;margin-top:8px}
 .soc{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--plum);border:1.5px solid var(--line)}
 .soc:hover{background:var(--plum);color:#fff;border-color:var(--plum)}
-.inq{background:var(--blush);padding:clamp(28px,4vw,56px) max(5vw,16px);scroll-margin-top:10px}
+.backlink{display:inline-block;margin-bottom:14px;font-weight:700;color:var(--plum);text-decoration:none}.backlink:hover{text-decoration:underline}
+.trackbtn.on{background:var(--plum);color:#fff;border-color:var(--plum)}
+.inq{min-height:60vh;background:var(--blush);padding:clamp(28px,4vw,56px) max(5vw,16px);scroll-margin-top:10px}
 .inqin{max-width:1240px;margin:0 auto}
 .inqhead{max-width:680px;margin-bottom:20px}
 .inqhead h2{font-size:clamp(26px,3.4vw,38px)}
@@ -125,6 +127,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 <main id="main"><div class="center">Loading products…</div></main>
 <section class="inq" id="inquiry" hidden aria-labelledby="inqT">
   <div class="inqin">
+    <a class="backlink" href="#">← Back to products</a>
     <div class="inqhead">
       <h2 id="inqT">Have something special in mind?</h2>
       <p>Send a custom inquiry with photos of your inspiration. Share up to two ideas as Option 1 and Option 2, and the shop will reply with a price and timeline.</p>
@@ -226,7 +229,7 @@ function head(){
   $('openTrack').addEventListener('click',()=>openTrack());
 }
 function grid(){
-  if(!products.length){$('main').innerHTML=`<div class="empty"><b>No products yet</b>This shop hasn't published any pieces yet. You can still send a custom inquiry below.</div>`;return}
+  if(!products.length){$('main').innerHTML=`<div class="empty"><b>No products yet</b>This shop hasn't published any pieces yet. You can still <a href="#inquiry">send a custom inquiry</a>.</div>`;return}
   const cats=['All',...new Set(products.map(p=>p.category))];
   const list=products.filter(p=>cat==='All'||p.category===cat);
   $('main').innerHTML=`${cats.length>2?`<div class="cats" id="cats">${cats.map(c=>`<button type="button" aria-pressed="${c===cat}">${esc(c)}</button>`).join('')}</div>`:''}
@@ -360,14 +363,25 @@ $('inqForm').addEventListener('submit',async e=>{e.preventDefault();
       ${j.mailtoUrl?`<a class="btn ghost" style="width:100%;margin-top:8px" href="${esc(j.mailtoUrl)}">Also send by email</a>`:''}
       <button class="btn ghost" type="button" id="inqAgain" style="width:100%;margin-top:8px">Send another inquiry</button></div>`;
     $('inqAgain').addEventListener('click',()=>{$('inqForm').reset();setInqImg(0,'');setInqImg(1,'');$('inqDone').hidden=true;$('inqForm').hidden=false});
-    $('inquiry').scrollIntoView({behavior:'smooth'});
+    window.scrollTo({top:0,behavior:'smooth'});
     if(j.whatsappUrl&&!j.whatsappSent)setTimeout(()=>{location.href=j.whatsappUrl},1200);
   }catch{err('Network problem — please check your connection and try again.')}
   finally{b.disabled=false;b.textContent='Send inquiry'}
 });
+/* ---------- views: product listing vs custom inquiry page ---------- */
+function showView(){
+  if(!shop)return;
+  const inq=location.hash==='#inquiry';
+  $('main').hidden=inq;$('inquiry').hidden=!inq;
+  const g=$('goInq');if(g){g.classList.toggle('on',inq);g.setAttribute('aria-current',inq?'page':'false')}
+  document.title=shop.business+(inq?' — Custom inquiry':' — Shop');
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange',showView);
+document.addEventListener('click',e=>{const a=e.target.closest('.backlink');if(!a)return;e.preventDefault();history.pushState(null,'',location.pathname+location.search);showView()});
 (async()=>{
   try{const r=await fetch('/api/shop?u='+encodeURIComponent(uid));const j=await r.json();
-    if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();grid();$('inquiry').hidden=false;
+    if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();grid();showView();
     const tq=new URLSearchParams(location.search).get('track');if(tq)openTrack(tq.toUpperCase())}
   catch(e){$('head').innerHTML='<div><h1>Shop not found</h1><p>Check the link and try again.</p></div>';$('main').innerHTML='<div class="center"><a class="btn plumb" href="/">Go to CrochetHub</a></div>'}
 })();
