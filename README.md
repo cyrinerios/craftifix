@@ -59,3 +59,7 @@ Open `index.html` in a browser.
 - Statuses: New, Replied, Quoted, Customer accepted, Converted to order, Closed.
 - **Convert to order** (once the customer confirms): item, qty, agreed price, delivery address and notes. Creates a Confirmed order (tagged "Custom · IQ-…") in Orders, marks the inquiry Converted with the order number, sends the customer the confirmation with a tracking link, and records both in the Google Sheet (Inquiries tab: Last reply, Quoted price, Order no.).
 - API: `POST /api/inquiries?id=&action=reply`, `POST /api/inquiries?id=&action=convert`.
+
+## Business logo and social links
+- Sign-up (optional): business logo upload and Instagram, Facebook and TikTok links (a full link or just the @username). Existing owners add or change them in Settings → Edit details.
+- The logo becomes the shop's icon (header circle, browser tab icon and home-screen icon); the social links show as icons under the shop name.

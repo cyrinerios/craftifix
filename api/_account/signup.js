@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
+import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -12,6 +12,12 @@ export default async function handler(req, res) {
     const email = clean(b.email, 254).toLowerCase();
     const plan = String(b.plan || '').toLowerCase();
     const whatsapp = normWhatsApp(b.whatsapp);
+    const social = {};
+    for (const k of ['instagram', 'facebook', 'tiktok']) {
+      const v = normSocial(k, b[k]);
+      if (v === null) return send(res, 400, { error: `That ${k === 'tiktok' ? 'TikTok' : k[0].toUpperCase() + k.slice(1)} link doesn't look right. Paste your profile link or just your username.`, field: k });
+      if (v) social[k] = v;
+    }
 
     if (!validId(userId)) return send(res, 400, { error: 'User ID must be 3–20 characters: letters, numbers, dot, dash or underscore, starting with a letter or number.', field: 'userId' });
     if (password.length < 8 || password.length > 128) return send(res, 400, { error: 'Password must be at least 8 characters.', field: 'password' });
@@ -26,7 +32,7 @@ export default async function handler(req, res) {
 
     const now = new Date().toISOString();
     const rec = {
-      userId, name, business, email, whatsapp, plan,
+      userId, name, business, email, whatsapp, plan, social,
       passwordHash: await hashPassword(password),
       subscription: { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now },
       createdAt: now, updatedAt: now
@@ -35,6 +41,11 @@ export default async function handler(req, res) {
     catch (e) {
       if (/already exists/i.test(String(e?.message))) return send(res, 409, { error: 'That user ID is already taken. Please choose another.', field: 'userId' });
       throw e;
+    }
+    // Logo is optional; if it fails to upload the account is still created.
+    if (b.logo) {
+      try { rec.logo = await uploadImage(userId, b.logo); await saveUser(rec); }
+      catch (e) { if (e?.status !== 400) console.error('logo upload failed', e); }
     }
     setSession(res, userId);
     send(res, 201, { user: publicUser(rec) });

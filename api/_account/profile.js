@@ -1,4 +1,4 @@
-import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, sendOwnerWhatsApp, body, send, onlyMethod, fail } from '../_lib.js';
+import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail } from '../_lib.js';
 
 // POST /api/profile { name, business, email, whatsapp, callmebotKey? } -> update the logged-in owner's details
 // POST /api/profile?test=whatsapp -> send a test WhatsApp alert to the owner's number
@@ -25,6 +25,17 @@ export default async function handler(req, res) {
       if (k && !/^[A-Za-z0-9_-]{3,40}$/.test(k)) return send(res, 400, { error: 'That CallMeBot API key does not look right — it is the number the bot sent you.', field: 'callmebotKey' });
       if (k) rec.callmebotKey = k; else if (b.callmebotKey === '') delete rec.callmebotKey;
     }
+    if (b.social && typeof b.social === 'object') {
+      const social = {};
+      for (const k of ['instagram', 'facebook', 'tiktok']) {
+        const v = normSocial(k, b.social[k]);
+        if (v === null) return send(res, 400, { error: `That ${k === 'tiktok' ? 'TikTok' : k[0].toUpperCase() + k.slice(1)} link doesn't look right. Paste your profile link or just your username.`, field: k });
+        if (v) social[k] = v;
+      }
+      rec.social = social;
+    }
+    if (b.logo === '' || b.logo === null) delete rec.logo;
+    else if (isBlobUrl(b.logo)) rec.logo = b.logo;
     Object.assign(rec, { name, business, email, whatsapp, updatedAt: new Date().toISOString() });
     await saveUser(rec);
     send(res, 200, { user: publicUser(rec) });

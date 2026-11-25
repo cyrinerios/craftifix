@@ -66,6 +66,12 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .planpill:hover{filter:brightness(1.05)}
 @media(max-width:640px){.planpill .pst{display:none}}
+.mylogo{width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;border:1px solid var(--line)}
+.soclinks a{color:var(--plum);text-decoration:underline}
+.logoup{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;margin-bottom:12px}
+.logobox{width:72px;height:72px;margin:0!important;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center;cursor:pointer;overflow:hidden;background:var(--bg);text-align:center;font-size:11.5px;color:var(--mute);font-weight:700}
+.logobox img{width:100%;height:100%;object-fit:cover}
+.linkbtn{background:none;border:0;color:#b02a5a;font-weight:700;cursor:pointer;padding:4px 0;font-size:13.5px}
 .wnav{display:flex;gap:2px;overflow-x:auto}
 .wnav a{color:#fff;font-weight:700;text-decoration:none;padding:9px 12px;border-radius:999px;white-space:nowrap;font-size:14.5px}
 .wnav a:hover{background:rgba(255,255,255,.12)}.wnav a.on{background:rgba(255,255,255,.2)}
@@ -207,6 +213,7 @@ function showLogin(note){
 }
 
 let curUser=null;
+function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=400,k=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(file.type==='image/png'?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',.9))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}
 function setNav(view){
   for(const a of document.querySelectorAll('#wnav a'))a.classList.toggle('on',a.dataset.v===view);
 }
@@ -231,6 +238,8 @@ function showAccount(u,welcome){
       <div><span>Email</span><b>${esc(u.email)}</b></div>
       <div><span>WhatsApp</span><b>${u.whatsapp?esc(u.whatsapp):'<span style="color:#c62f5f">Not set</span>'}</b></div>
       <div><span>WhatsApp order alerts</span><b>${u.whatsappAlerts?'<span style="color:#2f9e6b">On</span> <button class="mini" type="button" id="waTest">Send test</button>':'<span style="color:#8a5a00">Off</span>'}</b></div>
+      <div><span>Logo</span><b>${u.logo?`<img class="mylogo" src="${esc(u.logo)}" alt="Your logo">`:'<span style="color:var(--mute);font-weight:600">Not added</span>'}</b></div>
+      <div><span>Shop links</span><b class="soclinks">${['instagram','facebook','tiktok'].filter(k=>u.social&&u.social[k]).map(k=>`<a href="${esc(u.social[k])}" target="_blank" rel="noopener">${({instagram:'Instagram',facebook:'Facebook',tiktok:'TikTok'})[k]}</a>`).join(' · ')||'<span style="color:var(--mute);font-weight:600">Not added</span>'}</b></div>
       <div><span>Member since</span><b>${esc(since)}</b></div>
       </div>
       <form id="editForm" hidden novalidate>
@@ -238,6 +247,12 @@ function showAccount(u,welcome){
         <label><span>Business name</span><input id="eBiz" value="${esc(u.business)}" maxlength="80"></label>
         <label><span>Email</span><input id="eEmail" type="email" value="${esc(u.email)}"></label>
         <label><span>WhatsApp number</span><input id="eWa" type="tel" inputmode="tel" value="${esc(u.whatsapp||'')}" placeholder="+971 55 123 4567"></label>
+        <span style="display:block;font-weight:700;font-size:14.5px;margin-bottom:5px">Business logo</span>
+        <div class="logoup"><label class="logobox" for="eLogoFile" id="eLogoBox">${u.logo?`<img src="${esc(u.logo)}" alt="Your logo">`:'<span>Upload logo</span>'}</label>
+          <div><input type="file" id="eLogoFile" accept="image/png,image/jpeg,image/webp" hidden><small class="msg">Used as your shop's icon.</small><br><button type="button" class="linkbtn" id="eLogoRm"${u.logo?'':' hidden'}>Remove logo</button></div></div>
+        <label><span>Instagram</span><input id="eIg" value="${esc(u.social?.instagram||'')}" placeholder="@yourshop or instagram.com/yourshop" autocapitalize="none" spellcheck="false"></label>
+        <label><span>Facebook</span><input id="eFb" value="${esc(u.social?.facebook||'')}" placeholder="facebook.com/yourshop" autocapitalize="none" spellcheck="false"></label>
+        <label><span>TikTok</span><input id="eTt" value="${esc(u.social?.tiktok||'')}" placeholder="@yourshop or tiktok.com/@yourshop" autocapitalize="none" spellcheck="false"></label>
         <label><span>CallMeBot API key (automatic WhatsApp order alerts)</span><input id="eKey" inputmode="numeric" autocomplete="off" placeholder="${u.whatsappAlerts?'Saved — type a new key to replace it':'e.g. 1234567'}"></label>
         <div class="err" id="eErr" role="alert"></div>
         <div style="display:flex;gap:8px"><button class="btn plumb" type="submit" style="flex:1">Save</button><button class="btn ghost" type="button" id="eCancel" style="color:var(--ink);border-color:var(--line)">Cancel</button></div>
@@ -273,8 +288,15 @@ function showAccount(u,welcome){
     wt.textContent=r.ok?'Test sent ✓':'Failed';if(!r.ok)$('pmsg').textContent=r.data.error||'Test failed.';setTimeout(()=>{wt.disabled=false;wt.textContent='Send test'},4000)});
   $('editBtn').addEventListener('click',()=>{$('kvView').hidden=true;$('editForm').hidden=false;$('editBtn').hidden=true;$('eWa').focus()});
   $('eCancel').addEventListener('click',()=>{$('kvView').hidden=false;$('editForm').hidden=true;$('editBtn').hidden=false});
+  let editLogo=u.logo||'';
+  $('eLogoFile').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+    $('eLogoBox').innerHTML='<span>Uploading…</span>';
+    try{const dataUrl=await shrinkLogo(f);const r=await api('/api/upload',{method:'POST',body:JSON.stringify({dataUrl})});
+      if(!r.ok)throw new Error(r.data.error||'Upload failed');editLogo=r.data.url;$('eLogoBox').innerHTML=`<img src="${esc(editLogo)}" alt="Your logo">`;$('eLogoRm').hidden=false}
+    catch(x){$('eLogoBox').innerHTML=editLogo?`<img src="${esc(editLogo)}" alt="Your logo">`:'<span>Upload logo</span>';$('eErr').textContent=x.message||'Upload failed'}});
+  $('eLogoRm').addEventListener('click',()=>{editLogo='';$('eLogoBox').innerHTML='<span>Upload logo</span>';$('eLogoRm').hidden=true});
   $('editForm').addEventListener('submit',async e=>{e.preventDefault();
-    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined})}).catch(()=>({ok:false,data:{}}));
+    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined,social:{instagram:$('eIg').value,facebook:$('eFb').value,tiktok:$('eTt').value},logo:editLogo})}).catch(()=>({ok:false,data:{}}));
     if(r.ok)showAccount({...r.data.user,productCount:u.productCount},false);
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else $('eErr').textContent=r.data.error||'Could not save.'});

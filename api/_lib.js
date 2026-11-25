@@ -212,6 +212,30 @@ export function normWhatsApp(v) {
   if (/^\+\d{8,15}$/.test(s)) return s;
   return '';
 }
+// Social links: accept a full link or a username/handle. Returns a clean https link, '' for empty, or null if invalid.
+const SOCIAL = {
+  instagram: { hosts: ['instagram.com'], make: (h) => `https://www.instagram.com/${h}` },
+  facebook: { hosts: ['facebook.com', 'fb.com', 'm.facebook.com'], make: (h) => `https://www.facebook.com/${h}` },
+  tiktok: { hosts: ['tiktok.com'], make: (h) => `https://www.tiktok.com/@${h}` }
+};
+export function normSocial(kind, v) {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  const cfg = SOCIAL[kind];
+  if (/^https?:\/\//i.test(s) || /^(www\.|m\.)?[a-z]+\.com\//i.test(s)) {
+    try {
+      const u = new URL(/^https?:/i.test(s) ? s : 'https://' + s);
+      const host = u.hostname.replace(/^www\./, '');
+      if (!cfg.hosts.some((h) => host === h || host.endsWith('.' + h))) return null;
+      if (u.pathname.length < 2) return null;
+      return ('https://' + u.hostname + u.pathname + u.search).slice(0, 300);
+    } catch { return null; }
+  }
+  const h = s.replace(/^@/, '');
+  return /^[A-Za-z0-9._-]{1,60}$/.test(h) ? cfg.make(h) : null;
+}
+export const isBlobUrl = (u) => typeof u === 'string' && /^https:\/\/[a-z0-9.-]+\.public\.blob\.vercel-storage\.com\//i.test(u);
+
 export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
 
 /* ---------- orders (one encrypted list per business) ---------- */
