@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, escHtml, body, send, onlyMethod, fail } from './_lib.js';
+import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/order — a shopper places an order on a shop.
 // Saves the order to the owner's account, emails the owner (when email sending is configured)
@@ -65,17 +65,23 @@ export default async function handler(req, res) {
       ${customer.notes ? `<p><b>Notes:</b> ${escHtml(customer.notes)}</p>` : ''}
       <p style="color:#6d5670;font-size:13px">Reply to this email to contact the customer. You can also see this order in your CrochetHub account.</p></div>`;
 
-    const email = await deliver({
-      action: 'new_order',
-      order: { ...order, shop: uid, statusLabel: 'New' },
-      email: { to: owner.email, subject: `New order ${orderNo} — ${aed(total)}`, text, html, replyTo: customer.email, fromName: `${owner.business} orders` }
-    });
+    const [email, wa] = await Promise.all([
+      deliver({
+        action: 'new_order',
+        order: { ...order, shop: uid, statusLabel: 'New' },
+        email: { to: owner.email, subject: `New order ${orderNo} — ${aed(total)}`, text, html, replyTo: customer.email, fromName: `${owner.business} orders` }
+      }),
+      sendOwnerWhatsApp(owner, '🛍️ ' + text)
+    ]);
     order.emailSent = email.sent;
-    if (email.sent) { orders[0] = order; await saveOrders(uid, orders.slice(0, 1000)); }
+    order.whatsappSent = wa.sent;
+    orders[0] = order;
+    await saveOrders(uid, orders.slice(0, 1000));
 
     send(res, 201, {
       orderNo, total, items,
       emailSent: email.sent,
+      whatsappSent: wa.sent,
       whatsappUrl: owner.whatsapp ? waLink(owner.whatsapp, text) : null,
       mailtoUrl: email.sent ? null : `mailto:${owner.email}?subject=${encodeURIComponent(`Order ${orderNo} for ${owner.business}`)}&body=${encodeURIComponent(text)}`
     });

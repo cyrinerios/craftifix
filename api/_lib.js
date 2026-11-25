@@ -89,8 +89,8 @@ export async function saveUser(rec, { create = false } = {}) {
 }
 
 export function publicUser(rec) {
-  const { passwordHash, ...rest } = rec;
-  return { ...rest, planDetails: PLANS[rec.plan] || PLANS.starter };
+  const { passwordHash, callmebotKey, ...rest } = rec;
+  return { ...rest, whatsappAlerts: !!callmebotKey, planDetails: PLANS[rec.plan] || PLANS.starter };
 }
 
 /* ---------- sessions (HMAC-signed cookie) ---------- */
@@ -245,6 +245,25 @@ export async function sendEmail({ to, subject, text, html, replyTo }) {
     return { sent: true };
   } catch (e) { console.error('Resend failed', e); return { sent: false, reason: 'provider_error' }; }
 }
+/* ---------- automatic WhatsApp alerts to the shop owner (CallMeBot) ---------- */
+// CallMeBot sends WhatsApp messages to the owner's OWN number, using the API key the owner gets
+// by messaging the CallMeBot bot once. It cannot message customers.
+export async function sendOwnerWhatsApp(owner, text) {
+  if (!owner?.whatsapp || !owner?.callmebotKey) return { sent: false, reason: 'not_configured' };
+  try {
+    const url = 'https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(owner.whatsapp)
+      + '&text=' + encodeURIComponent(text.slice(0, 1500)) + '&apikey=' + encodeURIComponent(owner.callmebotKey);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    const body = (await r.text().catch(() => '')).toLowerCase();
+    const ok = r.ok && /queued|sent|will be sent|currently in the queue/.test(body) && !/error|invalid|not activ/.test(body);
+    if (!ok) console.error('CallMeBot', r.status, body.slice(0, 300));
+    return { sent: ok };
+  } catch (e) { console.error('CallMeBot failed', e); return { sent: false }; }
+}
+
 /* ---------- Google Apps Script (Gmail + Google Sheet) ---------- */
 // When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
 // which also records orders and status changes in the "CrochetHub database" Google Sheet.

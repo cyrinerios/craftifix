@@ -65,6 +65,7 @@ input:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,
 .loading{color:var(--mute);text-align:center;padding:60px 0}
 .mini{font:700 13px "Nunito Sans",sans-serif;border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
 .full{grid-column:1/-1}
+.alertsetup{background:#f0fbf4;border-color:#bfe8cf}.alertsetup ol{margin:8px 0;padding-left:20px;line-height:1.7}.alertsetup p{margin:6px 0}
 .pill{font:700 13px "Nunito Sans",sans-serif;color:var(--mute)}
 .ord{border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
 .ord summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto auto;gap:6px 14px;align-items:center;padding:12px 14px}
@@ -169,6 +170,7 @@ function showAccount(u,welcome){
       <div><span>Business</span><b>${esc(u.business)}</b></div>
       <div><span>Email</span><b>${esc(u.email)}</b></div>
       <div><span>WhatsApp</span><b>${u.whatsapp?esc(u.whatsapp):'<span style="color:#c62f5f">Not set</span>'}</b></div>
+      <div><span>WhatsApp order alerts</span><b>${u.whatsappAlerts?'<span style="color:#2f9e6b">On</span> <button class="mini" type="button" id="waTest">Send test</button>':'<span style="color:#8a5a00">Off</span>'}</b></div>
       <div><span>Member since</span><b>${esc(since)}</b></div>
       </div>
       <form id="editForm" hidden novalidate>
@@ -176,6 +178,7 @@ function showAccount(u,welcome){
         <label><span>Business name</span><input id="eBiz" value="${esc(u.business)}" maxlength="80"></label>
         <label><span>Email</span><input id="eEmail" type="email" value="${esc(u.email)}"></label>
         <label><span>WhatsApp number</span><input id="eWa" type="tel" inputmode="tel" value="${esc(u.whatsapp||'')}" placeholder="+971 55 123 4567"></label>
+        <label><span>CallMeBot API key (automatic WhatsApp order alerts)</span><input id="eKey" inputmode="numeric" autocomplete="off" placeholder="${u.whatsappAlerts?'Saved — type a new key to replace it':'e.g. 1234567'}"></label>
         <div class="err" id="eErr" role="alert"></div>
         <div style="display:flex;gap:8px"><button class="btn plumb" type="submit" style="flex:1">Save</button><button class="btn ghost" type="button" id="eCancel" style="color:var(--ink);border-color:var(--line)">Cancel</button></div>
       </form>
@@ -187,6 +190,12 @@ function showAccount(u,welcome){
       <div><span>Payment</span><b>Skipped for now</b></div>
       <div><span>Staff accounts</span><b>${esc(lim(p.limits.staff)==='Not included'?'Not included':lim(p.limits.staff)==='Unlimited'?'Multiple':lim(p.limits.staff))}</b></div>
     </div></div>
+    ${!u.whatsappAlerts?`<div class="card full alertsetup"><h3>Get every new order on WhatsApp automatically</h3>
+      <p>To get every new order on your WhatsApp ${u.whatsapp?esc(u.whatsapp):''} without anyone tapping send, connect the free CallMeBot service (one time, about 2 minutes):</p>
+      <ol><li>Open <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">callmebot.com</a> and save the bot's WhatsApp number shown there to your phone contacts.</li>
+      <li>From your WhatsApp (${u.whatsapp?esc(u.whatsapp):'your shop number'}), send it this message: <b>I allow callmebot to send me messages</b></li>
+      <li>The bot replies with your API key. Click <b>Edit details</b>, paste it into “CallMeBot API key”, and save.</li></ol>
+      <p class="msg">CallMeBot is free for personal use and only sends to your own number. If the key doesn't arrive within a few minutes, try again after 24 hours.</p></div>`:''}
     <div class="card"><h3>Plan usage</h3>
       ${usage.map(([t,used,max])=>`<div class="use"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
     </div>
@@ -208,10 +217,13 @@ function showAccount(u,welcome){
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else{$('pmsg').textContent=r.data.error||'Could not change plan.';b.disabled=false;b.textContent='Switch'}
   });
+  const wt=$('waTest');if(wt)wt.addEventListener('click',async()=>{wt.disabled=true;wt.textContent='Sending…';
+    const r=await api('/api/profile?test=whatsapp',{method:'POST',body:'{}'}).catch(()=>({ok:false,data:{}}));
+    wt.textContent=r.ok?'Test sent ✓':'Failed';if(!r.ok)$('pmsg').textContent=r.data.error||'Test failed.';setTimeout(()=>{wt.disabled=false;wt.textContent='Send test'},4000)});
   $('editBtn').addEventListener('click',()=>{$('kvView').hidden=true;$('editForm').hidden=false;$('editBtn').hidden=true;$('eWa').focus()});
   $('eCancel').addEventListener('click',()=>{$('kvView').hidden=false;$('editForm').hidden=true;$('editBtn').hidden=false});
   $('editForm').addEventListener('submit',async e=>{e.preventDefault();
-    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value})}).catch(()=>({ok:false,data:{}}));
+    const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined})}).catch(()=>({ok:false,data:{}}));
     if(r.ok)showAccount({...r.data.user,productCount:u.productCount},false);
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else $('eErr').textContent=r.data.error||'Could not save.'});
@@ -231,7 +243,7 @@ function renderOrders(list){
   const open=list.filter(o=>!['completed','cancelled'].includes(o.status)).length;
   $('ocount').textContent=list.length?`${open} open · ${list.length} total`:'';
   if(!list.length){$('orders').innerHTML='<p class="msg">No orders yet. Share your shop link with customers — their orders will appear here, in your email and on WhatsApp.</p>';return}
-  $('orders').innerHTML=list.map(o=>`<details class="ord"${o.status==='new'||notes.has(o.id)?' open':''}><summary><b>${esc(o.orderNo)}</b><span>${esc(o.customer.name)}</span><span>${aed(o.total)}</span><span class="st st-${esc(o.status)}">${esc((ST.find(s=>s[0]===o.status)||['','New'])[1])}</span><small>${esc(new Date(o.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</small></summary>
+  $('orders').innerHTML=list.map(o=>`<details class="ord"${o.status==='new'||notes.has(o.id)?' open':''}><summary><b>${esc(o.orderNo)}</b><span>${esc(o.customer.name)}</span><span>${aed(o.total)}</span><span class="st st-${esc(o.status)}">${esc((ST.find(s=>s[0]===o.status)||['','New'])[1])}</span><small>${esc(new Date(o.createdAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))} · Email ${o.emailSent?'✓':'✗'} · WhatsApp ${o.whatsappSent?'✓':'✗'}</small></summary>
     <div class="ob"><div><div class="kv">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}<div><span><b>Total</b></span><b>${aed(o.total)}</b></div></div></div>
     <div class="cust"><b>${esc(o.customer.name)}</b><br><a href="mailto:${esc(o.customer.email)}">${esc(o.customer.email)}</a><br><a href="${wa(o.customer.whatsapp)}" target="_blank" rel="noopener">WhatsApp ${esc(o.customer.whatsapp)}</a><br><span>${esc(o.customer.address)}</span>${o.customer.notes?`<br><i>“${esc(o.customer.notes)}”</i>`:''}
     <label style="margin-top:10px"><span>Status — the customer is notified when you change it</span><select data-o="${esc(o.id)}">${ST.map(([k,t])=>`<option value="${k}"${k===o.status?' selected':''}>${t}</option>`).join('')}</select></label>${o.status!=='new'?`<button class="mini" type="button" data-resend="${esc(o.id)}" style="margin-top:4px">Send update to customer</button>`:''}<div id="n-${esc(o.id)}"></div>${o.history&&o.history.length?`<p class="hist">Last update: ${esc((ST.find(s=>s[0]===o.history[o.history.length-1].status)||['',''])[1])} · ${esc(new Date(o.history[o.history.length-1].at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</p>`:''}</div></div></details>`).join('');

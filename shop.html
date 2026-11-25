@@ -69,6 +69,8 @@ textarea{min-height:70px}
 .done h3{font-size:24px;margin:8px 0 4px}
 .done .btn{width:100%;margin-top:10px}
 .wa{background:#25d366;color:#0b3d1f}
+.sentlist{list-style:none;padding:0;margin:10px 0;text-align:left;font-size:14.5px;font-weight:700}
+.sentlist li{padding:4px 0}.sentlist .y{color:#2f9e6b}.sentlist .y::before{content:'✓ '}.sentlist .n{color:var(--mute)}.sentlist .n::before{content:'• '}
 label span.req{display:inline;color:#c62f5f;margin:0}
 .p .btn{white-space:nowrap}
 footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding:18px}
@@ -94,7 +96,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
       <label><span>Notes (colours, names, delivery date)</span><textarea id="onotes" maxlength="800"></textarea></label>
       <div class="err" id="oerr" role="alert"></div>
       <button class="btn plumb" type="submit" id="sendBtn" style="width:100%">Send order</button>
-      <p class="note" style="margin-top:8px">Your order goes to the shop by email and WhatsApp. The shop will confirm price, delivery and payment with you.</p>
+      <p class="note" style="margin-top:8px">Your order is sent to the shop by email and WhatsApp. The shop will confirm price, delivery and payment with you.</p>
     </form></div>
     <div id="doneWrap" hidden></div>
   </div>
@@ -165,13 +167,15 @@ $('order').addEventListener('submit',async e=>{e.preventDefault();
     cart.clear();count();
     $('formWrap').hidden=true;$('lines').innerHTML='';$('total').parentElement.hidden=true;
     $('doneWrap').hidden=false;
+    const auto=j.emailSent&&j.whatsappSent;
     $('doneWrap').innerHTML=`<div class="done">${okSvg}<h3>Order ${esc(j.orderNo)} sent</h3>
-      <p class="note">Total ${aed(j.total)}. ${j.emailSent?`${esc(shop.business)} has received your order by email.`:'Your order has been saved for the shop.'}</p>
-      ${j.whatsappUrl?`<a class="btn wa" href="${esc(j.whatsappUrl)}" id="waBtn">Send on WhatsApp</a><p class="note">WhatsApp opens with your order ready — just tap send.</p>`:''}
+      <p class="note">Total ${aed(j.total)}. ${esc(shop.business)} will confirm price, delivery and payment with you.</p>
+      <ul class="sentlist"><li class="${j.emailSent?'y':'n'}">${j.emailSent?'Sent to the shop by email':'Not emailed automatically'}</li><li class="${j.whatsappSent?'y':'n'}">${j.whatsappSent?'Sent to the shop on WhatsApp':'Not sent on WhatsApp automatically'}</li></ul>
+      ${j.whatsappUrl?`<a class="btn ${j.whatsappSent?'ghost':'wa'}" href="${esc(j.whatsappUrl)}" id="waBtn">${j.whatsappSent?'Chat with the shop on WhatsApp':'Send on WhatsApp'}</a>${j.whatsappSent?'':'<p class="note">WhatsApp opens with your order ready — just tap send.</p>'}`:''}
       ${j.mailtoUrl?`<a class="btn ghost" href="${esc(j.mailtoUrl)}">Also send by email</a>`:''}
       <button class="btn ghost" type="button" id="again">Continue shopping</button></div>`;
     $('again').addEventListener('click',()=>{$('drawer').classList.remove('open');$('formWrap').hidden=false;$('doneWrap').hidden=true;$('total').parentElement.hidden=false;$('order').reset()});
-    if(j.whatsappUrl)setTimeout(()=>{location.href=j.whatsappUrl},900);
+    if(j.whatsappUrl&&!j.whatsappSent)setTimeout(()=>{location.href=j.whatsappUrl},900);
   }catch(x){err('Network problem — please check your connection and try again.')}
   finally{b.disabled=false;b.textContent='Send order'}
 });

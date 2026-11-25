@@ -38,3 +38,8 @@ Open `index.html` in a browser.
 - `apps-script/Code.gs` is pasted into the "CrochetHub database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
 - Vercel env vars: `APPS_SCRIPT_URL` (the web app URL) and `APPS_SCRIPT_SECRET` (must match `SECRET` in the script).
 - With these set, new orders are emailed to the shop owner and status updates to the customer from the owner's Gmail, and every order and status change is written to the sheet. Without them, email falls back to Resend if configured.
+
+## Automatic WhatsApp order alerts to the shop owner (CallMeBot)
+- Each owner can connect the free CallMeBot service (Account → Edit details → CallMeBot API key). New orders are then sent automatically to the owner's own WhatsApp number, with no tap needed. "Send test" checks it.
+- To get a key: save the bot number shown on callmebot.com, send it "I allow callmebot to send me messages" from the shop's WhatsApp, and paste the key it replies with.
+- CallMeBot only messages the key owner's own number, so customer status updates still open WhatsApp pre-filled for the owner to send.
