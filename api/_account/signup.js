@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail } from '../_lib.js';
+import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -49,6 +49,7 @@ export default async function handler(req, res) {
       try { rec.logo = await uploadImage(userId, b.logo); await saveUser(rec); }
       catch (e) { if (e?.status !== 400) console.error('logo upload failed', e); }
     }
+    await syncAccount(rec);
     setSession(res, userId);
     send(res, 201, { user: publicUser(rec) });
   } catch (e) { fail(res, e); }

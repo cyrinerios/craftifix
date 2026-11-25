@@ -315,7 +315,8 @@ export async function sendOwnerWhatsApp(owner, text) {
 // When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
 // which also records orders and status changes in the "CrochetHub database" Google Sheet.
 // Otherwise email falls back to Resend (if configured).
-export async function deliver({ action, order, inquiry, email }) {
+export async function deliver(payload) {
+  const { email } = payload;
   const url = process.env.APPS_SCRIPT_URL;
   if (url) {
     try {
@@ -324,7 +325,7 @@ export async function deliver({ action, order, inquiry, email }) {
       const r = await fetch(url, {
         method: 'POST', redirect: 'follow', signal: ctrl.signal,
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ secret: process.env.APPS_SCRIPT_SECRET || '', action, order, inquiry, email })
+        body: JSON.stringify({ ...payload, secret: process.env.APPS_SCRIPT_SECRET || '' })
       });
       clearTimeout(t);
       const j = await r.json().catch(() => ({}));
@@ -338,6 +339,20 @@ export async function deliver({ action, order, inquiry, email }) {
 }
 
 export const escHtml =(s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Account row for the Google Sheet (no password or private keys).
+export function accountForSheet(rec) {
+  const p = PLANS[rec.plan] || PLANS.starter;
+  const st = rec.subscription?.status || 'active';
+  return {
+    userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
+    plan: p.name, planPrice: p.price, status: st[0].toUpperCase() + st.slice(1),
+    payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : (rec.subscription?.paymentStatus || ''),
+    createdAt: rec.createdAt, updatedAt: rec.updatedAt || rec.createdAt, currency: rec.currency || 'AED',
+    logo: rec.logo || '', social: rec.social || {}
+  };
+}
+export const syncAccount = (rec) => deliver({ action: 'account_upsert', account: accountForSheet(rec) });
 
 export function requireUser(req, res) {
   const uid = readSession(req);

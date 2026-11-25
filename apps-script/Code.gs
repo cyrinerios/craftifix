@@ -16,6 +16,8 @@
  *                    and adds it to the Inquiries tab, with photo previews
  *   - inquiry_status: updates the inquiry's status, last reply, quoted price and
  *                    order number in the Inquiries tab (and emails the customer a reply)
+ *   - product_upsert / product_delete: keeps the Products tab in step with the shop
+ *   - account_upsert: keeps the Accounts tab in step (sign-up, details, plan changes)
  *
  * SECRET must match APPS_SCRIPT_SECRET in Vercel. Do not share it.
  */
@@ -47,6 +49,12 @@ function doPost(e) {
       result.sheet = true;
     } else if (data.action === 'inquiry_status' && data.inquiry) {
       result.sheet = updateInquiryStatus_(data.inquiry);
+    } else if (data.action === 'product_upsert' && data.product) {
+      upsertProduct_(data.product); result.sheet = true;
+    } else if (data.action === 'product_delete' && data.product) {
+      result.sheet = deleteProduct_(data.product.id);
+    } else if (data.action === 'account_upsert' && data.account) {
+      upsertAccount_(data.account); result.sheet = true;
     }
 
     if (data.email && data.email.to) {
@@ -170,6 +178,73 @@ function markInquiryEmailSent_(inqNo) {
   const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inquiries');
   const r = sh ? findRow_(sh, inqNo) : -1;
   if (r > 0) sh.getRange(r, 17).setValue('Yes');
+}
+
+/* ---------- Products and Accounts ---------- */
+const PRODUCT_HEADERS = ['Shop (user ID)', 'SKU', 'Product name', 'Category', 'Status', 'Stock qty', 'Production days', 'Customisable',
+  'Materials (AED)', 'Accessories (AED)', 'Packaging (AED)', 'Hours', 'Hourly rate (AED)', 'Overhead %', 'Total cost (AED)', 'Pricing method',
+  'Markup / margin %', 'Rounding (AED)', 'VAT added', 'Selling price (AED)', 'Customer price (AED)', 'Profit (AED)', 'Margin %',
+  'Description', 'Photo URL', 'Created', 'Product ID'];
+const METHOD_LABEL = { markup: 'Markup', margin: 'Gross margin', hourly: 'Hourly only', wholesale: 'Wholesale + retail' };
+
+function findRowIn_(sheet, col, value) {
+  const last = sheet.getLastRow();
+  if (last < 2) return -1;
+  const vals = sheet.getRange(2, col, last - 1, 1).getValues();
+  for (let i = 0; i < vals.length; i++) if (String(vals[i][0]) === String(value)) return i + 2;
+  return -1;
+}
+
+function upsertProduct_(p) {
+  const sh = sheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Products', PRODUCT_HEADERS);
+  let r = findRowIn_(sh, 27, p.id);
+  if (r < 1) r = sh.getLastRow() + 1;
+  const c = p.costing || {}, pr = p.pricing || {};
+  sh.getRange(r, 1, 1, 27).setValues([[
+    p.shop, p.sku || '', p.name, p.category || '', p.status === 'published' ? 'Published' : 'Draft', p.quantity || 0, p.productionDays || 0, p.customizable ? 'Yes' : 'No',
+    c.materials || 0, c.accessories || 0, c.packaging || 0, c.hours || 0, c.rate || 0, (c.overheadPct || 0) / 100,
+    '=($I' + r + '+$J' + r + '+$K' + r + '+$L' + r + '*$M' + r + ')*(1+$N' + r + ')', METHOD_LABEL[c.method] || c.method || '',
+    c.method === 'hourly' ? '' : (c.pct || 0) / 100, c.round || 0, c.vat ? 'Yes' : 'No',
+    pr.price || 0, pr.customerPrice || 0, '=$T' + r + '-$O' + r, '=IF($T' + r + '=0,0,$V' + r + '/$T' + r + ')',
+    p.description || '', p.image || '', new Date(p.createdAt || new Date()), p.id
+  ]]);
+  sh.getRange(r, 9, 1, 3).setNumberFormat('#,##0.00;(#,##0.00);"-"');
+  sh.getRange(r, 13, 1, 3).setNumberFormat('#,##0.00;(#,##0.00);"-"');
+  sh.getRange(r, 14).setNumberFormat('0.0%;(0.0%);"-"');
+  sh.getRange(r, 17).setNumberFormat('0.0%;(0.0%);"-"');
+  sh.getRange(r, 20, 1, 3).setNumberFormat('#,##0.00;(#,##0.00);"-"');
+  sh.getRange(r, 23).setNumberFormat('0.0%;(0.0%);"-"');
+  sh.getRange(r, 26).setNumberFormat('yyyy-mm-dd hh:mm');
+}
+
+function deleteProduct_(id) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Products');
+  if (!sh) return false;
+  const r = findRowIn_(sh, 27, id);
+  if (r < 1) return false;
+  sh.deleteRow(r);
+  return true;
+}
+
+const ACCOUNT_HEADERS = ['User ID', 'Name', 'Business', 'Email', 'WhatsApp', 'Plan', 'Plan price (AED/month)', 'Subscription status', 'Payment',
+  'Member since', 'Last updated', 'Products', 'Orders', 'Order value', 'Shop currency', 'Logo', 'Instagram', 'Facebook', 'TikTok'];
+
+function upsertAccount_(a) {
+  const sh = sheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Accounts', ACCOUNT_HEADERS);
+  let r = findRowIn_(sh, 1, a.userId);
+  if (r < 1) r = sh.getLastRow() + 1;
+  const soc = a.social || {};
+  sh.getRange(r, 1, 1, 19).setValues([[
+    a.userId, a.name, a.business, a.email, a.whatsapp ? "'" + a.whatsapp : '', a.plan, a.planPrice, a.status, a.payment,
+    new Date(a.createdAt), new Date(a.updatedAt),
+    '=COUNTIF(Products!$A:$A,$A' + r + ')', '=COUNTIF(Orders!$B:$B,$A' + r + ')',
+    '=SUMIFS(Orders!$J:$J,Orders!$B:$B,$A' + r + ',Orders!$D:$D,"<>Cancelled")',
+    a.currency || 'AED', a.logo ? '=IMAGE("' + String(a.logo).replace(/"/g, '') + '")' : '',
+    soc.instagram || '', soc.facebook || '', soc.tiktok || ''
+  ]]);
+  sh.getRange(r, 10, 1, 2).setNumberFormat('yyyy-mm-dd hh:mm');
+  sh.getRange(r, 14).setNumberFormat('#,##0.00;(#,##0.00);"-"');
+  if (a.logo) sh.setRowHeight(r, 70);
 }
 
 function findRow_(sheet, orderNo) {

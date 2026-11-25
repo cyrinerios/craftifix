@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, readSession, getUser, saveUser, publicUser, body, send, onlyMethod, fail } from '../_lib.js';
+import { PLANS, assertConfigured, readSession, getUser, saveUser, publicUser, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 // Change the logged-in user's plan. Payment is skipped for now.
 export default async function handler(req, res) {
@@ -16,6 +16,7 @@ export default async function handler(req, res) {
     rec.subscription = { ...rec.subscription, status: 'active', paymentStatus: 'skipped', changedAt: now };
     rec.updatedAt = now;
     await saveUser(rec);
+    await syncAccount(rec);
     send(res, 200, { user: publicUser(rec) });
   } catch (e) { fail(res, e); }
 }

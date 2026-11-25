@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { del } from '@vercel/blob';
-import { PLANS, assertConfigured, requireUser, getUser, getProducts, saveProducts, cleanProduct, body, send, fail } from './_lib.js';
+import { PLANS, deliver, assertConfigured, requireUser, getUser, getProducts, saveProducts, cleanProduct, body, send, fail } from './_lib.js';
 
 // GET    /api/products            -> list the logged-in business's products
 // POST   /api/products            -> create a product (plan limit enforced)
@@ -29,6 +29,7 @@ export default async function handler(req, res) {
       const rec = { id: crypto.randomUUID(), ...p, createdAt: now, updatedAt: now };
       list.unshift(rec);
       await saveProducts(uid, list);
+      await deliver({ action: 'product_upsert', product: { ...rec, shop: uid } });
       return send(res, 201, { product: rec, products: list, limit });
     }
 
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
       const oldImage = list[i].image;
       list[i] = { ...list[i], ...p, updatedAt: new Date().toISOString() };
       await saveProducts(uid, list);
+      await deliver({ action: 'product_upsert', product: { ...list[i], shop: uid } });
       if (oldImage && oldImage !== list[i].image) del(oldImage).catch(() => {});
       return send(res, 200, { product: list[i], products: list, limit });
     }
@@ -49,6 +51,7 @@ export default async function handler(req, res) {
       if (i < 0) return send(res, 404, { error: 'Product not found.' });
       const [gone] = list.splice(i, 1);
       await saveProducts(uid, list);
+      await deliver({ action: 'product_delete', product: { id: gone.id, shop: uid } });
       if (gone.image) del(gone.image).catch(() => {});
       return send(res, 200, { products: list, limit });
     }
