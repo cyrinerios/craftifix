@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">${text.split('\n').map((l) => `<p style="margin:6px 0">${escHtml(l) || '&nbsp;'}</p>`).join('')}</div>`;
       const email = await deliver({
         action: 'inquiry_status',
-        inquiry: { inqNo: q.inqNo, statusLabel: LABEL[q.status], lastReply: message, price },
+        inquiry: { inqNo: q.inqNo, shop: uid, customerName: q.customer.name, statusLabel: LABEL[q.status], lastReply: message, price, readyBy, replyAt: now },
         email: { to: q.customer.email, subject, text, html, replyTo: owner.email, fromName: owner.business }
       });
       reply.emailSent = email.sent;

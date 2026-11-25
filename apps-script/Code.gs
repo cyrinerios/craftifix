@@ -21,6 +21,7 @@
  */
 const SECRET = 'PASTE_THE_SAME_VALUE_AS_APPS_SCRIPT_SECRET_IN_VERCEL';
 const SENDER_NAME = 'CrochetHub';
+let LAST_REPLY_ROW = 0;
 
 function doPost(e) {
   let data;
@@ -62,6 +63,10 @@ function doPost(e) {
         result.emailed = true;
         if (data.action === 'new_order' && data.order) markEmailSent_(data.order.orderNo);
         if (data.action === 'new_inquiry' && data.inquiry) markInquiryEmailSent_(data.inquiry.inqNo);
+        if (data.action === 'inquiry_status' && LAST_REPLY_ROW) {
+          const rep = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Inquiry replies');
+          if (rep) rep.getRange(LAST_REPLY_ROW, 8).setValue('Yes');
+        }
       } else {
         result.error = 'Daily Gmail sending limit reached';
       }
@@ -83,16 +88,18 @@ function doGet() {
 
 function addOrder_(o) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const orders = sheet_(ss, 'Orders', ['Order no.', 'Shop (user ID)', 'Date', 'Status', 'Customer', 'Email', 'WhatsApp', 'Delivery address', 'Notes', 'Total (AED)', 'Email sent']);
-  const items = sheet_(ss, 'Order items', ['Order no.', 'Shop (user ID)', 'Product', 'Qty', 'Unit price (AED)', 'Line total (AED)']);
+  const orders = sheet_(ss, 'Orders', ['Order no.', 'Shop (user ID)', 'Date', 'Status', 'Customer', 'Email', 'WhatsApp', 'Delivery address', 'Notes', 'Total', 'Email sent', 'Source', 'From inquiry', 'Currency']);
+  const items = sheet_(ss, 'Order items', ['Order no.', 'Shop (user ID)', 'Product', 'Qty', 'Unit price', 'Line total']);
 
   if (findRow_(orders, o.orderNo) > 0) return; // already recorded
 
   const r = orders.getLastRow() + 1;
-  orders.getRange(r, 1, 1, 11).setValues([[
+  const fromInquiry = o.source && o.source.inqNo ? o.source.inqNo : '';
+  orders.getRange(r, 1, 1, 14).setValues([[
     o.orderNo, o.shop, new Date(o.createdAt), o.statusLabel || 'New',
     o.customer.name, o.customer.email, "'" + o.customer.whatsapp, o.customer.address, o.customer.notes || '',
-    "=SUMIFS('Order items'!$F:$F,'Order items'!$A:$A,$A" + r + ')', 'No'
+    "=SUMIFS('Order items'!$F:$F,'Order items'!$A:$A,$A" + r + ')', 'No',
+    fromInquiry ? 'Converted from inquiry' : 'Shop order', fromInquiry, o.currency || 'AED'
   ]]);
   orders.getRange(r, 3).setNumberFormat('yyyy-mm-dd hh:mm');
   orders.getRange(r, 10).setNumberFormat('#,##0.00;(#,##0.00);"-"');
@@ -145,7 +152,15 @@ function updateInquiryStatus_(q) {
   const r = findRow_(sh, q.inqNo);
   if (r < 1) return false;
   if (q.statusLabel) sh.getRange(r, 4).setValue(q.statusLabel);
-  if (q.lastReply) sh.getRange(r, 18).setValue(q.lastReply);
+  if (q.lastReply) {
+    sh.getRange(r, 18).setValue(q.lastReply);
+    const rep = sheet_(SpreadsheetApp.getActiveSpreadsheet(), 'Inquiry replies', ['Inquiry no.', 'Shop (user ID)', 'Customer', 'Replied at', 'Reply', 'Quoted price', 'Ready by', 'Emailed']);
+    const rr = rep.getLastRow() + 1;
+    rep.getRange(rr, 1, 1, 8).setValues([[q.inqNo, q.shop || '', q.customerName || '', q.replyAt ? new Date(q.replyAt) : new Date(), q.lastReply,
+      q.price === undefined || q.price === null ? '' : q.price, q.readyBy || '', 'No']]);
+    rep.getRange(rr, 4).setNumberFormat('yyyy-mm-dd hh:mm');
+    LAST_REPLY_ROW = rr;
+  }
   if (q.price !== undefined && q.price !== null) sh.getRange(r, 19).setValue(q.price).setNumberFormat('#,##0.00');
   if (q.orderNo) sh.getRange(r, 20).setValue(q.orderNo);
   return true;
