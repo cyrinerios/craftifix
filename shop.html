@@ -151,6 +151,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
           <label><span>Email <span class="req">*</span></span><input id="inqEmail" type="email" autocomplete="email" required></label>
         </div>
         <label><span>WhatsApp number <span class="req">*</span></span><input id="inqWa" type="tel" inputmode="tel" autocomplete="tel" required placeholder="+971 55 123 4567"></label>
+        <label><span>Delivery address <span class="req">*</span></span><textarea id="inqAddr" autocomplete="street-address" maxlength="400" required placeholder="Building, street, area, city, emirate"></textarea></label>
         <div class="err" id="inqErr" role="alert"></div>
         <button class="btn plumb" type="submit" id="inqBtn" style="width:100%">Send inquiry</button>
         <p class="note" style="margin-top:8px">Your inquiry and photos are sent to the shop by email and WhatsApp.</p>
@@ -328,16 +329,17 @@ function setInqImg(n,data){inqImgs[n]=data||'';$('inqPh'+n).innerHTML=data?`<img
 document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>setInqImg(+b.dataset.rm,'')));
 $('inqForm').addEventListener('submit',async e=>{e.preventDefault();
   const err=m=>{$('inqErr').textContent=m};
-  const d={shop:uid,message:$('inqMsg').value.trim(),budget:$('inqBudget').value.trim(),neededBy:$('inqDate').value,name:$('inqName').value.trim(),email:$('inqEmail').value.trim(),whatsapp:normWA($('inqWa').value),
+  const d={shop:uid,message:$('inqMsg').value.trim(),budget:$('inqBudget').value.trim(),neededBy:$('inqDate').value,name:$('inqName').value.trim(),email:$('inqEmail').value.trim(),whatsapp:normWA($('inqWa').value),address:$('inqAddr').value.trim(),
     options:[0,1].map(n=>({note:$('inqNote'+n).value.trim(),dataUrl:inqImgs[n]||undefined}))};
   if(d.message.length<5){$('inqMsg').focus();return err('Please tell the shop what you would like made.')}
   if(!d.name){$('inqName').focus();return err('Please enter your name.')}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){$('inqEmail').focus();return err('Please enter a valid email address.')}
   if(!d.whatsapp){$('inqWa').focus();return err('Please enter your WhatsApp number with country code, e.g. +971 55 123 4567.')}
+  if(d.address.length<8){$('inqAddr').focus();return err('Please enter your delivery address.')}
   err('');const b=$('inqBtn');b.disabled=true;b.textContent=inqImgs.some(Boolean)?'Uploading photos…':'Sending…';
   try{const r=await fetch('/api/inquiry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
     const j=await r.json().catch(()=>({}));
-    if(!r.ok){const map={name:'inqName',email:'inqEmail',whatsapp:'inqWa',message:'inqMsg'};if(j.field&&map[j.field])$(map[j.field]).focus();return err(j.error||(r.status===413?'Photos are too large — try smaller ones.':'Could not send the inquiry. Please try again.'))}
+    if(!r.ok){const map={name:'inqName',email:'inqEmail',whatsapp:'inqWa',address:'inqAddr',message:'inqMsg'};if(j.field&&map[j.field])$(map[j.field]).focus();return err(j.error||(r.status===413?'Photos are too large — try smaller ones.':'Could not send the inquiry. Please try again.'))}
     $('inqForm').hidden=true;$('inqDone').hidden=false;
     $('inqDone').innerHTML=`<div class="inqfields done" style="max-width:560px">${okSvg}<h3>Inquiry ${esc(j.inqNo)} sent</h3>
       <p class="note">${esc(shop.business)} will get back to you on WhatsApp or email with a price and timeline.</p>

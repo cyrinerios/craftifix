@@ -74,6 +74,7 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .replyf .row2,.convf .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .convert{margin-top:12px}.convert>summary{list-style:none;cursor:pointer}.convert>summary::-webkit-details-marker{display:none}
 .convf{margin-top:10px;border:1.5px solid var(--gold);border-radius:14px;padding:12px}
+.hint2{display:block;font-weight:400;font-size:12.5px;color:var(--mute);margin-top:4px}
 .convok{margin-top:10px;background:#cdeedd;color:#155c3b;border-radius:12px;padding:10px 12px}
 .srctag{font-size:12px;font-weight:700;background:#e2dcfb;color:#3b2a8a;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .flash{animation:fl 2s ease-out}@keyframes fl{0%{box-shadow:0 0 0 4px var(--gold)}100%{box-shadow:none}}
@@ -328,7 +329,7 @@ function renderInquiries(list){
       <h4 class="sub4">Replies to customer</h4>
       ${replies.length?`<ol class="thread">${replies.map(r=>`<li><small>${esc(fmtDT(r.at))}${r.emailSent?' · emailed':''}</small><p>${esc(r.message)}</p>${r.price!=null?`<b>Quoted ${aed(r.price)}</b>`:''}${r.readyBy?` <span class="msg">· ready by ${esc(r.readyBy)}</span>`:''}</li>`).join('')}</ol>`:'<p class="msg">You haven\'t replied yet.</p>'}
     </div>
-    <div class="cust"><b>${esc(q.customer.name)}</b><br><a href="mailto:${esc(q.customer.email)}">${esc(q.customer.email)}</a><br>WhatsApp ${esc(q.customer.whatsapp)}
+    <div class="cust"><b>${esc(q.customer.name)}</b><br><a href="mailto:${esc(q.customer.email)}">${esc(q.customer.email)}</a><br>WhatsApp ${esc(q.customer.whatsapp)}${q.suggestedAddress?`<br><span>${esc(q.suggestedAddress)}</span>`:''}
       ${conv?`<div class="convok">Converted to order <b>${esc(q.orderNo)}</b>. You'll find it in Orders from your shop.<br><a href="#ord-${esc(q.orderId)}" class="mini" data-goorder="${esc(q.orderId)}" style="margin-top:6px">View order</a></div>`:`
       <form class="replyf" data-reply="${esc(q.id)}" novalidate>
         <label><span>Reply to ${esc(first)}</span><textarea name="message" maxlength="1500" required>${esc(`Hi ${first}, thank you for your custom inquiry! `)}</textarea></label>
@@ -343,7 +344,7 @@ function renderInquiries(list){
           <p class="msg">Use this once ${esc(first)} has confirmed the agreed item and price. It creates a confirmed order, moves it to Orders, and sends the confirmation with a tracking link.</p>
           <label><span>Item</span><input name="name" maxlength="120" value="${esc('Custom order: '+q.message.slice(0,80))}"></label>
           <div class="row2"><label><span>Qty</span><input name="qty" type="number" min="1" max="99" step="1" value="1"></label><label><span>Price each (AED)</span><input name="unitPrice" type="number" min="0" step="0.5" inputmode="decimal" value="${q.quote?q.quote.price:''}"></label></div>
-          <label><span>Delivery address</span><textarea name="address" maxlength="400" placeholder="Building, street, area, city, emirate"></textarea></label>
+          <label><span>Delivery address</span><textarea name="address" maxlength="400" placeholder="Building, street, area, city, emirate">${esc(q.suggestedAddress||'')}</textarea>${q.suggestedAddress?`<small class="hint2">${q.addressFrom==='inquiry'?'From the customer’s inquiry':'From the customer’s previous order '+esc(q.addressFrom)} — edit if needed</small>`:'<small class="hint2">No address on file for this customer — ask them and type it here</small>'}</label>
           <label><span>Order notes (optional)</span><textarea name="notes" maxlength="800">${esc([q.options.map(o=>o.note&&o.label+': '+o.note).filter(Boolean).join('; '),q.neededBy?'Needed by '+q.neededBy:''].filter(Boolean).join(' · '))}</textarea></label>
           <div class="err" role="alert"></div>
           <button class="btn plumb" type="submit" style="width:100%">Create confirmed order</button>
@@ -353,13 +354,13 @@ function renderInquiries(list){
   for(const d of $('inquiries').querySelectorAll('details.ord'))d.addEventListener('toggle',()=>{d.open?iqOpen.add(d.dataset.qid):iqOpen.delete(d.dataset.qid)});
   $('inquiries').onchange=async e=>{const sel=e.target.closest('select[data-q]');if(!sel)return;sel.disabled=true;
     const r=await api('/api/inquiries?id='+encodeURIComponent(sel.dataset.q),{method:'PUT',body:JSON.stringify({status:sel.value})}).catch(()=>({ok:false,data:{}}));
-    if(r.ok)renderInquiries(r.data.inquiries);else{sel.disabled=false;alertMsg(r.data.error||'Could not update the inquiry.')}};
+    if(r.ok)loadInquiries();else{sel.disabled=false;alertMsg(r.data.error||'Could not update the inquiry.')}};
   $('inquiries').onclick=async e=>{
     const g=e.target.closest('[data-goorder]');if(g){e.preventDefault();const o=document.getElementById('ord-'+g.dataset.goorder);if(o){o.open=true;o.scrollIntoView({behavior:'smooth',block:'start'})}return}
     const b=e.target.closest('[data-qdel]');if(!b)return;
     if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='Tap again to delete';setTimeout(()=>{b.dataset.confirm='';b.textContent='Delete inquiry'},3000);return}
     b.disabled=true;const r=await api('/api/inquiries?id='+encodeURIComponent(b.dataset.qdel),{method:'DELETE'}).catch(()=>({ok:false,data:{}}));
-    if(r.ok)renderInquiries(r.data.inquiries);else{b.disabled=false;alertMsg('Could not delete the inquiry.')}};
+    if(r.ok)loadInquiries();else{b.disabled=false;alertMsg('Could not delete the inquiry.')}};
   $('inquiries').onsubmit=async e=>{
     const f=e.target;e.preventDefault();
     if(f.dataset.reply){
@@ -369,7 +370,7 @@ function renderInquiries(list){
       const w=window.open('about:blank','_blank');btn.disabled=true;btn.textContent='Sending…';
       const r=await api('/api/inquiries?id='+encodeURIComponent(id)+'&action=reply',{method:'POST',body:JSON.stringify(d)}).catch(()=>({ok:false,data:{}}));
       if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Send reply';const nb=$('qn-'+id);if(nb)nb.innerHTML=`<p class="nerr">${esc(r.data.error||'Could not send the reply.')}</p>`;return}
-      iqOpen.add(id);renderInquiries(r.data.inquiries);
+      iqOpen.add(id);renderInquiries(r.data.inquiries);loadInquiries().then(()=>showReplyNote(id,{...r.data.notification,auto:!!w}));
       const n=r.data.notification;if(w){if(n.whatsappUrl)w.location.href=n.whatsappUrl;else w.close()}
       showReplyNote(id,{...n,auto:!!w});
     }
@@ -383,7 +384,7 @@ function renderInquiries(list){
       const r=await api('/api/inquiries?id='+encodeURIComponent(id)+'&action=convert',{method:'POST',body:JSON.stringify(d)}).catch(()=>({ok:false,data:{}}));
       if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Create confirmed order';er.textContent=r.data.error||'Could not create the order.';return}
       const o=r.data.order,n=r.data.notification;
-      renderInquiries(r.data.inquiries);
+      loadInquiries();
       notes.set(o.id,{...n,auto:!!w});renderOrders(r.data.orders);
       if(w){if(n&&n.whatsappUrl)w.location.href=n.whatsappUrl;else w.close()}
       const el=document.getElementById('ord-'+o.id);if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.add('flash')}

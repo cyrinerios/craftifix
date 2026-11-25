@@ -19,7 +19,16 @@ export default async function handler(req, res) {
     assertConfigured();
     const uid = requireUser(req, res); if (!uid) return;
     const list = await getInquiries(uid);
-    if (req.method === 'GET') return send(res, 200, { inquiries: list });
+    if (req.method === 'GET') {
+      // Delivery address for each inquiry: the one the customer gave, otherwise their latest order's address.
+      const orders = await getOrders(uid);
+      const withAddr = list.map((q) => {
+        if (q.customer.address) return { ...q, suggestedAddress: q.customer.address, addressFrom: 'inquiry' };
+        const prev = orders.find((o) => o.customer?.address && (o.customer.email === q.customer.email || o.customer.whatsapp === q.customer.whatsapp));
+        return prev ? { ...q, suggestedAddress: prev.customer.address, addressFrom: prev.orderNo } : q;
+      });
+      return send(res, 200, { inquiries: withAddr });
+    }
 
     const i = list.findIndex((x) => x.id === String(req.query?.id || ''));
     if (i < 0) return send(res, 404, { error: 'Inquiry not found.' });
