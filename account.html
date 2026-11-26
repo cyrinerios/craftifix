@@ -179,7 +179,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const main=$('main');
-const ALL=[['starter','Starter',29],['professional','Professional',59],['business','Business',99]];
+const ALL=[['standard','Standard',10],['premium','Premium',30]];
 const FEAT=[['dashboard','Dashboard'],['pricingCalculator','Pricing calculator'],['onlineStore','Online store'],['customers','Customer management'],['inventory','Inventory'],['salesReports','Sales reports'],['productionTracking','Production tracking'],['staffAccounts','Staff accounts']];
 const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
 

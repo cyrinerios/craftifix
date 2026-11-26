@@ -163,7 +163,7 @@ ol.st8 li:not(:last-child)::after{content:"";position:absolute;left:13px;top:29p
 @media(max-width:480px){.prods{grid-template-columns:repeat(2,minmax(0,1fr))}.prods .prod:nth-child(3){display:none}}
 
 /* plans */
-.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:stretch}
+.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch;max-width:820px;margin:0 auto}
 .plan{border:1.5px solid var(--line);border-radius:22px;padding:26px;background:var(--bg);display:flex;flex-direction:column}
 .plan.pop{border-color:var(--gold);box-shadow:0 18px 40px rgba(255,182,39,.25);position:relative}
 .badge{position:absolute;top:-13px;left:24px;background:var(--gold);color:#2a1430;font:700 13px Outfit,sans-serif;padding:4px 12px;border-radius:999px}
@@ -209,7 +209,7 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .ok b{font:800 24px Outfit,sans-serif;display:block;margin-bottom:6px}
 .hint{display:block;font-weight:400;font-size:13px;color:var(--mute);margin-top:4px}
 .lbl{display:block;font-weight:700;font-size:14.5px;margin-bottom:6px}
-.pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
 .pick label{margin:0;cursor:pointer;position:relative}
 .pick input{position:absolute;opacity:0;width:1px;height:1px}
 .pick span{display:block;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;text-align:center;min-height:64px;margin:0}
@@ -233,7 +233,7 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .btn[disabled]{opacity:.6;cursor:wait}
 .login{color:#fff;font-weight:700;text-decoration:none;padding:10px 6px;white-space:nowrap;flex:none}
 @media(max-width:860px){.login{margin-left:auto}.bar .btn{margin-left:0!important}}
-@media(max-width:480px){.pick{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:360px){.pick{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:430px){.bar .btn.gold{display:none}}
 @media(max-width:860px){.join .wrap{grid-template-columns:minmax(0,1fr)}}
 
@@ -386,7 +386,7 @@ footer a:hover{color:#fff}
     <div class="head"><h2>Built for the whole team</h2><p>Grow from a solo maker to a small studio without changing tools.</p></div>
     <div class="roles">
       <div class="role" style="background:var(--plum)"><h3>Business owner</h3><p>Runs the shop: products, pricing, storefront, customers, quotations, invoices, orders, inventory, reports and billing.</p></div>
-      <div class="role" style="background:#a8437c"><h3>Staff members</h3><p>On the Business plan, add helpers and choose exactly what each can manage — products, orders, customers, quotations, invoices or inventory.</p></div>
+      <div class="role" style="background:#a8437c"><h3>Staff members</h3><p>On the Premium plan, add helpers and choose exactly what each can manage — products, orders, customers, quotations, invoices or inventory.</p></div>
       <div class="role" style="background:#d9669a;color:#2a1430"><h3>Your customers</h3><p>Browse your storefront, request custom pieces and receive polished, branded quotations, invoices and receipts.</p></div>
     </div>
     <h3 style="margin-top:46px;font-size:24px">What's coming</h3>
@@ -546,9 +546,8 @@ $('prods').addEventListener('click',e=>{if(e.target.matches('[data-add]')){cart+
 
 /* plans */
 const plans=[
- ['Starter',29,'For makers just starting to sell.',[['20 product listings',1],['Basic dashboard & pricing calculator',1],['10 quotations & 10 invoices a month',1],['Basic online store',1],['Basic customer list & sales reports',1],['Limited inventory',1],['Production tracking',0],['Staff accounts',0]]],
- ['Professional',59,'For growing shops with steady orders.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management & reports',1],['Full inventory',1],['Basic production tracking',1],['Staff accounts',0]],1],
- ['Business',99,'For studios with a team.',[['Unlimited products',1],['Advanced dashboard & pricing calculator',1],['Unlimited quotations & invoices',1],['Customisable online store',1],['Full customer management',1],['Advanced inventory & sales reports',1],['Full production tracking',1],['Multiple staff accounts',1]]]];
+ ['Standard',10,'For makers just starting to sell online.',[['20 product listings',1],['Pricing calculator',1],['Basic dashboard',1],['10 quotations & 10 invoices a month',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Advanced analytics & unlimited products',0],['Staff accounts',0]]],
+ ['Premium',30,'For growing shops and studios with a team.',[['Unlimited products',1],['Pricing calculator',1],['Advanced dashboard & analytics',1],['Unlimited quotations & invoices',1],['Customisable online shop',1],['Custom inquiries with inspo photos',1],['Full inventory & production tracking',1],['Multiple staff accounts',1]],1]];
 $('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p">AED ${p}<small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
 $('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const r=document.querySelector(`#pick input[value="${a.dataset.plan.toLowerCase()}"]`);if(r)r.checked=true});
 

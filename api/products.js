@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { del } from '@vercel/blob';
-import { PLANS, deliver, assertConfigured, requireUser, getUser, getProducts, saveProducts, cleanProduct, body, send, fail } from './_lib.js';
+import { planFor, deliver, assertConfigured, requireUser, getUser, getProducts, saveProducts, cleanProduct, body, send, fail } from './_lib.js';
 
 // GET    /api/products            -> list the logged-in business's products
 // POST   /api/products            -> create a product (plan limit enforced)
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     const uid = requireUser(req, res); if (!uid) return;
     const user = await getUser(uid);
     if (!user) return send(res, 401, { error: 'Please log in again.' });
-    const plan = PLANS[user.plan] || PLANS.starter;
+    const plan = planFor(user.plan);
     const list = await getProducts(uid);
     const limit = plan.limits.products;
     const id = String(req.query?.id || '');

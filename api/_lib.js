@@ -10,22 +10,22 @@ const COOKIE = 'ch_session';
 const SESSION_DAYS = 7;
 
 export const PLANS = {
-  starter: {
-    id: 'starter', name: 'Starter', price: 29,
+  standard: {
+    id: 'standard', name: 'Standard', price: 10,
     limits: { products: 20, quotationsPerMonth: 10, invoicesPerMonth: 10, staff: 0 },
-    features: { dashboard: 'Basic', pricingCalculator: 'Basic', onlineStore: 'Basic', customers: 'Basic', inventory: 'Limited', salesReports: 'Basic', productionTracking: 'No', staffAccounts: 'No' }
+    features: { dashboard: 'Basic', pricingCalculator: 'Full', onlineStore: 'Basic', customers: 'Basic', inventory: 'Limited', salesReports: 'Basic', productionTracking: 'No', staffAccounts: 'No' }
   },
-  professional: {
-    id: 'professional', name: 'Professional', price: 59,
-    limits: { products: null, quotationsPerMonth: null, invoicesPerMonth: null, staff: 0 },
-    features: { dashboard: 'Advanced', pricingCalculator: 'Advanced', onlineStore: 'Customizable', customers: 'Full', inventory: 'Full', salesReports: 'Full', productionTracking: 'Basic', staffAccounts: 'No' }
-  },
-  business: {
-    id: 'business', name: 'Business', price: 99,
+  premium: {
+    id: 'premium', name: 'Premium', price: 30,
     limits: { products: null, quotationsPerMonth: null, invoicesPerMonth: null, staff: null },
-    features: { dashboard: 'Advanced', pricingCalculator: 'Advanced', onlineStore: 'Customizable', customers: 'Full', inventory: 'Advanced', salesReports: 'Advanced', productionTracking: 'Full', staffAccounts: 'Multiple' }
+    features: { dashboard: 'Advanced', pricingCalculator: 'Full', onlineStore: 'Customizable', customers: 'Full', inventory: 'Full', salesReports: 'Advanced', productionTracking: 'Full', staffAccounts: 'Multiple' }
   }
 };
+
+// Accounts created before the plan change keep working: Starter -> Standard, Professional/Business -> Premium.
+const LEGACY_PLANS = { starter: 'standard', professional: 'premium', business: 'premium' };
+export const planId = (id) => (PLANS[id] ? id : LEGACY_PLANS[id] || 'standard');
+export const planFor = (id) => PLANS[planId(id)];
 
 export function assertConfigured() {
   if (!SECRET || SECRET.length < 32) throw new Error('AUTH_SECRET is not configured');
@@ -90,7 +90,7 @@ export async function saveUser(rec, { create = false } = {}) {
 
 export function publicUser(rec) {
   const { passwordHash, callmebotKey, ...rest } = rec;
-  return { ...rest, currency: rec.currency || 'AED', whatsappAlerts: !!callmebotKey, planDetails: PLANS[rec.plan] || PLANS.starter };
+  return { ...rest, currency: rec.currency || 'AED', whatsappAlerts: !!callmebotKey, plan: planId(rec.plan), planDetails: planFor(rec.plan) };
 }
 
 /* ---------- sessions (HMAC-signed cookie) ---------- */
@@ -342,7 +342,7 @@ export const escHtml =(s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': 
 
 // Account row for the Google Sheet (no password or private keys).
 export function accountForSheet(rec) {
-  const p = PLANS[rec.plan] || PLANS.starter;
+  const p = planFor(rec.plan);
   const st = rec.subscription?.status || 'active';
   return {
     userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
