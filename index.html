@@ -168,6 +168,8 @@ ol.st8 li:not(:last-child)::after{content:"";position:absolute;left:13px;top:29p
 .plan.pop{border-color:var(--gold);box-shadow:0 18px 40px rgba(255,182,39,.25);position:relative}
 .badge{position:absolute;top:-13px;left:24px;background:var(--gold);color:#2a1430;font:700 13px Outfit,sans-serif;padding:4px 12px;border-radius:999px}
 .plan .p{font:800 44px/1 Outfit,sans-serif;margin:14px 0 4px;white-space:nowrap}
+.plan .p span{font:inherit}
+.fxnote{text-align:center;color:var(--mute);font-size:13.5px;margin:14px auto 0;max-width:640px}.fxnote a{color:inherit}
 .plan .p small{font:600 16px "Nunito Sans",sans-serif;color:var(--mute)}
 .plan .for{color:var(--mute);font-size:15px;min-height:3em}
 .plan ul{list-style:none;padding:0;margin:16px 0 22px;flex:1}
@@ -377,6 +379,7 @@ footer a:hover{color:#fff}
   <div class="wrap">
     <div class="head"><h2>Simple monthly plans</h2><p>Start small and upgrade as your shop grows. Annual billing is also available. Introductory prices.</p></div>
     <div class="plans" id="planGrid"></div>
+    <p class="fxnote" id="fxnote" hidden></p>
     <p class="fine">Prices are introductory and may change. Upgrade, downgrade or cancel from your account at any time.</p>
   </div>
 </section>
@@ -549,7 +552,7 @@ $('prods').addEventListener('click',e=>{if(e.target.matches('[data-add]')){cart+
 const plans=[
  ['Standard',10,'For makers just starting to sell online.',[['Up to 5 product listings',1],['Up to 5 confirmed orders from inquiries a month',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Unlimited listings & inquiry orders',0]]],
  ['Premium',30,'For growing shops with steady custom orders.',[['Unlimited product listings',1],['Unlimited confirmed orders from inquiries',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Priority access to new features',1]],1]];
-$('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p">AED ${p}<small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
+$('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p"><span data-pp="${n.toLowerCase()}">AED ${p}</span><small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
 $('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const r=document.querySelector(`#pick input[value="${a.dataset.plan.toLowerCase()}"]`);if(r)r.checked=true});
 
 /* roadmap */
@@ -566,7 +569,19 @@ const faqs=[['Who is CrochetHub for?','Crocheters, handmade product creators and
 $('faqs').innerHTML=faqs.map(([q,a],i)=>`<details${i===0?' open':''}><summary>${q}</summary><p>${a}</p></details>`).join('');
 
 /* signup — creates a real account through /api/signup (payment skipped) */
-$('pick').innerHTML=plans.map(([n,p,,,pop])=>`<label><input type="radio" name="plan" value="${n.toLowerCase()}"${pop?' checked':''}><span><b>${n}</b><small>AED ${p}/mo</small></span></label>`).join('');
+$('pick').innerHTML=plans.map(([n,p,,,pop])=>`<label><input type="radio" name="plan" value="${n.toLowerCase()}"${pop?' checked':''}><span><b>${n}</b><small data-pk="${n.toLowerCase()}">AED ${p}/mo</small></span></label>`).join('');
+/* plan prices follow the chosen shop currency (converted from AED at today's rate) */
+async function showPrices(cur){
+  const base=Object.fromEntries(plans.map(([n,p])=>[n.toLowerCase(),'AED '+p]));
+  let labels=base,pr=null;
+  if(cur&&cur!=='AED'){try{const r=await fetch('/api/rates?currency='+encodeURIComponent(cur));if(r.ok){pr=(await r.json()).pricing;labels=Object.fromEntries(Object.entries(pr.plans).map(([k,v])=>[k,v.label]))}}catch{}}
+  for(const el of document.querySelectorAll('[data-pp]'))el.textContent=labels[el.dataset.pp]||base[el.dataset.pp];
+  for(const el of document.querySelectorAll('[data-pk]'))el.textContent=(labels[el.dataset.pk]||base[el.dataset.pk])+'/mo';
+  const n=$('fxnote');
+  if(pr&&pr.currency!=='AED'){n.hidden=false;n.innerHTML=`Prices shown in ${pr.currency}, converted from AED (Standard AED ${pr.plans.standard.aed}, Premium AED ${pr.plans.premium.aed}) at ${pr.live?'today’s':'an approximate'} rate: 1 AED = ${pr.rate} ${pr.currency}. <a href="${pr.sourceUrl}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`}
+  else n.hidden=true;
+}
+$('scur').addEventListener('change',e=>showPrices(e.target.value));
 const fields={currency:'scur',userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw',instagram:'sig',facebook:'sfb',tiktok:'stt'};
 let logoData='';
 function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=400,k=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(file.type==='image/png'?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',.9))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}

@@ -74,3 +74,11 @@ Open `index.html` in a browser.
 - **Premium (AED 30/month):** unlimited product listings and unlimited orders from inquiries.
 - Limits are enforced by the API (`/api/products` create, `/api/inquiries?action=convert`, and downgrading in `/api/plan`), and shown to the owner on the Dashboard, Inquiries, My products and Settings pages.
 - Older accounts map automatically: Starter → Standard, Professional/Business → Premium.
+
+## Subscription price in the shop currency
+
+Plan prices are set in AED (Standard 10, Premium 30) and shown in each shop's currency, converted at the day's rate from
+ExchangeRate-API's free open endpoint (`https://open.er-api.com/v6/latest/AED`, updates daily, attribution link shown).
+Rates are cached for 12 hours; if the service is unreachable, approximate built-in rates are used and labelled as such.
+`GET /api/rates?currency=PHP` returns the converted plan prices (public, CDN-cached). Signup and plan changes record the
+currency, converted amount, AED base price and rate on the account's subscription.

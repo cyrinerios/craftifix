@@ -5,6 +5,7 @@
     { "source": "/api/logout", "destination": "/api/account?action=logout" },
     { "source": "/api/me", "destination": "/api/account?action=me" },
     { "source": "/api/plan", "destination": "/api/account?action=plan" },
-    { "source": "/api/profile", "destination": "/api/account?action=profile" }
+    { "source": "/api/profile", "destination": "/api/account?action=profile" },
+    { "source": "/api/rates", "destination": "/api/account?action=rates" }
   ]
 }

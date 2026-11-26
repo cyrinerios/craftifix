@@ -1,4 +1,4 @@
-import { PLANS, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
+import { PLANS, pricingFor, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -33,10 +33,12 @@ export default async function handler(req, res) {
     if (await getUser(userId)) return send(res, 409, { error: 'That user ID is already taken. Please choose another.', field: 'userId' });
 
     const now = new Date().toISOString();
+    const pricing = await pricingFor(currency);
     const rec = {
       userId, name, business, email, whatsapp, plan, social, currency,
       passwordHash: await hashPassword(password),
-      subscription: { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now },
+      subscription: { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
+        currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate },
       createdAt: now, updatedAt: now
     };
     try { await saveUser(rec, { create: true }); }

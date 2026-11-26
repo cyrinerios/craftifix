@@ -1,4 +1,4 @@
-import { assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, validCurrency, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
+import { pricingFor, assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, validCurrency, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 // POST /api/profile { name, business, email, whatsapp, callmebotKey? } -> update the logged-in owner's details
 // POST /api/profile?test=whatsapp -> send a test WhatsApp alert to the owner's number
@@ -44,6 +44,6 @@ export default async function handler(req, res) {
     Object.assign(rec, { name, business, email, whatsapp, updatedAt: new Date().toISOString() });
     await saveUser(rec);
     await syncAccount(rec);
-    send(res, 200, { user: publicUser(rec) });
+    send(res, 200, { user: { ...publicUser(rec), pricing: await pricingFor(rec.currency) } });
   } catch (e) { fail(res, e); }
 }

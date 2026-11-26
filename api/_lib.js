@@ -258,6 +258,48 @@ export function money(n, cur = 'AED') {
   catch { return c + ' ' + (Number(n) || 0).toFixed(2); }
 }
 
+// ---------- Subscription prices in the shop's currency ----------
+// Plan prices are set in AED and converted with the day's rate from ExchangeRate-API's free endpoint
+// (https://www.exchangerate-api.com — attribution required, updates once a day). Rates are cached for
+// 12 hours per server instance; if the service can't be reached we fall back to approximate rates.
+const FX_URL = 'https://open.er-api.com/v6/latest/AED';
+const FX_TTL = 12 * 3600e3;
+const FX_FALLBACK = { AED: 1, SAR: 1.0211, QAR: 0.9912, KWD: 0.0836, BHD: 0.1026, OMR: 0.1047, USD: 0.2723, EUR: 0.235, GBP: 0.205,
+  PHP: 16.1, INR: 23.6, PKR: 76.4, EGP: 13.3, JOD: 0.1931, LKR: 82, NPR: 37.8, BDT: 33.2, CAD: 0.38, AUD: 0.42 };
+let fxCache = null;
+export async function getFx() {
+  if (fxCache && Date.now() - fxCache.fetchedAt < FX_TTL) return fxCache;
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 3500);
+    const r = await fetch(FX_URL, { signal: ctl.signal }); clearTimeout(t);
+    const j = await r.json();
+    if (j.result !== 'success' || !j.rates) throw new Error('fx');
+    fxCache = { rates: j.rates, updated: j.time_last_update_utc ? new Date(j.time_last_update_utc).toISOString() : new Date().toISOString(), live: true, fetchedAt: Date.now() };
+  } catch {
+    if (!fxCache) return { rates: FX_FALLBACK, updated: null, live: false, fetchedAt: 0 };
+  }
+  return fxCache;
+}
+const decimals = (c) => { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: c }).resolvedOptions().maximumFractionDigits; } catch { return 2; } };
+export function convertFromAED(aed, cur, rates) {
+  const c = validCurrency(cur) || 'AED';
+  if (c === 'AED') return { amount: aed, rate: 1 };
+  const rate = Number(rates[c]) || FX_FALLBACK[c];
+  const f = 10 ** decimals(c);
+  return { amount: Math.round(aed * rate * f) / f, rate };
+}
+export async function pricingFor(cur) {
+  const currency = validCurrency(cur) || 'AED';
+  const fx = await getFx();
+  const plans = {};
+  for (const p of Object.values(PLANS)) {
+    const { amount, rate } = convertFromAED(p.price, currency, fx.rates);
+    plans[p.id] = { aed: p.price, amount, label: money(amount, currency) };
+  }
+  return { currency, rate: convertFromAED(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
+    source: 'ExchangeRate-API', sourceUrl: 'https://www.exchangerate-api.com', plans };
+}
+
 export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
 
 /* ---------- orders (one encrypted list per business) ---------- */

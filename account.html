@@ -55,6 +55,7 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .meter span{display:block;height:100%;background:var(--pink)}
 .use{font-size:14.5px;display:flex;justify-content:space-between;gap:8px}
 .use.full b{color:#b02a5a}
+.fxn{font-size:12.5px;margin-top:10px}.fxn a{color:inherit}
 .plim{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
 .limbar{border:1.5px solid #f0d2df;background:#fff;border-radius:18px;padding:14px 16px;margin:0 0 16px}
 .limbar.ok{background:#e9f7f0;border-color:#bfe5d2;color:#165a3c;font-size:14.5px}
@@ -196,6 +197,10 @@ const main=$('main');
 const ALL=[['standard','Standard',10,'Up to 5 product listings · 5 orders from inquiries a month'],['premium','Premium',30,'Unlimited product listings · unlimited orders from inquiries']];
 const FEAT=[['dashboard','Dashboard'],['pricingCalculator','Pricing calculator'],['onlineStore','Online store'],['customers','Customer management'],['inventory','Inventory'],['salesReports','Sales reports'],['productionTracking','Production tracking'],['staffAccounts','Staff accounts']];
 const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
+const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'AED '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
+function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='AED')return'';
+  const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+  return `<p class="msg fxn">Prices are set in AED and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 AED = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
 const fmtDay=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 /* Plan limits banner — keeps Standard owners informed about what they have left. */
 function limitBanner(u,which){
@@ -208,7 +213,7 @@ function limitBanner(u,which){
   if(which!=='inquiries')rows.push(row('Product listings',P));
   if(which!=='products')rows.push(row('Orders from inquiries this month',Q,` · resets ${fmtDay(Q.resetsOn)}`));
   const anyFull=P.used>=P.limit||Q.used>=Q.limit;
-  return `<div class="limbar${anyFull?' full':''}"><div class="limhead"><div><b>Standard plan limits</b><span>Up to ${P.limit} product listings and ${Q.limit} confirmed orders from inquiries each month. Orders placed directly from your shop are not limited.</span></div><a class="btn gold" href="/account.html#settings">Upgrade to Premium · AED 30</a></div><div class="limrows">${rows.join('')}</div></div>`;
+  return `<div class="limbar${anyFull?' full':''}"><div class="limhead"><div><b>Standard plan limits</b><span>Up to ${P.limit} product listings and ${Q.limit} confirmed orders from inquiries each month. Orders placed directly from your shop are not limited.</span></div><a class="btn gold" href="/account.html#settings">Upgrade to Premium · ${planLabel(u,'premium')}/mo</a></div><div class="limrows">${rows.join('')}</div></div>`;
 }
 
 async function api(path,opts={}){
@@ -290,7 +295,7 @@ function showAccount(u,welcome){
     </div>
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
-      <div><span>Price</span><b>AED ${p.price} / month</b></div>
+      <div><span>Price</span><b>${planLabel(u,u.plan)} / month</b></div>${u.pricing&&u.pricing.currency!=='AED'?`<div><span>Base price</span><b>AED ${p.price} / month</b></div>`:''}
       <div><span>Status</span><b style="color:#2f9e6b">Active</b></div>
       <div><span>Payment</span><b>Skipped for now</b></div>
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
@@ -304,7 +309,8 @@ function showAccount(u,welcome){
       ${FEAT.map(([k,t])=>`<div><span>${t}</span><b>${esc(p.features[k])}</b></div>`).join('')}
     </div></div>
     <div class="card"><h3>Change plan</h3>
-      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>AED ${pr}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
+      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
+      ${fxNote(u)}
       <div class="msg" id="pmsg" role="status"></div>
     </div>
   </div>`;
@@ -329,7 +335,7 @@ function showAccount(u,welcome){
   $('eLogoRm').addEventListener('click',()=>{editLogo='';$('eLogoBox').innerHTML='<span>Upload logo</span>';$('eLogoRm').hidden=true});
   $('editForm').addEventListener('submit',async e=>{e.preventDefault();
     const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined,currency:$('eCur').value,social:{instagram:$('eIg').value,facebook:$('eFb').value,tiktok:$('eTt').value},logo:editLogo})}).catch(()=>({ok:false,data:{}}));
-    if(r.ok)showAccount({...r.data.user,productCount:u.productCount,usage:u.usage},false);
+    if(r.ok)showAccount({...r.data.user,productCount:u.productCount,usage:u.usage,pricing:r.data.user.pricing||u.pricing},false);
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else $('eErr').textContent=r.data.error||'Could not save.'});
     if(new URLSearchParams(location.search).has('edit'))$('editBtn').click();
