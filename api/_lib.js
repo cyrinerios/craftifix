@@ -1,4 +1,4 @@
-// Shared helpers for the CrochetHub account API.
+// Shared helpers for the Craftifix account API.
 // Files starting with "_" are not exposed as routes by Vercel.
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
@@ -67,6 +67,7 @@ export async function verifyPassword(pw, stored) {
 }
 
 /* ---------- encrypted record storage (Vercel Blob) ---------- */
+// Do not change 'crochethub-records' — it is part of the encryption key for all stored records (kept after the rename to Craftifix).
 const encKey = () => crypto.createHash('sha256').update('crochethub-records:' + SECRET).digest();
 const pathFor = (uid) => 'users/' + crypto.createHmac('sha256', SECRET).update(uid).digest('hex') + '.json';
 
@@ -342,7 +343,7 @@ export async function sendEmail({ to, subject, text, html, replyTo }) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: process.env.EMAIL_FROM || 'CrochetHub Orders <onboarding@resend.dev>', to: [].concat(to), subject, text, html, reply_to: replyTo || undefined })
+      body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Craftifix Orders <onboarding@resend.dev>', to: [].concat(to), subject, text, html, reply_to: replyTo || undefined })
     });
     if (!r.ok) { console.error('Resend error', r.status, await r.text().catch(() => '')); return { sent: false, reason: 'provider_error' }; }
     return { sent: true };
@@ -369,7 +370,7 @@ export async function sendOwnerWhatsApp(owner, text) {
 
 /* ---------- Google Apps Script (Gmail + Google Sheet) ---------- */
 // When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
-// which also records orders and status changes in the "CrochetHub database" Google Sheet.
+// which also records orders and status changes in the "Craftifix database" Google Sheet.
 // Otherwise email falls back to Resend (if configured).
 export async function deliver(payload) {
   const { email } = payload;

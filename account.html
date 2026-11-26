@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>My account — CrochetHub</title>
+<title>My account — Craftifix</title>
 <meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
@@ -175,9 +175,9 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 </head>
 <body>
 <header class="bar"><div class="in">
-  <a class="logo" href="/" aria-label="CrochetHub home">
+  <a class="logo" href="/" aria-label="Craftifix home">
     <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="13" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".55" stroke-width="1.8" fill="none"/><path d="M8 26 26 5" stroke="#ffb627" stroke-width="3" stroke-linecap="round"/></svg>
-    CrochetHub
+    Craftifix
   </a>
   <span class="who" id="who"></span>
   <a class="planpill" id="planPill" href="/account.html#settings" hidden title="Your plan — open Settings"></a>
@@ -187,7 +187,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 
 <main id="main"><div class="loading">Loading your account…</div></main>
 
-<footer>© 2026 CrochetHub · <a href="/">Back to website</a></footer>
+<footer>© 2026 Craftifix · <a href="/">Back to website</a></footer>
 
 <script>
 {
@@ -224,13 +224,13 @@ async function api(path,opts={}){
 function showLogin(note){
   $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;$('planPill').hidden=true;
   main.innerHTML=`<div class="center"><form class="box" id="lf" novalidate>
-    <h1>Log in</h1><p>Welcome back to your CrochetHub workspace.</p>
+    <h1>Log in</h1><p>Welcome back to your Craftifix workspace.</p>
     ${note?`<div class="ribbon">${esc(note)}</div>`:''}
     <label><span>User ID</span><input id="lu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
     <label><span>Password</span><input id="lp" type="password" autocomplete="current-password" required></label>
     <div class="err" id="lerr" role="alert"></div>
     <button class="btn plumb" id="lbtn" type="submit">Log in</button>
-    <p class="small">New to CrochetHub? <a href="/#join">Create an account</a></p>
+    <p class="small">New to Craftifix? <a href="/#join">Create an account</a></p>
   </form></div>`;
   $('lu').focus();
   $('lf').addEventListener('submit',async e=>{e.preventDefault();
@@ -256,7 +256,7 @@ function showAccount(u,welcome){
   const view=({'#settings':'settings','#orders':'orders','#inquiries':'inquiries'})[location.hash]||'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
   const st=(u.subscription?.status||'active');$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${st==='active'?'#2f9e6b':'#c62f5f'}"></i>${esc(p.name)}<span class="pst"> · ${st==='active'?'Active':esc(st[0].toUpperCase()+st.slice(1))}</span>`;
-  document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard'})[view]+' — CrochetHub';
+  document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard'})[view]+' — Craftifix';
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Product listings',u.usage?u.usage.products.used:(u.productCount||0),p.limits.products],['Orders from inquiries this month',u.usage?u.usage.inquiryOrders.used:0,p.limits.inquiryOrdersPerMonth]];
   if(view==='settings'){

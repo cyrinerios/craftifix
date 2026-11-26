@@ -1,6 +1,6 @@
-# CrochetHub
+# Craftifix
 
-Marketing website for **CrochetHub** — the subscription business platform for crocheters and handmade makers (storefront, pricing calculator, quotations, invoices, orders, inventory and reports).
+Marketing website for **Craftifix** — the subscription business platform for crocheters and handmade makers (storefront, pricing calculator, quotations, invoices, orders, inventory and reports).
 
 The site is a single self-contained `index.html` (no build step). It includes a working crochet pricing calculator, a dashboard preview, plans (Standard AED 10, Premium AED 30) and a sign-up form preview.
 
@@ -26,7 +26,7 @@ Open `index.html` in a browser.
 - Shop customers fill in name, email, WhatsApp number and delivery address, then **Send order**.
 - The order is saved to the owner's account (Account page → Orders from your shop, with status updates), emailed to the owner, and WhatsApp opens on the customer's phone with the order addressed to the owner's WhatsApp number (customer taps send).
 - WhatsApp number is required at sign-up and editable on the Account page.
-- **Email sending** uses [Resend](https://resend.com). Set `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `CrochetHub Orders <orders@yourdomain.com>`, on a domain verified in Resend) in Vercel → Project → Settings → Environment Variables, then redeploy. Without them, orders are still saved and sent by WhatsApp, and the customer is offered an "Also send by email" button instead.
+- **Email sending** uses [Resend](https://resend.com). Set `RESEND_API_KEY` and `EMAIL_FROM` (e.g. `Craftifix Orders <orders@yourdomain.com>`, on a domain verified in Resend) in Vercel → Project → Settings → Environment Variables, then redeploy. Without them, orders are still saved and sent by WhatsApp, and the customer is offered an "Also send by email" button instead.
 
 ## Customer status updates
 - On Account → Orders, changing an order's status (Confirmed, In production, Ready for delivery, Completed, Cancelled) notifies the customer:
@@ -35,7 +35,7 @@ Open `index.html` in a browser.
 - "Send update to customer" re-sends the current status. Each update is recorded in the order's history.
 
 ## Google Apps Script (Gmail email + live Google Sheet)
-- `apps-script/Code.gs` is pasted into the "CrochetHub database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
+- `apps-script/Code.gs` is pasted into the "Craftifix database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
 - Vercel env vars: `APPS_SCRIPT_URL` (the web app URL) and `APPS_SCRIPT_SECRET` (must match `SECRET` in the script).
 - With these set, products and account details (sign-up, Settings, plan changes) are kept in the Products and Accounts tabs, new orders and custom inquiries are emailed to the shop owner and status updates to the customer from the owner's Gmail, and every order, inquiry (with photo previews in the Inquiries tab) and status change is written to the sheet. Without them, email falls back to Resend if configured.
 
@@ -66,7 +66,7 @@ Open `index.html` in a browser.
 
 ## Shop currency
 - Chosen at sign-up (default AED; GCC currencies, USD, EUR, GBP, PHP, INR, PKR, EGP and more) and changeable in Settings → Edit details.
-- Used everywhere in that owner's shop: product prices and the pricing calculator, the shop, cart, orders, tracking, inquiries and quotes, emails, WhatsApp messages and analytics. Changing it relabels existing prices; it does not convert them. CrochetHub subscription prices stay in AED.
+- Used everywhere in that owner's shop: product prices and the pricing calculator, the shop, cart, orders, tracking, inquiries and quotes, emails, WhatsApp messages and analytics. Changing it relabels existing prices; it does not convert them. Craftifix subscription prices stay in AED.
 
 ## Plan limits
 

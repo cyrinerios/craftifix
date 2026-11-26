@@ -58,13 +58,13 @@ export default async function handler(req, res) {
 
     const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">
       <h2 style="color:#4a1d4f">New order ${escHtml(orderNo)}</h2>
-      <p>You have a new order on your CrochetHub shop <b>${escHtml(owner.business)}</b>.</p>
+      <p>You have a new order on your Craftifix shop <b>${escHtml(owner.business)}</b>.</p>
       <table style="border-collapse:collapse;width:100%">${items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
       <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(total)}</b></td></tr></table>
       <h3 style="color:#4a1d4f">Customer</h3>
       <p>${escHtml(customer.name)}<br>Email: ${escHtml(customer.email)}<br>WhatsApp: <a href="${waLink(customer.whatsapp)}">${escHtml(customer.whatsapp)}</a><br>Delivery address: ${escHtml(customer.address)}</p>
       ${customer.notes ? `<p><b>Notes:</b> ${escHtml(customer.notes)}</p>` : ''}
-      <p style="color:#6d5670;font-size:13px">Reply to this email to contact the customer. You can also see this order in your CrochetHub account.</p></div>`;
+      <p style="color:#6d5670;font-size:13px">Reply to this email to contact the customer. You can also see this order in your Craftifix account.</p></div>`;
 
     const [email, wa] = await Promise.all([
       deliver({

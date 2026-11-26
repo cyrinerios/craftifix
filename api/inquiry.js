@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       <p><b>What they'd like:</b><br>${escHtml(message).replace(/\n/g, '<br>')}</p>
       ${budget ? `<p><b>Budget:</b> ${escHtml(budget)}</p>` : ''}${neededBy ? `<p><b>Needed by:</b> ${escHtml(neededBy)}</p>` : ''}
       ${options.map((o) => `<div style="margin:16px 0;padding:12px;border:1px solid #ecd9e4;border-radius:12px"><b style="color:#4a1d4f">${escHtml(o.label)}</b>${o.note ? `<p style="margin:6px 0">${escHtml(o.note)}</p>` : ''}${o.image ? `<a href="${escHtml(o.image)}"><img src="${escHtml(o.image)}" alt="${escHtml(o.label)}" style="max-width:100%;max-height:360px;border-radius:8px"></a>` : ''}</div>`).join('')}
-      <p style="color:#6d5670;font-size:13px">Reply to this email to answer the customer. You can also see this inquiry in your CrochetHub account.</p></div>`;
+      <p style="color:#6d5670;font-size:13px">Reply to this email to answer the customer. You can also see this inquiry in your Craftifix account.</p></div>`;
 
     const [email, wa] = await Promise.all([
       deliver({ action: 'new_inquiry', inquiry: { ...inq, shop: uid, statusLabel: 'New' }, email: { to: owner.email, subject: `New custom inquiry ${inqNo} from ${customer.name}`, text, html, replyTo: customer.email, fromName: `${owner.business} inquiries` } }),

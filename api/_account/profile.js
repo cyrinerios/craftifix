@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const rec = await getUser(uid);
     if (!rec) return send(res, 401, { error: 'Please log in again.' });
     if (String(req.query?.test || '') === 'whatsapp') {
-      const r = await sendOwnerWhatsApp(rec, `✅ CrochetHub test: order alerts for ${rec.business} will arrive on this WhatsApp number.`);
+      const r = await sendOwnerWhatsApp(rec, `✅ Craftifix test: order alerts for ${rec.business} will arrive on this WhatsApp number.`);
       return send(res, r.sent ? 200 : 400, r.sent ? { ok: true } : { error: rec.callmebotKey ? 'The test message could not be sent. Check your WhatsApp number and CallMeBot API key.' : 'Add your CallMeBot API key first.' });
     }
     const b = body(req);

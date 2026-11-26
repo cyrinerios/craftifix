@@ -1,13 +1,13 @@
 /**
- * CrochetHub — Google Apps Script web app
+ * Craftifix — Google Apps Script web app
  * ---------------------------------------
- * Paste this into the "CrochetHub database" Google Sheet:
+ * Paste this into the "Craftifix database" Google Sheet:
  *   Extensions → Apps Script → replace everything in Code.gs with this file → Save.
  * Then: Deploy → New deployment → type "Web app"
  *   Execute as: Me        Who has access: Anyone
  * Copy the Web app URL and give it to Claude (or add it in Vercel as APPS_SCRIPT_URL).
  *
- * What it does when the CrochetHub website calls it:
+ * What it does when the Craftifix website calls it:
  *   - new_order:     emails the order to the shop owner (from your Gmail) and adds it
  *                    to the Orders and Order items tabs
  *   - status_update: emails the status update to the customer and updates the
@@ -22,7 +22,7 @@
  * SECRET must match APPS_SCRIPT_SECRET in Vercel. Do not share it.
  */
 const SECRET = 'PASTE_THE_SAME_VALUE_AS_APPS_SCRIPT_SECRET_IN_VERCEL';
-const SENDER_NAME = 'CrochetHub';
+const SENDER_NAME = 'Craftifix';
 let LAST_REPLY_ROW = 0;
 
 function doPost(e) {
@@ -62,7 +62,7 @@ function doPost(e) {
       if (quotaLeft > 0) {
         MailApp.sendEmail({
           to: data.email.to,
-          subject: data.email.subject || 'CrochetHub',
+          subject: data.email.subject || 'Craftifix',
           body: data.email.text || '',
           htmlBody: data.email.html || undefined,
           replyTo: data.email.replyTo || undefined,
@@ -89,7 +89,7 @@ function doPost(e) {
 
 // Visiting the web app URL in a browser shows this, so you can check it is live.
 function doGet() {
-  return json_({ ok: true, service: 'CrochetHub', quotaLeft: MailApp.getRemainingDailyQuota() });
+  return json_({ ok: true, service: 'Craftifix', quotaLeft: MailApp.getRemainingDailyQuota() });
 }
 
 /* ---------- sheet helpers ---------- */
