@@ -54,6 +54,20 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .meter{height:10px;border-radius:999px;background:var(--blush);overflow:hidden;margin:4px 0 12px}
 .meter span{display:block;height:100%;background:var(--pink)}
 .use{font-size:14.5px;display:flex;justify-content:space-between;gap:8px}
+.use.full b{color:#b02a5a}
+.plim{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
+.limbar{border:1.5px solid #f0d2df;background:#fff;border-radius:18px;padding:14px 16px;margin:0 0 16px}
+.limbar.ok{background:#e9f7f0;border-color:#bfe5d2;color:#165a3c;font-size:14.5px}
+.limbar.full{border-color:#e7a1bd;background:#fff5f8}
+.limhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.limhead b{display:block;font:700 16px Outfit,sans-serif}.limhead span{display:block;color:var(--mute);font-size:13.5px;max-width:560px}
+.limhead .btn{white-space:nowrap}
+.limrows{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 18px;margin-top:12px}
+.limrow{display:grid;grid-template-columns:1fr auto;font-size:14px;align-items:baseline}
+.limrow .meter{grid-column:1/-1;margin:4px 0 2px}.limrow small{grid-column:1/-1;color:var(--mute);font-size:12.5px}
+.limrow.near .meter span{background:#ffb627}.limrow.full .meter span{background:#c62f5f}.limrow.full b,.limrow.full small{color:#b02a5a;font-weight:700}
+.locked{margin-top:12px;border:1.5px dashed #e7a1bd;background:#fff5f8;border-radius:14px;padding:12px;font-size:14px}
+.locked b{display:block;color:#b02a5a;margin-bottom:4px}
 .plans{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .pl{border:1.5px solid var(--line);border-radius:16px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 10px}
 .pl>b{grid-column:1}.pl>small{grid-column:1}.pl>.btn,.pl>.badge{grid-column:2;grid-row:1/3}
@@ -179,9 +193,23 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const main=$('main');
-const ALL=[['standard','Standard',10],['premium','Premium',30]];
+const ALL=[['standard','Standard',10,'Up to 5 product listings · 5 orders from inquiries a month'],['premium','Premium',30,'Unlimited product listings · unlimited orders from inquiries']];
 const FEAT=[['dashboard','Dashboard'],['pricingCalculator','Pricing calculator'],['onlineStore','Online store'],['customers','Customer management'],['inventory','Inventory'],['salesReports','Sales reports'],['productionTracking','Production tracking'],['staffAccounts','Staff accounts']];
 const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
+const fmtDay=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+/* Plan limits banner — keeps Standard owners informed about what they have left. */
+function limitBanner(u,which){
+  const us=u.usage;if(!us)return'';
+  if(us.products.limit===null)return which==='dash'?`<div class="limbar ok"><b>Premium plan</b> — unlimited product listings and unlimited orders from inquiries.</div>`:'';
+  const P=us.products,Q=us.inquiryOrders;
+  const row=(label,x,extra)=>{const full=x.used>=x.limit,near=!full&&x.used>=x.limit-1;
+    return `<div class="limrow ${full?'full':near?'near':''}"><span>${label}</span><b>${x.used} of ${x.limit}</b><div class="meter"><span style="width:${Math.min(100,x.used/x.limit*100)}%"></span></div><small>${full?'Limit reached':`${x.limit-x.used} left`}${extra||''}</small></div>`};
+  const rows=[];
+  if(which!=='inquiries')rows.push(row('Product listings',P));
+  if(which!=='products')rows.push(row('Orders from inquiries this month',Q,` · resets ${fmtDay(Q.resetsOn)}`));
+  const anyFull=P.used>=P.limit||Q.used>=Q.limit;
+  return `<div class="limbar${anyFull?' full':''}"><div class="limhead"><div><b>Standard plan limits</b><span>Up to ${P.limit} product listings and ${Q.limit} confirmed orders from inquiries each month. Orders placed directly from your shop are not limited.</span></div><a class="btn gold" href="/account.html#settings">Upgrade to Premium · AED 30</a></div><div class="limrows">${rows.join('')}</div></div>`;
+}
 
 async function api(path,opts={}){
   const r=await fetch(path,{credentials:'same-origin',headers:{'Content-Type':'application/json'},...opts});
@@ -225,7 +253,7 @@ function showAccount(u,welcome){
   const st=(u.subscription?.status||'active');$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${st==='active'?'#2f9e6b':'#c62f5f'}"></i>${esc(p.name)}<span class="pst"> · ${st==='active'?'Active':esc(st[0].toUpperCase()+st.slice(1))}</span>`;
   document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard'})[view]+' — CrochetHub';
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-  const usage=[['Products',u.productCount||0,p.limits.products],['Quotations this month',0,p.limits.quotationsPerMonth],['Invoices this month',0,p.limits.invoicesPerMonth]];
+  const usage=[['Product listings',u.usage?u.usage.products.used:(u.productCount||0),p.limits.products],['Orders from inquiries this month',u.usage?u.usage.inquiryOrders.used:0,p.limits.inquiryOrdersPerMonth]];
   if(view==='settings'){
     main.innerHTML=`
   <section class="sethead"><div><h1>Settings</h1><p>Your account details, subscription and plan for ${esc(u.business)}.</p></div><a class="mini" href="/account.html">← Back to dashboard</a></section>
@@ -265,16 +293,18 @@ function showAccount(u,welcome){
       <div><span>Price</span><b>AED ${p.price} / month</b></div>
       <div><span>Status</span><b style="color:#2f9e6b">Active</b></div>
       <div><span>Payment</span><b>Skipped for now</b></div>
-      <div><span>Staff accounts</span><b>${esc(lim(p.limits.staff)==='Not included'?'Not included':lim(p.limits.staff)==='Unlimited'?'Multiple':lim(p.limits.staff))}</b></div>
+      <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
+      <div><span>Orders from inquiries</span><b>${p.limits.inquiryOrdersPerMonth===null?'Unlimited':p.limits.inquiryOrdersPerMonth+' a month'}</b></div>
     </div></div>
     <div class="card"><h3>Plan usage</h3>
-      ${usage.map(([t,used,max])=>`<div class="use"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
+      ${usage.map(([t,used,max])=>`<div class="use${max!==null&&used>=max?' full':''}"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
+      ${p.limits.products!==null?`<p class="msg" style="margin-top:8px">Orders from inquiries reset on ${u.usage?fmtDay(u.usage.inquiryOrders.resetsOn):'the 1st of each month'}. Orders customers place directly in your shop are unlimited on every plan.</p>`:''}
     </div>
     <div class="card wide"><h3>What your plan includes</h3><div class="kv">
       ${FEAT.map(([k,t])=>`<div><span>${t}</span><b>${esc(p.features[k])}</b></div>`).join('')}
     </div></div>
     <div class="card"><h3>Change plan</h3>
-      <div class="plans" id="plans">${ALL.map(([id,n,pr])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>AED ${pr}/month</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
+      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>AED ${pr}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
       <div class="msg" id="pmsg" role="status"></div>
     </div>
   </div>`;
@@ -299,14 +329,14 @@ function showAccount(u,welcome){
   $('eLogoRm').addEventListener('click',()=>{editLogo='';$('eLogoBox').innerHTML='<span>Upload logo</span>';$('eLogoRm').hidden=true});
   $('editForm').addEventListener('submit',async e=>{e.preventDefault();
     const r=await api('/api/profile',{method:'POST',body:JSON.stringify({name:$('eName').value,business:$('eBiz').value,email:$('eEmail').value,whatsapp:$('eWa').value,callmebotKey:$('eKey').value.trim()||undefined,currency:$('eCur').value,social:{instagram:$('eIg').value,facebook:$('eFb').value,tiktok:$('eTt').value},logo:editLogo})}).catch(()=>({ok:false,data:{}}));
-    if(r.ok)showAccount({...r.data.user,productCount:u.productCount},false);
+    if(r.ok)showAccount({...r.data.user,productCount:u.productCount,usage:u.usage},false);
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else $('eErr').textContent=r.data.error||'Could not save.'});
     if(new URLSearchParams(location.search).has('edit'))$('editBtn').click();
     return;
   }
   const ribbons=`${!u.whatsapp?`<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Add your WhatsApp number in <a href="/account.html#settings">Settings</a> so customer orders from your shop reach you on WhatsApp too.</div>`:''}
-  ${welcome?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.</div>`:''}`;
+  ${welcome?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
   if(view==='orders'){
     main.innerHTML=`${ribbons}<section class="sethead"><div><h1>Orders</h1><p>Orders from your shop and custom orders converted from inquiries. Changing a status notifies the customer.</p></div><a class="mini" href="/shop.html?u=${encodeURIComponent(u.userId)}" target="_blank" rel="noopener">View my shop →</a></section>
     <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Orders from your shop <span class="pill" id="ocount"></span></h3><div class="ofilter" id="ofilter"></div><div id="orders"><p class="msg">Loading orders…</p></div></div>`;
@@ -314,6 +344,7 @@ function showAccount(u,welcome){
   }
   if(view==='inquiries'){
     main.innerHTML=`${ribbons}<section class="sethead"><div><h1>Inquiries</h1><p>Custom requests with inspiration photos. Reply with a quote, then convert accepted ones into orders.</p></div></section>
+    <div id="iqlimit">${limitBanner(u,'inquiries')}</div>
     <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Custom inquiries <span class="pill" id="icount"></span></h3><div id="inquiries"><p class="msg">Loading inquiries…</p></div></div>`;
     loadInquiries();return;
   }
@@ -326,6 +357,7 @@ function showAccount(u,welcome){
       <a href="/shop.html?u=${encodeURIComponent(u.userId)}" target="_blank" rel="noopener" style="color:#fff;font-weight:700">View my shop →</a>
     </div>
   </section>
+  ${limitBanner(u,'dash')}
   <section class="ana" id="ana"><p class="msg">Loading analytics…</p></section>`;
   loadAnalytics(u);
 }
@@ -453,13 +485,16 @@ const IST=[['new','New'],['replied','Replied'],['quoted','Quoted'],['accepted','
 const istClass={new:'new',replied:'confirmed',quoted:'confirmed',accepted:'in_production',converted:'completed',closed:'cancelled'};
 const fmtDT=d=>new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 const iqOpen=new Set();
-let inqCache=[];
+let inqCache=[],inqUsage=null;
 async function loadInquiries(){
   const r=await api('/api/inquiries').catch(()=>({ok:false,data:{}}));
   if(!$('inquiries'))return;
   if(!r.ok){$('inquiries').innerHTML='<p class="msg">Could not load inquiries.</p>';return}
+  if(r.data.usage)setInqUsage(r.data.usage);
   renderInquiries(r.data.inquiries||[]);
 }
+function setInqUsage(us){inqUsage=us;if(curUser&&curUser.usage){curUser.usage={...curUser.usage,inquiryOrders:us}}
+  const b=$('iqlimit');if(b&&curUser)b.innerHTML=limitBanner(curUser,'inquiries')}
 function renderInquiries(list){
   inqCache=list;
   const open=list.filter(q=>!['closed','converted'].includes(q.status)).length;
@@ -487,7 +522,8 @@ function renderInquiries(list){
       </form>
       <div class="nbox" id="qn-${esc(q.id)}"></div>
       <label style="margin-top:12px"><span>Status</span><select data-q="${esc(q.id)}">${IST.filter(([k])=>k!=='converted').map(([k,t])=>`<option value="${k}"${k===q.status?' selected':''}>${t}</option>`).join('')}</select></label>
-      <details class="convert"${q.status==='accepted'?' open':''}><summary class="btn gold" style="width:100%">Convert to order</summary>
+      ${inqUsage&&inqUsage.limit!==null&&inqUsage.used>=inqUsage.limit?`<div class="locked"><b>Convert to order is paused</b>You've used all ${inqUsage.limit} orders from inquiries on the Standard plan this month. You can still reply and quote — converting opens again on ${fmtDay(inqUsage.resetsOn)}, or straight away if you <a href="/account.html#settings">upgrade to Premium</a>.</div>`:`
+      <details class="convert"${q.status==='accepted'?' open':''}><summary class="btn gold" style="width:100%">Convert to order${inqUsage&&inqUsage.limit!==null?` <small style="font-weight:600">(${inqUsage.limit-inqUsage.used} of ${inqUsage.limit} left this month)</small>`:''}</summary>
         <form class="convf" data-convert="${esc(q.id)}" novalidate>
           <p class="msg">Use this once ${esc(first)} has confirmed the agreed item and price. It creates a confirmed order, moves it to Orders, and sends the confirmation with a tracking link.</p>
           <label><span>Item</span><input name="name" maxlength="120" value="${esc('Custom order: '+q.message.slice(0,80))}"></label>
@@ -497,7 +533,7 @@ function renderInquiries(list){
           <div class="err" role="alert"></div>
           <button class="btn plumb" type="submit" style="width:100%">Create confirmed order</button>
         </form>
-      </details>`}
+      </details>`}`}
       <button class="mini" type="button" data-qdel="${esc(q.id)}" style="color:#b02a5a;margin-top:10px">Delete inquiry</button></div></div></details>`}).join('');
   for(const d of $('inquiries').querySelectorAll('details.ord'))d.addEventListener('toggle',()=>{d.open?iqOpen.add(d.dataset.qid):iqOpen.delete(d.dataset.qid)});
   $('inquiries').onchange=async e=>{const sel=e.target.closest('select[data-q]');if(!sel)return;sel.disabled=true;
@@ -530,7 +566,8 @@ function renderInquiries(list){
       if(d.address.length<8){f.address.focus();return er.textContent='Enter the delivery address.'}
       const w=window.open('about:blank','_blank');btn.disabled=true;btn.textContent='Creating order…';
       const r=await api('/api/inquiries?id='+encodeURIComponent(id)+'&action=convert',{method:'POST',body:JSON.stringify(d)}).catch(()=>({ok:false,data:{}}));
-      if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Create confirmed order';er.textContent=r.data.error||'Could not create the order.';return}
+      if(!r.ok){if(w)w.close();btn.disabled=false;btn.textContent='Create confirmed order';er.textContent=r.data.error||'Could not create the order.';if(r.data.usage){setInqUsage(r.data.usage);renderInquiries(inqCache)}return}
+      if(r.data.usage)setInqUsage(r.data.usage);
       const o=r.data.order,n=r.data.notification;
       loadInquiries();
       notes.set(o.id,{...n,auto:!!w});renderOrders(r.data.orders);

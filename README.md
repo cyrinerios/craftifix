@@ -67,3 +67,10 @@ Open `index.html` in a browser.
 ## Shop currency
 - Chosen at sign-up (default AED; GCC currencies, USD, EUR, GBP, PHP, INR, PKR, EGP and more) and changeable in Settings → Edit details.
 - Used everywhere in that owner's shop: product prices and the pricing calculator, the shop, cart, orders, tracking, inquiries and quotes, emails, WhatsApp messages and analytics. Changing it relabels existing prices; it does not convert them. CrochetHub subscription prices stay in AED.
+
+## Plan limits
+
+- **Standard (AED 10/month):** up to 5 product listings (drafts count) and 5 confirmed orders converted from inquiries per calendar month (UAE time; resets on the 1st). Orders customers place directly in the shop are not limited.
+- **Premium (AED 30/month):** unlimited product listings and unlimited orders from inquiries.
+- Limits are enforced by the API (`/api/products` create, `/api/inquiries?action=convert`, and downgrading in `/api/plan`), and shown to the owner on the Dashboard, Inquiries, My products and Settings pages.
+- Older accounts map automatically: Starter → Standard, Professional/Business → Premium.

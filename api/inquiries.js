@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { del } from '@vercel/blob';
-import { money, assertConfigured, requireUser, getUser, getInquiries, saveInquiries, getOrders, saveOrders, deliver, waLink, escHtml, clean, body, send, fail } from './_lib.js';
+import { money, assertConfigured, requireUser, getUser, getInquiries, saveInquiries, getOrders, saveOrders, getProducts, planFor, planUsage, deliver, waLink, escHtml, clean, body, send, fail } from './_lib.js';
 import { notify, LABEL as ORDER_LABEL } from './orders.js';
 
 // GET    /api/inquiries                         -> the logged-in owner's custom inquiries
@@ -26,7 +26,9 @@ export default async function handler(req, res) {
         const prev = orders.find((o) => o.customer?.address && (o.customer.email === q.customer.email || o.customer.whatsapp === q.customer.whatsapp));
         return prev ? { ...q, suggestedAddress: prev.customer.address, addressFrom: prev.orderNo } : q;
       });
-      return send(res, 200, { inquiries: withAddr });
+      const owner = await getUser(uid);
+      const usage = owner ? planUsage(owner, await getProducts(uid), orders).inquiryOrders : null;
+      return send(res, 200, { inquiries: withAddr, usage });
     }
 
     const i = list.findIndex((x) => x.id === String(req.query?.id || ''));
@@ -90,6 +92,10 @@ export default async function handler(req, res) {
       if (q.status === 'converted') return send(res, 400, { error: `This inquiry is already order ${q.orderNo}.` });
       const owner = await getUser(uid);
       if (!owner) return send(res, 401, { error: 'Please log in again.' });
+      const plan = planFor(owner.plan);
+      const before = planUsage(owner, [], await getOrders(uid)).inquiryOrders;
+      if (before.limit !== null && before.used >= before.limit)
+        return send(res, 403, { limitReached: 'inquiryOrders', usage: before, error: `You've used all ${before.limit} orders from inquiries on your ${plan.name} plan this month. The count resets on ${before.resetsOn}. Upgrade to Premium in Settings for unlimited orders from inquiries.` });
       const b = body(req);
       const items = [];
       for (const it of (Array.isArray(b.items) ? b.items : []).slice(0, 20)) {
@@ -130,7 +136,8 @@ export default async function handler(req, res) {
       const notification = await notify(order, owner, trackUrl);
       order.history[0].emailSent = !!notification.emailSent;
       await saveOrders(uid, orders.slice(0, 1000));
-      return send(res, 201, { inquiries: list, orders, order, notification });
+      const usage = planUsage(owner, [], orders).inquiryOrders;
+      return send(res, 201, { inquiries: list, orders, order, notification, usage });
     }
 
     if (req.method === 'DELETE') {

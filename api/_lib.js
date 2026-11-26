@@ -12,12 +12,12 @@ const SESSION_DAYS = 7;
 export const PLANS = {
   standard: {
     id: 'standard', name: 'Standard', price: 10,
-    limits: { products: 20, quotationsPerMonth: 10, invoicesPerMonth: 10, staff: 0 },
+    limits: { products: 5, inquiryOrdersPerMonth: 5 },
     features: { dashboard: 'Basic', pricingCalculator: 'Full', onlineStore: 'Basic', customers: 'Basic', inventory: 'Limited', salesReports: 'Basic', productionTracking: 'No', staffAccounts: 'No' }
   },
   premium: {
     id: 'premium', name: 'Premium', price: 30,
-    limits: { products: null, quotationsPerMonth: null, invoicesPerMonth: null, staff: null },
+    limits: { products: null, inquiryOrdersPerMonth: null },
     features: { dashboard: 'Advanced', pricingCalculator: 'Full', onlineStore: 'Customizable', customers: 'Full', inventory: 'Full', salesReports: 'Advanced', productionTracking: 'Full', staffAccounts: 'Multiple' }
   }
 };
@@ -26,6 +26,20 @@ export const PLANS = {
 const LEGACY_PLANS = { starter: 'standard', professional: 'premium', business: 'premium' };
 export const planId = (id) => (PLANS[id] ? id : LEGACY_PLANS[id] || 'standard');
 export const planFor = (id) => PLANS[planId(id)];
+
+// Plan limits are counted per calendar month in UAE time (UTC+4).
+const uaeMonth = (d) => new Date(new Date(d).getTime() + 4 * 3600e3).toISOString().slice(0, 7);
+export const isInquiryOrderThisMonth = (o, now = new Date()) => o.source?.type === 'inquiry' && uaeMonth(o.createdAt) === uaeMonth(now);
+export function planUsage(rec, products, orders, now = new Date()) {
+  const p = planFor(rec.plan);
+  const [y, m] = uaeMonth(now).split('-').map(Number);
+  const resetsOn = `${m === 12 ? y + 1 : y}-${String(m === 12 ? 1 : m + 1).padStart(2, '0')}-01`;
+  return {
+    plan: p.id, planName: p.name,
+    products: { used: products.length, limit: p.limits.products },
+    inquiryOrders: { used: orders.filter((o) => isInquiryOrderThisMonth(o, now)).length, limit: p.limits.inquiryOrdersPerMonth, resetsOn }
+  };
+}
 
 export function assertConfigured() {
   if (!SECRET || SECRET.length < 32) throw new Error('AUTH_SECRET is not configured');

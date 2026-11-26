@@ -439,6 +439,7 @@ footer a:hover{color:#fff}
         </div>
         <span class="lbl">Choose your plan</span>
         <div class="pick" id="pick" role="radiogroup" aria-label="Plan"></div>
+        <p class="paynote"><b>Standard:</b> up to 5 product listings and 5 confirmed orders from inquiries a month. <b>Premium:</b> unlimited. You can upgrade any time.</p>
         <p class="paynote">Payment is skipped for now — your plan is activated as soon as you create the account.</p>
         <div class="err" id="serr" role="alert"></div>
         <button class="btn plumb" type="submit" id="sbtn">Create my account</button>
@@ -546,8 +547,8 @@ $('prods').addEventListener('click',e=>{if(e.target.matches('[data-add]')){cart+
 
 /* plans */
 const plans=[
- ['Standard',10,'For makers just starting to sell online.',[['20 product listings',1],['Pricing calculator',1],['Basic dashboard',1],['10 quotations & 10 invoices a month',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Advanced analytics & unlimited products',0],['Staff accounts',0]]],
- ['Premium',30,'For growing shops and studios with a team.',[['Unlimited products',1],['Pricing calculator',1],['Advanced dashboard & analytics',1],['Unlimited quotations & invoices',1],['Customisable online shop',1],['Custom inquiries with inspo photos',1],['Full inventory & production tracking',1],['Multiple staff accounts',1]],1]];
+ ['Standard',10,'For makers just starting to sell online.',[['Up to 5 product listings',1],['Up to 5 confirmed orders from inquiries a month',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Unlimited listings & inquiry orders',0]]],
+ ['Premium',30,'For growing shops with steady custom orders.',[['Unlimited product listings',1],['Unlimited confirmed orders from inquiries',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Priority access to new features',1]],1]];
 $('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p">AED ${p}<small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
 $('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const r=document.querySelector(`#pick input[value="${a.dataset.plan.toLowerCase()}"]`);if(r)r.checked=true});
 

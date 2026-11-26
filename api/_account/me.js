@@ -1,4 +1,4 @@
-import { assertConfigured, readSession, getUser, getProducts, publicUser, clearSession, send, onlyMethod, fail } from '../_lib.js';
+import { assertConfigured, readSession, getUser, getProducts, getOrders, planUsage, publicUser, clearSession, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'GET')) return;
@@ -8,7 +8,8 @@ export default async function handler(req, res) {
     if (!uid) return send(res, 401, { error: 'Not logged in' });
     const rec = await getUser(uid);
     if (!rec) { clearSession(res); return send(res, 401, { error: 'Not logged in' }); }
-    const productCount = (await getProducts(uid)).length;
-    send(res, 200, { user: { ...publicUser(rec), productCount } });
+    const [products, orders] = await Promise.all([getProducts(uid), getOrders(uid)]);
+    const usage = planUsage(rec, products, orders);
+    send(res, 200, { user: { ...publicUser(rec), productCount: products.length, usage } });
   } catch (e) { fail(res, e); }
 }
