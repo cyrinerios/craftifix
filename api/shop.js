@@ -1,3 +1,4 @@
+import { shopPaused } from './_stripe.js';
 import { assertConfigured, normId, validId, getUser, getProducts, send, onlyMethod, fail } from './_lib.js';
 
 // GET /api/shop?u=<userId> -> public storefront data (published products only, no costs)
@@ -9,6 +10,8 @@ export default async function handler(req, res) {
     if (!validId(uid)) return send(res, 404, { error: 'Shop not found.' });
     const user = await getUser(uid);
     if (!user || user.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
+    const shop = { userId: user.userId, business: user.business, owner: user.name, hasWhatsApp: !!user.whatsapp, logo: user.logo || null, currency: user.currency || 'AED', social: user.social || {} };
+    if (shopPaused(user)) return send(res, 200, { shop: { ...shop, paused: true }, products: [] });
     const products = (await getProducts(uid))
       .filter((p) => p.status === 'published')
       .map((p) => ({
@@ -18,6 +21,6 @@ export default async function handler(req, res) {
         vatIncluded: !!p.costing.vat,
         inStock: p.quantity > 0, quantity: p.quantity, customizable: p.customizable, productionDays: p.productionDays
       }));
-    send(res, 200, { shop: { userId: user.userId, business: user.business, owner: user.name, hasWhatsApp: !!user.whatsapp, logo: user.logo || null, currency: user.currency || 'AED', social: user.social || {} }, products });
+    send(res, 200, { shop, products });
   } catch (e) { fail(res, e); }
 }

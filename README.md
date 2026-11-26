@@ -82,3 +82,19 @@ ExchangeRate-API's free open endpoint (`https://open.er-api.com/v6/latest/AED`, 
 Rates are cached for 12 hours; if the service is unreachable, approximate built-in rates are used and labelled as such.
 `GET /api/rates?currency=PHP` returns the converted plan prices (public, CDN-cached). Signup and plan changes record the
 currency, converted amount, AED base price and rate on the account's subscription.
+
+## Stripe subscriptions
+
+Set in Vercel → Project → Settings → Environment Variables (Production), then redeploy:
+- `STRIPE_SECRET_KEY` — `sk_test_…` for test mode, `sk_live_…` for real payments.
+- `STRIPE_WEBHOOK_SECRET` — `whsec_…` from the webhook endpoint below.
+
+Stripe webhook endpoint: `https://craftifix-app.vercel.app/api/stripe/webhook`, events `checkout.session.completed`,
+`customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+
+How it works (`api/billing.js`, `api/_stripe.js`): signup sends the owner to Stripe Checkout for a monthly subscription in
+their shop currency (converted from AED; falls back to AED if Stripe can't charge that currency). Products
+`craftifix_standard` and `craftifix_premium` are created automatically. The webhook marks the account active and stores the
+renewal date. Plan changes switch the Stripe subscription with proration. Settings has Pay now and Manage billing
+(Stripe customer portal). Shops whose subscription is pending, unpaid or cancelled are closed to customers. Without
+`STRIPE_SECRET_KEY` the site works as before (payment skipped). Accounts created before Stripe stay active.

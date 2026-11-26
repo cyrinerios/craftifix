@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { shopPaused } from './_stripe.js';
 import { money, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/order — a shopper places an order on a shop.
@@ -14,6 +15,7 @@ export default async function handler(req, res) {
     if (!validId(uid)) return send(res, 404, { error: 'Shop not found.' });
     const owner = await getUser(uid);
     if (!owner || owner.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
+    if (shopPaused(owner)) return send(res, 403, { error: 'This shop is temporarily unavailable. Please try again later.' });
 
     const cur = owner.currency || 'AED';
     const aed = (n) => money(n, cur);

@@ -56,6 +56,9 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .use{font-size:14.5px;display:flex;justify-content:space-between;gap:8px}
 .use.full b{color:#b02a5a}
 .fxn{font-size:12.5px;margin-top:10px}.fxn a{color:inherit}
+.billbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fff5f8;border:1.5px solid #e7a1bd;border-radius:16px;padding:12px 16px;margin:0 0 16px;font-size:14.5px}
+.billbar b{color:#b02a5a}.billbar .btn{white-space:nowrap}
+.billbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .plim{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
 .limbar{border:1.5px solid #f0d2df;background:#fff;border-radius:18px;padding:14px 16px;margin:0 0 16px}
 .limbar.ok{background:#e9f7f0;border-color:#bfe5d2;color:#165a3c;font-size:14.5px}
@@ -201,6 +204,30 @@ const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].la
 function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='AED')return'';
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
   return `<p class="msg fxn">Prices are set in AED and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 AED = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
+let billingInfo=null;
+const SUBLBL={active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
+const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
+const longDay=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+function payRow(u){const s=u.subscription||{};
+  if(s.provider!=='stripe')return s.paymentStatus==='skipped'?'Skipped (early account)':'—';
+  if(s.status==='active')return s.paidUntil?`Card via Stripe · ${s.cancelAtPeriodEnd?'ends':'renews'} ${longDay(s.paidUntil)}`:'Card via Stripe';
+  if(s.status==='pending')return 'Not paid yet';
+  if(s.status==='past_due')return 'Last payment failed — Stripe will retry';
+  return 'Subscription ended';}
+/* Banner when the subscription needs attention — the shop is closed to customers until it's paid. */
+function billingBanner(u){const s=u.subscription||{};if(!billingInfo||!billingInfo.online)return'';
+  const msg={pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
+    past_due:`<b>Your last payment didn't go through.</b> Stripe will try again. Update your card to keep your shop open.`,
+    unpaid:`<b>Your subscription is unpaid, so your shop is closed to customers.</b> Pay to reopen it.`,
+    canceled:`<b>Your subscription has ended, so your shop is closed to customers.</b> Subscribe again to reopen it.`}[s.status];
+  if(!msg)return'';
+  const btn=s.status==='past_due'&&u.stripe?.customerId?`<button class="btn gold" type="button" data-bill="portal">Update card</button>`:`<button class="btn gold" type="button" data-bill="checkout">Pay ${planLabel(u,u.plan)}/mo</button>`;
+  return `<div class="billbar"><span>${msg}</span>${btn}</div>`}
+async function goBilling(kind,btn){if(btn){btn.disabled=true;btn.textContent='Opening Stripe…'}
+  const r=await api('/api/billing?action='+kind,{method:'POST',body:JSON.stringify({plan:curUser&&curUser.plan})}).catch(()=>({ok:false,data:{}}));
+  if(r.ok&&r.data.url){location.href=r.data.url;return}
+  const m=r.data.error||'Could not open the payment page.';if(btn){btn.disabled=false;btn.textContent='Try again';const box=btn.closest('.billbar,.card');if(box){let e=box.querySelector('.billerr');if(!e){e=document.createElement('p');e.className='billerr';e.style.cssText='color:#b02a5a;font-size:13.5px;margin:8px 0 0;width:100%';box.appendChild(e)}e.textContent=m;return}}alertMsg(m)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-bill]');if(b){e.preventDefault();goBilling(b.dataset.bill,b)}});
 const fmtDay=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 /* Plan limits banner — keeps Standard owners informed about what they have left. */
 function limitBanner(u,which){
@@ -239,7 +266,7 @@ function showLogin(note){
     const b=$('lbtn');b.disabled=true;b.textContent='Logging in…';
     try{const r=await api('/api/login',{method:'POST',body:JSON.stringify({userId,password})});
       if(!r.ok){$('lerr').textContent=r.data.error||'Could not log in.';return}
-      showAccount(r.data.user,false)}
+      const m=await api('/api/me');billingInfo=m.data.billing||null;showAccount(m.ok?m.data.user:r.data.user,false)}
     catch{$('lerr').textContent='Network problem — please try again.'}
     finally{b.disabled=false;b.textContent='Log in'}
   });
@@ -255,7 +282,7 @@ function showAccount(u,welcome){
   const p=u.planDetails;
   const view=({'#settings':'settings','#orders':'orders','#inquiries':'inquiries'})[location.hash]||'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
-  const st=(u.subscription?.status||'active');$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${st==='active'?'#2f9e6b':'#c62f5f'}"></i>${esc(p.name)}<span class="pst"> · ${st==='active'?'Active':esc(st[0].toUpperCase()+st.slice(1))}</span>`;
+  const [stl,stc]=subLbl(u);$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${stc}"></i>${esc(p.name)}<span class="pst"> · ${esc(stl)}</span>`;
   document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard'})[view]+' — Craftifix';
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Product listings',u.usage?u.usage.products.used:(u.productCount||0),p.limits.products],['Orders from inquiries this month',u.usage?u.usage.inquiryOrders.used:0,p.limits.inquiryOrdersPerMonth]];
@@ -296,11 +323,14 @@ function showAccount(u,welcome){
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
       <div><span>Price</span><b>${planLabel(u,u.plan)} / month</b></div>${u.pricing&&u.pricing.currency!=='AED'?`<div><span>Base price</span><b>AED ${p.price} / month</b></div>`:''}
-      <div><span>Status</span><b style="color:#2f9e6b">Active</b></div>
-      <div><span>Payment</span><b>Skipped for now</b></div>
+      <div><span>Status</span><b style="color:${subLbl(u)[1]}">${esc(subLbl(u)[0])}</b></div>
+      <div><span>Payment</span><b>${esc(payRow(u))}</b></div>
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
       <div><span>Orders from inquiries</span><b>${p.limits.inquiryOrdersPerMonth===null?'Unlimited':p.limits.inquiryOrdersPerMonth+' a month'}</b></div>
-    </div></div>
+    </div>
+    ${billingInfo&&billingInfo.online?`<div class="billbtns">${['pending','canceled','unpaid'].includes(u.subscription?.status)||u.subscription?.provider!=='stripe'?`<button class="btn gold" type="button" data-bill="checkout">${u.subscription?.provider==='stripe'?'Pay now':'Start paid subscription'}</button>`:''}${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>
+    <p class="msg" style="font-size:12.5px;margin-top:8px">Payments are handled securely by Stripe.${billingInfo.mode==='test'?' <b>Test mode</b> — no real money is charged.':''}</p>`:''}
+    </div>
     <div class="card"><h3>Plan usage</h3>
       ${usage.map(([t,used,max])=>`<div class="use${max!==null&&used>=max?' full':''}"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
       ${p.limits.products!==null?`<p class="msg" style="margin-top:8px">Orders from inquiries reset on ${u.usage?fmtDay(u.usage.inquiryOrders.resetsOn):'the 1st of each month'}. Orders customers place directly in your shop are unlimited on every plan.</p>`:''}
@@ -317,7 +347,8 @@ function showAccount(u,welcome){
   $('plans').addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b)return;
     b.disabled=true;b.textContent='Switching…';
     const r=await api('/api/plan',{method:'POST',body:JSON.stringify({plan:b.dataset.plan})}).catch(()=>({ok:false,data:{}}));
-    if(r.ok){showAccount(r.data.user,false);$('pmsg').textContent='Plan updated — payment skipped for now.'}
+    if(r.ok&&r.data.checkoutUrl){location.href=r.data.checkoutUrl;return}
+    if(r.ok){showAccount({...r.data.user,pricing:r.data.user.pricing||u.pricing},false);$('pmsg').textContent=r.data.switched?'Plan changed. Stripe adjusts your next invoice for the difference.':'Plan updated — payment skipped for now.'}
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else{$('pmsg').textContent=r.data.error||'Could not change plan.';b.disabled=false;b.textContent='Switch'}
   });
@@ -342,7 +373,7 @@ function showAccount(u,welcome){
     return;
   }
   const ribbons=`${!u.whatsapp?`<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Add your WhatsApp number in <a href="/account.html#settings">Settings</a> so customer orders from your shop reach you on WhatsApp too.</div>`:''}
-  ${welcome?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
+  ${billingBanner(u)}${welcome&&u.subscription?.status!=='pending'?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
   if(view==='orders'){
     main.innerHTML=`${ribbons}<section class="sethead"><div><h1>Orders</h1><p>Orders from your shop and custom orders converted from inquiries. Changing a status notifies the customer.</p></div><a class="mini" href="/shop.html?u=${encodeURIComponent(u.userId)}" target="_blank" rel="noopener">View my shop →</a></section>
     <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Orders from your shop <span class="pill" id="ocount"></span></h3><div class="ofilter" id="ofilter"></div><div id="orders"><p class="msg">Loading orders…</p></div></div>`;
@@ -592,9 +623,17 @@ function alertMsg(m){const p=$('pmsg');if(p)p.textContent=m}
 $('logout').addEventListener('click',async()=>{await api('/api/logout',{method:'POST'}).catch(()=>{});showLogin('You have logged out.')});
 
 (async()=>{
-  const welcome=new URLSearchParams(location.search).has('welcome');
-  if(welcome)history.replaceState(null,'','/account.html');
-  try{const r=await api('/api/me');if(r.ok)showAccount(r.data.user,welcome);else showLogin()}
+  const qs=new URLSearchParams(location.search),welcome=qs.has('welcome'),billing=qs.get('billing');
+  if(welcome||billing)history.replaceState(null,'','/account.html'+location.hash);
+  try{const r=await api('/api/me');if(!r.ok)return showLogin();billingInfo=r.data.billing||null;showAccount(r.data.user,welcome);
+    if(billing==='cancelled')main.insertAdjacentHTML('afterbegin','<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Payment cancelled — nothing was charged. You can pay any time from Settings.</div>');
+    if(billing==='success'){
+      // Stripe tells us about the payment a moment later; check a few times until the plan shows as active.
+      main.insertAdjacentHTML('afterbegin','<div class="ribbon" id="payRib">Payment received — activating your plan…</div>');
+      for(let i=0;i<8;i++){await new Promise(ok=>setTimeout(ok,2000));const m=await api('/api/me').catch(()=>null);
+        if(m&&m.ok&&m.data.user.subscription?.status==='active'){showAccount(m.data.user,false);main.insertAdjacentHTML('afterbegin',`<div class="ribbon">Payment received — your ${esc(m.data.user.planDetails.name)} plan is active and your shop is open. Thank you!</div>`);return}}
+      const pr=$('payRib');if(pr)pr.textContent='Payment received. Your plan will show as active in a minute — refresh the page if it doesn’t.'}
+  }
   catch{showLogin()}
 })();
 }

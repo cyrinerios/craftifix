@@ -1,3 +1,4 @@
+import { stripeEnabled, createCheckout } from '../_stripe.js';
 import { PLANS, pricingFor, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 export default async function handler(req, res) {
@@ -37,7 +38,10 @@ export default async function handler(req, res) {
     const rec = {
       userId, name, business, email, whatsapp, plan, social, currency,
       passwordHash: await hashPassword(password),
-      subscription: { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
+      subscription: stripeEnabled()
+        ? { status: 'pending', billing: 'monthly', provider: 'stripe', paymentStatus: 'pending', startedAt: now,
+          currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate }
+        : { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
         currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate },
       createdAt: now, updatedAt: now
     };
@@ -51,8 +55,16 @@ export default async function handler(req, res) {
       try { rec.logo = await uploadImage(userId, b.logo); await saveUser(rec); }
       catch (e) { if (e?.status !== 400) console.error('logo upload failed', e); }
     }
+    // With Stripe set up, send the new owner straight to the payment page. If that fails they can pay from Settings.
+    let checkoutUrl = null;
+    if (stripeEnabled()) {
+      try {
+        checkoutUrl = (await createCheckout(rec, plan, `https://${req.headers['x-forwarded-host'] || req.headers.host}`)).url;
+        await saveUser(rec);
+      } catch (e) { console.error('checkout at signup failed', e.message); }
+    }
     await syncAccount(rec);
     setSession(res, userId);
-    send(res, 201, { user: publicUser(rec) });
+    send(res, 201, { user: publicUser(rec), checkoutUrl });
   } catch (e) { fail(res, e); }
 }

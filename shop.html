@@ -381,7 +381,9 @@ window.addEventListener('hashchange',showView);
 document.addEventListener('click',e=>{const a=e.target.closest('.backlink');if(!a)return;e.preventDefault();history.pushState(null,'',location.pathname+location.search);showView()});
 (async()=>{
   try{const r=await fetch('/api/shop?u='+encodeURIComponent(uid));const j=await r.json();
-    if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();grid();showView();
+    if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();
+    if(shop.paused){$('main').innerHTML=`<div class="center" style="text-align:center;padding:60px 16px"><h2>This shop is temporarily unavailable</h2><p>${esc(shop.business)} will be back soon. Please check again later.</p></div>`;for(const b of document.querySelectorAll('#head .cart,.fab'))b.hidden=true;return}
+    grid();showView();
     const tq=new URLSearchParams(location.search).get('track');if(tq)openTrack(tq.toUpperCase())}
   catch(e){$('head').innerHTML='<div><h1>Shop not found</h1><p>Check the link and try again.</p></div>';$('main').innerHTML='<div class="center"><a class="btn plumb" href="/">Go to Craftifix</a></div>'}
 })();

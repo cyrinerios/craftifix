@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { shopPaused } from './_stripe.js';
 import { assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getInquiries, saveInquiries, uploadImage, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/inquiry — a shopper sends a custom-order inquiry with up to two inspiration photos (Option 1, Option 2).
@@ -14,6 +15,7 @@ export default async function handler(req, res) {
     if (!validId(uid)) return send(res, 404, { error: 'Shop not found.' });
     const owner = await getUser(uid);
     if (!owner || owner.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
+    if (shopPaused(owner)) return send(res, 403, { error: 'This shop is temporarily unavailable. Please try again later.' });
 
     const customer = { name: clean(b.name, 80), email: clean(b.email, 254).toLowerCase(), whatsapp: normWhatsApp(b.whatsapp), address: clean(b.address, 400) };
     const message = clean(b.message, 1500);
