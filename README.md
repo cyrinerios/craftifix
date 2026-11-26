@@ -35,7 +35,7 @@ Open `index.html` in a browser.
 - "Send update to customer" re-sends the current status. Each update is recorded in the order's history.
 
 ## Google Apps Script (Gmail email + live Google Sheet)
-- `apps-script/Code.gs` is pasted into the "Craftifix database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
+- `apps-script/Code.gs` is pasted into the "Craftifix Database" Google Sheet (Extensions → Apps Script) and deployed as a Web app (Execute as: Me, Who has access: Anyone).
 - Vercel env vars: `APPS_SCRIPT_URL` (the web app URL) and `APPS_SCRIPT_SECRET` (must match `SECRET` in the script).
 - With these set, products and account details (sign-up, Settings, plan changes) are kept in the Products and Accounts tabs, new orders and custom inquiries are emailed to the shop owner and status updates to the customer from the owner's Gmail, and every order, inquiry (with photo previews in the Inquiries tab) and status change is written to the sheet. Without them, email falls back to Resend if configured.
 

@@ -370,7 +370,7 @@ export async function sendOwnerWhatsApp(owner, text) {
 
 /* ---------- Google Apps Script (Gmail + Google Sheet) ---------- */
 // When APPS_SCRIPT_URL is set, emails go out from the owner's Gmail through the Apps Script web app,
-// which also records orders and status changes in the "Craftifix database" Google Sheet.
+// which also records orders and status changes in the "Craftifix Database" Google Sheet.
 // Otherwise email falls back to Resend (if configured).
 export async function deliver(payload) {
   const { email } = payload;

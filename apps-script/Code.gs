@@ -1,7 +1,7 @@
 /**
  * Craftifix — Google Apps Script web app
  * ---------------------------------------
- * Paste this into the "Craftifix database" Google Sheet:
+ * Paste this into the "Craftifix Database" Google Sheet:
  *   Extensions → Apps Script → replace everything in Code.gs with this file → Save.
  * Then: Deploy → New deployment → type "Web app"
  *   Execute as: Me        Who has access: Anyone
