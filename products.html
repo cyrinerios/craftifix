@@ -296,7 +296,7 @@ function usage(){
   $('useBar').style.width=l===null?'100%':Math.min(100,n/l*100)+'%';
   const ln=$('limNote');ln.hidden=l===null;
   if(l!==null){const full=n>=l;ln.className='limnote'+(full?' full':'');
-    ln.innerHTML=`<span>${full?`<b>You've reached your ${l} product listings.</b> To post another, delete a product (drafts count too) or upgrade.`:`<b>Standard plan:</b> up to ${l} product listings, including drafts. You have ${l-n} left.`}</span><a class="btn gold" href="/account.html#settings">Upgrade to Premium · AED 30</a>`;
+    ln.innerHTML=`<span>${full?`<b>You've reached your ${l} product listings on Standard.</b> Upgrade to Premium to post unlimited products and grow your shop.`:`<b>Standard plan:</b> up to ${l} product listings. You have ${l-n} left — upgrade to Premium for unlimited listings.`}</span><a class="btn gold" href="/account.html#settings">Upgrade to Premium · AED 30</a>`;
     $('saveBtn').title=full&&!state.editing?'Product listing limit reached':''}
 }
 function renderList(){
@@ -343,7 +343,7 @@ function mount(){
     const p=payload(),err=m=>{$('ferr').textContent=m};
     if(!p.name){$('name').focus();return err('Please enter a product name.')}
     if(calc(p.costing).price<=0)return err('The price is zero — add your material costs or hours first.');
-    if(!state.editing&&state.limit!==null&&state.products.length>=state.limit)return err(`Your Standard plan allows up to ${state.limit} product listings (drafts count too). Delete a product or upgrade to Premium in Settings to add more.`);
+    if(!state.editing&&state.limit!==null&&state.products.length>=state.limit)return err(`You've reached the ${state.limit} product listings on your Standard plan. Upgrade to Premium for unlimited listings.`);
     const b=$('saveBtn');b.disabled=true;const was=b.textContent;b.textContent='Saving…';
     try{const r=state.editing?await api('/api/products?id='+encodeURIComponent(state.editing),{method:'PUT',body:JSON.stringify(p)}):await api('/api/products',{method:'POST',body:JSON.stringify(p)});
       if(!r.ok){err(r.data.error||'Could not save.');return}

@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       if (limit !== null && list.length >= limit)
-        return send(res, 403, { error: `Your ${plan.name} plan allows up to ${limit} product listings (published and drafts). Delete a product or upgrade to Premium for unlimited listings.`, limitReached: 'products' });
+        return send(res, 403, { error: `You've reached the ${limit} product listings on your ${plan.name} plan. Upgrade to Premium for unlimited listings.`, limitReached: 'products' });
       const p = cleanProduct(body(req));
       if (!p.name) return send(res, 400, { error: 'Please enter a product name.', field: 'name' });
       if (p.pricing.price <= 0) return send(res, 400, { error: 'The calculated price is zero — add your costs first.' });
