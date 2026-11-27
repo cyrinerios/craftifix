@@ -4,7 +4,7 @@
 //   STRIPE_WEBHOOK_SECRET  whsec_... from the webhook endpoint in Stripe
 // Without STRIPE_SECRET_KEY the site behaves as before (payment skipped).
 import crypto from 'node:crypto';
-import { PLANS, BASE_CURRENCY, pricingFor, validCurrency, trialInfo } from './_lib.js';
+import { PLANS, BASE_CURRENCY, pricingFor, validCurrency, trialInfo, deliver, money, escHtml } from './_lib.js';
 
 // Keys are trimmed of stray spaces/quotes from copy-pasting.
 const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
@@ -88,7 +88,8 @@ async function ensureCustomer(rec) {
 export async function createCheckout(rec, plan, origin) {
   const product = await ensureProduct(plan);
   const customer = await ensureCustomer(rec);
-  const meta = { userId: rec.userId, plan };
+  const pre = await planPrice(plan, rec.currency);
+  const meta = { userId: rec.userId, plan, basePrice: String(pre.basePrice), percentOff: String(pre.percentOff || 0) };
   // Adding a card during the free trial: the first charge waits until the trial ends.
   // (Stripe needs a trial end at least 2 days away; with less left, billing starts today.)
   const t = trialInfo(rec);
@@ -127,9 +128,64 @@ export async function switchPlan(rec, plan) {
   let price = await planPrice(plan, item.price.currency.toUpperCase());
   const updated = await stripe('subscriptions/' + sub.id, {
     items: [{ id: item.id, price_data: priceData(product, price) }],
-    metadata: { userId: rec.userId, plan }, proration_behavior: 'create_prorations'
+    metadata: { userId: rec.userId, plan, basePrice: String(price.basePrice), percentOff: String(price.percentOff || 0) }, proration_behavior: 'create_prorations'
   });
   return { sub: updated, price };
+}
+
+// Keep a subscription on the current plan price: the promotion while it runs, the normal price after it ends.
+// Compares US-dollar base prices (not converted amounts), so exchange-rate movements alone never change a price.
+// The new amount applies from the next billing date: no proration, nothing is charged now.
+// Returns { changed, plan, currency, from, to, effective } (amounts in the subscription's currency).
+export async function syncSubscriptionPrice(rec) {
+  if (!stripeEnabled() || !rec?.stripe?.subscriptionId) return { changed: false };
+  const sub = await stripe('subscriptions/' + rec.stripe.subscriptionId);
+  if (!['active', 'trialing', 'past_due'].includes(sub.status) || sub.cancel_at_period_end) return { changed: false };
+  const item = sub.items?.data?.[0];
+  if (!item) return { changed: false };
+  const cur = item.price.currency.toUpperCase();
+  const plan = sub.metadata?.plan && PLANS[sub.metadata.plan] ? sub.metadata.plan : rec.plan;
+  const price = await planPrice(plan, cur);
+  if (price.currency !== cur) return { changed: false };
+  const want = minor(price.amount, cur), have = item.price.unit_amount;
+  const recorded = Number(sub.metadata?.basePrice);
+  // Subscriptions made before base prices were recorded: only move when the amount is clearly off (>10%), not for rate drift.
+  const stale = Number.isFinite(recorded) && recorded > 0 ? Math.abs(recorded - price.basePrice) > 0.004 : Math.abs(have - want) / want > 0.1;
+  if (!stale || have === want) return { changed: false };
+  const product = await ensureProduct(plan);
+  const updated = await stripe('subscriptions/' + sub.id, {
+    items: [{ id: item.id, price_data: priceData(product, price) }], proration_behavior: 'none',
+    metadata: { userId: rec.userId, plan, basePrice: String(price.basePrice), percentOff: String(price.percentOff || 0) }
+  });
+  const div = THREE_DEC.has(cur) ? 1000 : 100;
+  const next = updated.trial_end && updated.status === 'trialing' ? updated.trial_end : (updated.current_period_end || updated.items?.data?.[0]?.current_period_end);
+  applySubscription(rec, updated);
+  const change = { plan, currency: cur, from: have / div, to: price.amount, percentOff: price.percentOff || 0,
+    effective: next ? new Date(next * 1000).toISOString() : null, at: new Date().toISOString() };
+  rec.subscription = { ...rec.subscription, priceChange: change };
+  return { changed: true, ...change };
+}
+
+// Tell the owner their monthly price is changing (email via the Apps Script mailer).
+export async function notifyPriceChange(rec, ch) {
+  if (!rec?.email || !ch?.changed) return;
+  const site = String(process.env.SITE_URL || 'https://craftifix.com').replace(/\/$/, '');
+  const name = String(rec.name || rec.business || '').split(/\s+/)[0] || 'there';
+  const planName = PLANS[ch.plan]?.name || 'Craftifix';
+  const from = money(ch.from, ch.currency), to = money(ch.to, ch.currency);
+  const when = ch.effective ? new Date(ch.effective).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const lower = ch.to < ch.from;
+  const why = ch.percentOff ? `Craftifix's current promotion is ${ch.percentOff}% off every plan.` : 'The Craftifix promotion has ended, so plans are back to their normal price.';
+  const line = `From your next billing date${when ? ` (${when})` : ''}, your ${planName} plan will be ${to} a month instead of ${from}.`;
+  const subject = lower ? `Good news: your Craftifix price is going down to ${to}/month` : `Your Craftifix plan price is changing to ${to}/month`;
+  const text = `Hi ${name},\n\n${why} ${line}\n\nYou don't need to do anything, and nothing is charged now. You can change your plan or cancel any time in Settings → Manage billing:\n${site}/account.html#settings\n\nCraftifix`;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#2a1430;max-width:520px;line-height:1.5">
+    <p>Hi ${escHtml(name)},</p><p>${escHtml(why)} ${escHtml(line)}</p>
+    <p style="font-size:18px"><s style="color:#9a8a99">${escHtml(from)}</s> &nbsp;→&nbsp; <b>${escHtml(to)}</b> a month</p>
+    <p>You don't need to do anything, and nothing is charged now. You can change your plan or cancel any time in
+    <a href="${site}/account.html#settings">Settings → Manage billing</a>.</p><p>Craftifix</p></div>`;
+  try { await deliver({ action: 'price_change', email: { to: rec.email, fromName: 'Craftifix', subject, text, html } }); }
+  catch (e) { console.warn('price change email failed', rec.userId, e.message); }
 }
 
 // Map a Stripe subscription onto the account record.
@@ -151,7 +207,7 @@ export function applySubscription(rec, sub) {
     trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : rec.subscription?.trialEndsAt,
     currency: cur || rec.subscription?.currency,
     amount: amt != null ? amt / (THREE_DEC.has(cur) ? 1000 : 100) : rec.subscription?.amount,
-    basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, changedAt: new Date().toISOString()
+    basePrice: Number(sub.metadata?.basePrice) || rec.subscription?.basePrice || PLANS[plan].price, baseCurrency: BASE_CURRENCY, changedAt: new Date().toISOString()
   };
   rec.updatedAt = new Date().toISOString();
   return rec;

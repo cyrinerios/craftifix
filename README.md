@@ -145,6 +145,10 @@ invoice the first time the owner opens Orders. Items from VAT-registered prices 
   USD 4.50, converted to the shop's currency). Set in `api/_lib.js` (`DEFAULT_PROMO_PERCENT_OFF`).
 - Change it without code: Vercel → craftifix → Settings → Environment Variables → `PROMO_PERCENT_OFF` (e.g. `50`),
   or `0` to end the promotion, then redeploy. `PROMO_LABEL` changes its name (default "Launch promo").
-- New checkouts and plan switches are charged the promo price. Subscriptions keep the price they started with
-  when the promotion changes (Stripe keeps each subscription's price).
+- New checkouts and plan switches are charged the promo price.
+- **Existing subscriptions follow the current price.** When the promotion changes or ends, every active subscription
+  moves to the current plan price from its next billing date (no proration, nothing charged at that moment), the
+  owner gets an email, and the workspace shows a notice for two weeks. This runs daily (Vercel Cron, 04:15 UTC →
+  `/api/cron/reprice`) and when an owner opens their workspace (at most twice a day). Prices are compared in US
+  dollars, so exchange-rate movements alone never change a subscription. Subscriptions set to cancel are left alone.
 - The homepage, the plan chooser and Settings show the normal price crossed out next to the promo price.

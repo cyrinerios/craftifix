@@ -39,6 +39,10 @@
     {
       "source": "/api/stripe/webhook",
       "destination": "/api/billing?action=webhook"
+    },
+    {
+      "source": "/api/cron/reprice",
+      "destination": "/api/billing?action=reprice"
     }
   ],
   "headers": [
@@ -50,6 +54,12 @@
           "value": "public, max-age=604800"
         }
       ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/reprice",
+      "schedule": "15 4 * * *"
     }
   ]
 }

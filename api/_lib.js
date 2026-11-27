@@ -578,6 +578,20 @@ export async function storageStatus() {
   return { storage: 'prisma-postgres', connection: dbEnvName(), counts: c, blobImport: m?.value || null };
 }
 
+// User IDs of accounts with a Stripe subscription (for the daily price check).
+export async function listSubscribedUserIds() {
+  if (useDb()) return (await q(`SELECT user_id FROM accounts WHERE data->'stripe'->>'subscriptionId' IS NOT NULL`)).map((r) => r.user_id);
+  const ids = []; let cursor;
+  do {
+    const page = await list({ prefix: 'users/', cursor, limit: 1000 });
+    for (const b of page.blobs) {
+      try { const r = await fetch(b.url + '?v=' + Date.now(), { cache: 'no-store' }); if (!r.ok) continue; const rec = decrypt(await r.text()); if (rec.stripe?.subscriptionId) ids.push(rec.userId); } catch {}
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  return ids;
+}
+
 export const getUser = (uid) => (useDb() ? dbGetUser(uid) : blobGetUser(uid));
 export const saveUser = (rec, opts) => (useDb() ? dbSaveUser(rec, opts) : blobSaveUser(rec, opts));
 export const findUsersByEmail = (email) => (useDb() ? dbFindUsersByEmail(email) : blobFindUsersByEmail(email));

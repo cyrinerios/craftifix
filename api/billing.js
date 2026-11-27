@@ -1,5 +1,5 @@
-import { PLANS, assertConfigured, requireUser, getUser, saveUser, syncAccount, body, send, fail } from './_lib.js';
-import { stripeEnabled, createCheckout, createPortal, applySubscription, verifyWebhook, stripe } from './_stripe.js';
+import { PLANS, assertConfigured, requireUser, getUser, saveUser, syncAccount, listSubscribedUserIds, body, send, fail } from './_lib.js';
+import { stripeEnabled, createCheckout, createPortal, applySubscription, verifyWebhook, stripe, syncSubscriptionPrice, notifyPriceChange } from './_stripe.js';
 
 // POST /api/billing?action=checkout  { plan }  -> { url } Stripe Checkout for the logged-in owner
 // POST /api/billing?action=portal               -> { url } Stripe customer portal (card, invoices, cancel)
@@ -45,10 +45,31 @@ async function onWebhook(req, res) {
   send(res, 200, { received: true });
 }
 
+// Daily (Vercel Cron → /api/cron/reprice): move every subscription to the current plan price when the promotion
+// changes or ends, from its next billing date, and email the owner. Only Vercel's scheduler (or CRON_SECRET) may run it.
+async function onReprice(req, res) {
+  const secret = String(process.env.CRON_SECRET || '').trim();
+  const authed = secret ? req.headers.authorization === `Bearer ${secret}` : /vercel-cron/i.test(String(req.headers['user-agent'] || ''));
+  if (!authed) return send(res, 401, { error: 'Not allowed' });
+  const out = { checked: 0, changed: 0, errors: 0 };
+  for (const uid of await listSubscribedUserIds()) {
+    try {
+      const rec = await getUser(uid); if (!rec) continue;
+      out.checked++;
+      const ch = await syncSubscriptionPrice(rec);
+      rec.subscription = { ...rec.subscription, priceCheckedAt: new Date().toISOString() };
+      await saveUser(rec);
+      if (ch.changed) { out.changed++; await syncAccount(rec); await notifyPriceChange(rec, ch); console.log('reprice', uid, ch.from, '→', ch.to, ch.currency); }
+    } catch (e) { out.errors++; console.warn('reprice failed', uid, e.message); }
+  }
+  send(res, 200, out);
+}
+
 export default async function handler(req, res) {
   try {
     assertConfigured();
     const action = String(req.query?.action || '');
+    if (action === 'reprice') return stripeEnabled() ? await onReprice(req, res) : send(res, 200, { skipped: 'no Stripe' });
     if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
     if (!stripeEnabled()) return send(res, 503, { error: 'Online payment is not set up yet.' });
     if (action === 'webhook') return await onWebhook(req, res);
