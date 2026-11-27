@@ -106,3 +106,13 @@ link `/invoice.html?u=<shop>&o=<orderNo>&t=<token>` (the token is an HMAC, so li
 the "completed" email and WhatsApp message, on the customer's order tracking, and on the owner's order card (View /
 Copy link). The invoice page prints to an A4 PDF ("Download PDF"). Completed orders from before this feature get their
 invoice the first time the owner opens Orders. Items from VAT-registered prices show the 5% VAT included.
+
+## 30-day free trial
+
+- New shops sign up **without any payment details**. Their chosen plan (Standard or Premium) runs free for 30 days (`subscription.status = 'trial'`, `trialEndsAt`), and the shop is open to customers straight away.
+- The owner workspace shows how many trial days are left, with an **Add billing details** button. In the last 7 days the banner turns gold to remind them.
+- Adding a card during the trial opens Stripe Checkout with `trial_end` set to the trial's end date, so the **first charge is on day 30**, not when the card is added. If less than 2 days are left, billing starts the same day, because Stripe needs at least 2 days.
+- Plan changes during the trial take effect immediately, with no payment, and the trial end date doesn't move.
+- When the trial ends without a card, the shop closes to customers (`trial_ended`) until billing details are added. Products, orders and settings are kept.
+- In the Google Sheet, the Status column shows *Free trial* / *Trial ended* and the Payment column shows *Trial ends YYYY-MM-DD*.
+- Existing accounts are not affected.

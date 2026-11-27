@@ -4,7 +4,7 @@
 //   STRIPE_WEBHOOK_SECRET  whsec_... from the webhook endpoint in Stripe
 // Without STRIPE_SECRET_KEY the site behaves as before (payment skipped).
 import crypto from 'node:crypto';
-import { PLANS, BASE_CURRENCY, pricingFor, validCurrency } from './_lib.js';
+import { PLANS, BASE_CURRENCY, pricingFor, validCurrency, trialInfo } from './_lib.js';
 
 // Keys are trimmed of stray spaces/quotes from copy-pasting.
 const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
@@ -89,10 +89,14 @@ export async function createCheckout(rec, plan, origin) {
   const product = await ensureProduct(plan);
   const customer = await ensureCustomer(rec);
   const meta = { userId: rec.userId, plan };
+  // Adding a card during the free trial: the first charge waits until the trial ends.
+  // (Stripe needs a trial end at least 2 days away; with less left, billing starts today.)
+  const t = trialInfo(rec);
+  const trialEnd = t?.onTrial && new Date(t.endsAt).getTime() - Date.now() > 49 * 3600e3 ? Math.floor(new Date(t.endsAt).getTime() / 1000) : undefined;
   const make = (price) => stripe('checkout/sessions', {
     mode: 'subscription', customer, client_reference_id: rec.userId,
     line_items: [{ quantity: 1, price_data: priceData(product, price) }],
-    subscription_data: { metadata: meta, description: `Craftifix ${PLANS[plan].name} plan for ${rec.business}` },
+    subscription_data: { metadata: meta, description: `Craftifix ${PLANS[plan].name} plan for ${rec.business}`, trial_end: trialEnd },
     metadata: meta, allow_promotion_codes: 'true',
     success_url: `${origin}/account.html?billing=success#settings`,
     cancel_url: `${origin}/account.html?billing=cancelled#settings`
@@ -141,9 +145,10 @@ export function applySubscription(rec, sub) {
   rec.subscription = {
     ...(rec.subscription || {}),
     status: STATUS[sub.status] || sub.status, billing: 'monthly', provider: 'stripe',
-    paymentStatus: sub.status === 'active' || sub.status === 'trialing' ? 'paid' : sub.status,
+    paymentStatus: sub.status === 'trialing' ? 'card-added' : sub.status === 'active' ? 'paid' : sub.status,
     paidUntil: periodEnd ? new Date(periodEnd * 1000).toISOString() : rec.subscription?.paidUntil,
     cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+    trialEndsAt: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : rec.subscription?.trialEndsAt,
     currency: cur || rec.subscription?.currency,
     amount: amt != null ? amt / (THREE_DEC.has(cur) ? 1000 : 100) : rec.subscription?.amount,
     basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, changedAt: new Date().toISOString()
@@ -167,7 +172,7 @@ export function verifyWebhook(raw, header, secret = clean(process.env.STRIPE_WEB
 // pick it up. Returns true when the record changed.
 export async function reconcile(rec) {
   if (!stripeEnabled() || !rec?.stripe?.customerId) return false;
-  if (!['pending', 'past_due', 'unpaid'].includes(rec.subscription?.status)) return false;
+  if (!['pending', 'past_due', 'unpaid', 'trial', 'trial_ended'].includes(rec.subscription?.status)) return false;
   const list = await stripe(`subscriptions?customer=${encodeURIComponent(rec.stripe.customerId)}&status=all&limit=5`);
   const sub = (list.data || []).find((s) => ['active', 'trialing'].includes(s.status)) || (list.data || [])[0];
   if (!sub || (sub.status === rec.stripe.status && sub.id === rec.stripe.subscriptionId)) return false;
@@ -176,4 +181,15 @@ export async function reconcile(rec) {
 }
 
 // Accounts that must pay before their shop is open to customers.
-export const shopPaused = (rec) => ['pending', 'canceled', 'unpaid'].includes(rec?.subscription?.status);
+// A free trial that has run out without billing details also closes the shop until the owner adds a card.
+export const shopPaused = (rec) => ['pending', 'canceled', 'unpaid', 'trial_ended'].includes(rec?.subscription?.status) || !!trialInfo(rec)?.ended;
+
+// Mark a run-out trial as ended (once). Returns true when the record changed.
+export function expireTrial(rec) {
+  if (rec?.subscription?.status === 'trial' && trialInfo(rec)?.ended) {
+    rec.subscription = { ...rec.subscription, status: 'trial_ended', paymentStatus: 'needed', changedAt: new Date().toISOString() };
+    rec.updatedAt = rec.subscription.changedAt;
+    return true;
+  }
+  return false;
+}

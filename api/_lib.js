@@ -105,7 +105,7 @@ export async function saveUser(rec, { create = false } = {}) {
 
 export function publicUser(rec) {
   const { passwordHash, callmebotKey, ...rest } = rec;
-  return { ...rest, currency: rec.currency || 'AED', whatsappAlerts: !!callmebotKey, plan: planId(rec.plan), planDetails: planFor(rec.plan) };
+  return { ...rest, currency: rec.currency || 'AED', whatsappAlerts: !!callmebotKey, plan: planId(rec.plan), planDetails: planFor(rec.plan), trial: trialInfo(rec) };
 }
 
 /* ---------- sessions (HMAC-signed cookie) ---------- */
@@ -348,6 +348,18 @@ export function money(n, cur = 'AED') {
 // Plan prices are set in US dollars (BASE_CURRENCY) and converted with the day's rate from ExchangeRate-API's free endpoint
 // (https://www.exchangerate-api.com — attribution required, updates once a day). Rates are cached for
 // 12 hours per server instance; if the service can't be reached we fall back to approximate rates.
+// Free trial: new shops run on their chosen plan for 30 days with no payment details. After that the
+// owner adds a card (Stripe) to keep the shop open.
+export const TRIAL_DAYS = 30;
+export const trialEndFrom = (iso) => new Date(new Date(iso).getTime() + TRIAL_DAYS * 864e5).toISOString();
+// { onTrial, ended, endsAt, daysLeft } for accounts on the free trial; null otherwise.
+export function trialInfo(rec, now = Date.now()) {
+  const s = rec?.subscription;
+  if (!s || !['trial', 'trial_ended'].includes(s.status) || !s.trialEndsAt) return null;
+  const end = new Date(s.trialEndsAt).getTime();
+  const ended = s.status === 'trial_ended' || now >= end;
+  return { onTrial: !ended, ended, endsAt: s.trialEndsAt, daysLeft: ended ? 0 : Math.max(1, Math.ceil((end - now) / 864e5)) };
+}
 export const BASE_CURRENCY = 'USD';
 const FX_URL = 'https://open.er-api.com/v6/latest/' + BASE_CURRENCY;
 const FX_TTL = 12 * 3600e3;
@@ -490,8 +502,8 @@ export function accountForSheet(rec) {
   const st = rec.subscription?.status || 'active';
   return {
     userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
-    plan: p.name, planPrice: money(p.price, BASE_CURRENCY), status: st[0].toUpperCase() + st.slice(1),
-    payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : (rec.subscription?.paymentStatus || ''),
+    plan: p.name, planPrice: money(p.price, BASE_CURRENCY), status: ({ trial: 'Free trial', trial_ended: 'Trial ended', past_due: 'Past due' })[st] || st[0].toUpperCase() + st.slice(1),
+    payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : rec.subscription?.trialEndsAt && ['trial', 'trial_ended'].includes(st) ? `Trial ends ${rec.subscription.trialEndsAt.slice(0, 10)}` : (rec.subscription?.paymentStatus || ''),
     createdAt: rec.createdAt, updatedAt: rec.updatedAt || rec.createdAt, currency: rec.currency || 'AED',
     logo: rec.logo || '', social: rec.social || {}
   };

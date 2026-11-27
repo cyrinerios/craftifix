@@ -229,23 +229,28 @@ function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='USD')return'';
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
   return `<p class="msg fxn">Plan prices are set in US dollars (Standard USD 5, Premium USD 15) and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 USD = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
 let billingInfo=null;
-const SUBLBL={active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
+const SUBLBL={trial:['Free trial','#2f9e6b'],trial_ended:['Free trial ended','#c62f5f'],active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
 const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
 const longDay=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
 function payRow(u){const s=u.subscription||{};
   if(s.provider!=='stripe')return s.paymentStatus==='skipped'?'Skipped (early account)':'—';
+  if(s.status==='trial')return u.trial?`No card needed yet · trial ends ${longDay(u.trial.endsAt)}`:'Free trial';
+  if(s.status==='trial_ended')return 'Add billing details to reopen your shop';
+  if(s.status==='active'&&s.paymentStatus==='card-added'&&s.trialEndsAt&&new Date(s.trialEndsAt)>new Date())return `Card added · first charge ${longDay(s.trialEndsAt)}`;
   if(s.status==='active')return s.paidUntil?`Card via Stripe · ${s.cancelAtPeriodEnd?'ends':'renews'} ${longDay(s.paidUntil)}`:'Card via Stripe';
   if(s.status==='pending')return 'Not paid yet';
   if(s.status==='past_due')return 'Last payment failed — Stripe will retry';
   return 'Subscription ended';}
 /* Banner when the subscription needs attention — the shop is closed to customers until it's paid. */
 function billingBanner(u){const s=u.subscription||{};if(!billingInfo||!billingInfo.online)return'';
-  const msg={pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
+  if(s.status==='trial'&&u.trial&&!u.trial.ended){const d=u.trial.daysLeft,soon=d<=7;
+    return `<div class="billbar"${soon?'':' style="background:#e9f7ef;color:#1d5c3c"'}><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Your shop is open and everything on the ${esc(u.planDetails.name)} plan is unlocked. ${soon?`Add your billing details before ${longDay(u.trial.endsAt)} to keep your shop open — you won't be charged until the trial ends.`:`No card needed yet — you'll be asked for billing details when the trial ends. It's ${planLabel(u,u.plan)}/month after that.`}</span><button class="btn ${soon?'gold':'plumb'}" type="button" data-bill="checkout">Add billing details</button></div>`}
+  const msg={trial_ended:`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Add your billing details to reopen it — your products, orders and settings are all still here. ${esc(u.planDetails.name)} plan: ${planLabel(u,u.plan)}/month.`,pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
     past_due:`<b>Your last payment didn't go through.</b> Stripe will try again. Update your card to keep your shop open.`,
     unpaid:`<b>Your subscription is unpaid, so your shop is closed to customers.</b> Pay to reopen it.`,
     canceled:`<b>Your subscription has ended, so your shop is closed to customers.</b> Subscribe again to reopen it.`}[s.status];
   if(!msg)return'';
-  const btn=s.status==='past_due'&&u.stripe?.customerId?`<button class="btn gold" type="button" data-bill="portal">Update card</button>`:`<button class="btn gold" type="button" data-bill="checkout">Pay ${planLabel(u,u.plan)}/mo</button>`;
+  const btn=s.status==='past_due'&&u.stripe?.customerId?`<button class="btn gold" type="button" data-bill="portal">Update card</button>`:s.status==='trial_ended'?`<button class="btn gold" type="button" data-bill="checkout">Add billing details</button>`:`<button class="btn gold" type="button" data-bill="checkout">Pay ${planLabel(u,u.plan)}/mo</button>`;
   return `<div class="billbar"><span>${msg}</span>${btn}</div>`}
 async function goBilling(kind,btn){if(btn){btn.disabled=true;btn.textContent='Opening Stripe…'}
   const r=await api('/api/billing?action='+kind,{method:'POST',body:JSON.stringify({plan:curUser&&curUser.plan})}).catch(()=>({ok:false,data:{}}));
@@ -501,8 +506,8 @@ function showAccount(u,welcome){
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
       <div><span>Orders from inquiries</span><b>${p.limits.inquiryOrdersPerMonth===null?'Unlimited':p.limits.inquiryOrdersPerMonth+' a month'}</b></div>
     </div>
-    ${billingInfo&&billingInfo.online?`<div class="billbtns">${['pending','canceled','unpaid'].includes(u.subscription?.status)||u.subscription?.provider!=='stripe'?`<button class="btn gold" type="button" data-bill="checkout">${u.subscription?.provider==='stripe'?'Pay now':'Start paid subscription'}</button>`:''}${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>
-    <p class="msg" style="font-size:12.5px;margin-top:8px">Payments are handled securely by Stripe.${billingInfo.mode==='test'?' <b>Test mode</b> — no real money is charged.':''}</p>`:''}
+    ${billingInfo&&billingInfo.online?`<div class="billbtns">${['pending','canceled','unpaid','trial','trial_ended'].includes(u.subscription?.status)||u.subscription?.provider!=='stripe'?`<button class="btn gold" type="button" data-bill="checkout">${['trial','trial_ended'].includes(u.subscription?.status)?'Add billing details':u.subscription?.provider==='stripe'?'Pay now':'Start paid subscription'}</button>`:''}${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>
+    <p class="msg" style="font-size:12.5px;margin-top:8px">Payments are handled securely by Stripe.${u.subscription?.status==='trial'&&u.trial?` If you add your card during the free trial, the first charge is on ${longDay(u.trial.endsAt)}.`:''}${billingInfo.mode==='test'?' <b>Test mode</b> — no real money is charged.':''}</p>`:''}
     </div>
     <div class="card"><h3>Plan usage</h3>
       ${usage.map(([t,used,max])=>`<div class="use${max!==null&&used>=max?' full':''}"><span>${t}</span><b>${used} / ${max===null?'∞':max}</b></div><div class="meter"><span style="width:${max?Math.min(100,used/max*100):0}%"></span></div>`).join('')}
@@ -546,7 +551,7 @@ function showAccount(u,welcome){
     return;
   }
   const ribbons=`${!u.whatsapp?`<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Add your WhatsApp number in <a href="/account.html#settings">Settings</a> so customer orders from your shop reach you on WhatsApp too.</div>`:''}
-  ${billingBanner(u)}${welcome&&u.subscription?.status!=='pending'?`<div class="ribbon">Your account is ready. Your ${esc(p.name)} plan is active — payment was skipped for now.${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
+  ${billingBanner(u)}${welcome&&u.subscription?.status!=='pending'?`<div class="ribbon">Your account is ready. ${u.trial?`Your 30-day free trial of the ${esc(p.name)} plan has started — your shop is open and no card is needed until ${longDay(u.trial.endsAt)}.`:`Your ${esc(p.name)} plan is active — payment was skipped for now.`}${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
   if(view==='orders'){
     main.innerHTML=`${ribbons}<section class="sethead"><div><h1>Orders</h1><p>Orders from your shop and custom orders converted from inquiries. Changing a status notifies the customer.</p></div><a class="mini" href="/shop.html?u=${encodeURIComponent(u.userId)}" target="_blank" rel="noopener">View my shop →</a></section>
     <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Orders from your shop <span class="pill" id="ocount"></span></h3><div class="ofilter" id="ofilter"></div><div id="orders"><p class="msg">Loading orders…</p></div></div>`;
@@ -830,9 +835,9 @@ $('logout').addEventListener('click',async()=>{await api('/api/logout',{method:'
     if(billing==='cancelled')main.insertAdjacentHTML('afterbegin','<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Payment cancelled — nothing was charged. You can pay any time from Settings.</div>');
     if(billing==='success'){
       // Stripe tells us about the payment a moment later; check a few times until the plan shows as active.
-      main.insertAdjacentHTML('afterbegin','<div class="ribbon" id="payRib">Payment received — activating your plan…</div>');
+      main.insertAdjacentHTML('afterbegin','<div class="ribbon" id="payRib">Saving your billing details…</div>');
       for(let i=0;i<8;i++){await new Promise(ok=>setTimeout(ok,2000));const m=await api('/api/me').catch(()=>null);
-        if(m&&m.ok&&m.data.user.subscription?.status==='active'){showAccount(m.data.user,false);main.insertAdjacentHTML('afterbegin',`<div class="ribbon">Payment received — your ${esc(m.data.user.planDetails.name)} plan is active and your shop is open. Thank you!</div>`);return}}
+        if(m&&m.ok&&m.data.user.subscription?.status==='active'){const su=m.data.user.subscription;showAccount(m.data.user,false);main.insertAdjacentHTML('afterbegin',su.paymentStatus==='card-added'&&su.trialEndsAt?`<div class="ribbon">Billing details saved — thank you! Your free trial continues and the first charge is on ${longDay(su.trialEndsAt)}.</div>`:`<div class="ribbon">Payment received — your ${esc(m.data.user.planDetails.name)} plan is active and your shop is open. Thank you!</div>`);return}}
       const pr=$('payRib');if(pr)pr.textContent='Payment received. Your plan will show as active in a minute — refresh the page if it doesn’t.'}
   }
   catch{showLogin()}
