@@ -7,7 +7,6 @@
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#4a1d4f">
 <title>Invoice</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +68,7 @@ const day=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'long',
     if(!r.ok)throw new Error(j.error||'This invoice link is not valid.');
     const {invoice:inv,order:o,customer:c,shop:s}=j,cur=o.currency,m=n=>fmt(n,cur);
     document.title=`Invoice ${inv.no} — ${s.business}`;
+    if(s.logo){document.querySelectorAll('link[rel=icon],link[rel=apple-touch-icon]').forEach(l=>l.remove());for(const rel of ['icon','apple-touch-icon']){const l=document.createElement('link');l.rel=rel;l.href=s.logo;document.head.append(l)}}
     const initials=s.business.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const vatIncl=o.items.filter(i=>i.vat).reduce((a,i)=>a+i.lineTotal,0);
     const vat=vatIncl?Math.round(vatIncl/1.05*0.05*100)/100:0;
