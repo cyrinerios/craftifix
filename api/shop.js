@@ -15,7 +15,8 @@ export default async function handler(req, res) {
     if (!user || user.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
     const shop = { userId: user.userId, business: user.business, owner: user.name, hasWhatsApp: !!user.whatsapp, logo: user.logo || null, currency: user.currency || 'AED', social: user.social || {} };
     if (shopPaused(user)) return send(res, 200, { shop: { ...shop, paused: true }, products: [] });
-    if (quote) { const q = await quoteShipping(user, body(req)); return send(res, q.ok ? 200 : 400, q); }
+    // Each quote also returns the shop's current delivery settings, so an open cart stays in step with the owner's changes.
+    if (quote) { const q = await quoteShipping(user, body(req)); return send(res, q.ok ? 200 : 400, { ...q, config: publicShipping(user) }); }
     shop.shipping = publicShipping(user);
     const products = (await getProducts(uid))
       .filter((p) => p.status === 'published')

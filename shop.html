@@ -277,7 +277,13 @@ async function requote(){
   if(ship.method==='delivery'&&c.mode==='km'&&!ship.lat&&$('oaddr').value.trim().length<8){totals();return msg('Enter your address to see the delivery fee.')}
   ship.busy=true;totals();msg('Working out delivery…');
   try{const r=await fetch(`/api/shop?u=${encodeURIComponent(shop.userId)}&action=quote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:ship.method,speed:ship.speed,region:ship.region,address:$('oaddr').value.trim(),lat:ship.lat,lng:ship.lng,subtotal:sub})});
-    const j=await r.json();ship.quote=j;if(j.ok&&j.speed)ship.speed=j.speed;renderSpeeds(j);
+    const j=await r.json();
+    if(j.config&&JSON.stringify(j.config)!==JSON.stringify(shop.shipping)){
+      // The owner changed delivery settings since this page opened: show the new options and ask again.
+      shop.shipping=j.config;if(ship.method==='pickup'&&!j.config.pickup.enabled)ship.method='delivery';
+      ship.busy=false;renderShipBox();return requote();
+    }
+    ship.quote=j;if(j.ok&&j.speed)ship.speed=j.speed;renderSpeeds(j);
     msg(j.ok?(j.pending?'':`${esc(j.label)}${j.free?' 🎉':''}`):`<span style="color:#b02a5a">${esc(j.error)}</span>`)}
   catch{msg('Could not work out delivery right now — the shop will confirm it.')}
   ship.busy=false;totals();
