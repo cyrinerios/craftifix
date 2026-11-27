@@ -51,5 +51,22 @@
         }
       ]
     }
-  ]
+  ],
+  "images": {
+    "sizes": [
+      256,
+      384,
+      640
+    ],
+    "minimumCacheTTL": 60,
+    "formats": [
+      "image/webp"
+    ],
+    "remotePatterns": [
+      {
+        "protocol": "https",
+        "hostname": "hkmfx1sggl44yv8n.public.blob.vercel-storage.com"
+      }
+    ]
+  }
 }
