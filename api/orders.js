@@ -1,4 +1,4 @@
-import { money, assertConfigured, requireUser, getUser, getOrders, saveOrders, deliver, escHtml, waLink, body, send, fail } from './_lib.js';
+import { money, assertConfigured, requireUser, getUser, saveUser, getOrders, saveOrders, assignInvoices, invoiceUrl, deliver, escHtml, waLink, body, send, fail } from './_lib.js';
 
 // GET /api/orders                 -> the logged-in owner's received orders
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
@@ -6,7 +6,7 @@ import { money, assertConfigured, requireUser, getUser, getOrders, saveOrders, d
 const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'completed', 'cancelled'];
 export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
 
-export function customerMessage(order, owner, trackUrl) {
+export function customerMessage(order, owner, trackUrl, invUrl) {
   const aed = (n) => money(n, order.currency || owner.currency);
   const first = order.customer.name.split(/\s+/)[0];
   const items = order.items.map((i) => `${i.qty} × ${i.name}`).join(', ');
@@ -16,22 +16,23 @@ export function customerMessage(order, owner, trackUrl) {
     confirmed: `Good news — your order is confirmed! ✅\n${ref}\nWe'll start crocheting it soon and keep you updated.`,
     in_production: `Your order is now being handmade 🧶\n${ref}\nWe'll let you know as soon as it's ready.`,
     ready: `Your order is ready for delivery 📦\n${ref}\nDelivery address: ${order.customer.address}\nWe'll contact you to arrange the delivery time.`,
-    completed: `Your order is complete — thank you for shopping with us! 💕\n${ref}\nWe'd love to hear what you think.`,
+    completed: `Your order is complete — thank you for shopping with us! 💕\n${ref}${invUrl ? `\nYour invoice (${order.invoice?.no || 'invoice'}): ${invUrl}` : ''}\nWe'd love to hear what you think.`,
     cancelled: `Your order has been cancelled.\n${ref}\nIf you have any questions, just reply to this message.`,
     new: `We've received your order and will confirm it shortly.\n${ref}`
   }[order.status];
   return `${head}\n${body}${trackUrl ? `\nTrack your order: ${trackUrl}` : ''}\n\n— ${owner.business}${owner.whatsapp ? `\nWhatsApp: ${owner.whatsapp}` : ''}`;
 }
 
-export async function notify(order, owner, trackUrl) {
+export async function notify(order, owner, trackUrl, invUrl) {
   const aed = (n) => money(n, order.currency || owner.currency);
-  const text = customerMessage(order, owner, trackUrl);
+  const text = customerMessage(order, owner, trackUrl, invUrl);
   const subject = `Your order ${order.orderNo} is ${LABEL[order.status].toLowerCase()} — ${owner.business}`;
   const html = `<div style="font-family:Arial,sans-serif;color:#2a1430;max-width:560px">
     <h2 style="color:#4a1d4f">Order ${escHtml(order.orderNo)}: ${escHtml(LABEL[order.status])}</h2>
     ${text.split('\n').map((l) => `<p style="margin:6px 0">${escHtml(l)}</p>`).join('')}
     <table style="border-collapse:collapse;width:100%;margin-top:12px">${order.items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
-    <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(order.total)}</b></td></tr></table></div>`;
+    <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(order.total)}</b></td></tr></table>
+    ${invUrl ? `<p style="margin:18px 0"><a href="${escHtml(invUrl)}" style="display:inline-block;background:#4a1d4f;color:#fff;text-decoration:none;padding:11px 20px;border-radius:999px;font-weight:bold">View &amp; download invoice ${escHtml(order.invoice?.no || '')}</a></p>` : ''}</div>`;
   const email = await deliver({
     action: 'status_update',
     order: { orderNo: order.orderNo, statusLabel: LABEL[order.status] },
@@ -51,7 +52,14 @@ export default async function handler(req, res) {
     assertConfigured();
     const uid = requireUser(req, res); if (!uid) return;
     const orders = await getOrders(uid);
-    if (req.method === 'GET') return send(res, 200, { orders });
+    const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
+    const withLinks = (list) => list.map((o) => (o.invoice ? { ...o, invoiceUrl: invoiceUrl(origin, uid, o.orderNo) } : o));
+    if (req.method === 'GET') {
+      // Older completed orders get their invoice the first time the owner opens Orders.
+      const owner = await getUser(uid);
+      if (owner && assignInvoices(owner, orders)) { await saveUser(owner); await saveOrders(uid, orders); }
+      return send(res, 200, { orders: withLinks(orders) });
+    }
     if (req.method === 'PUT') {
       const o = orders.find((x) => x.id === String(req.query?.id || ''));
       if (!o) return send(res, 404, { error: 'Order not found.' });
@@ -61,16 +69,18 @@ export default async function handler(req, res) {
       if (!resend) {
         const status = String(body(req).status || '');
         if (!STATUSES.includes(status)) return send(res, 400, { error: 'Unknown status.' });
-        if (status === o.status) return send(res, 200, { orders, notification: null });
+        if (status === o.status) return send(res, 200, { orders: withLinks(orders), notification: null });
         o.status = status;
+        if (status === 'completed' && assignInvoices(owner, [o])) await saveUser(owner);
       }
       const now = new Date().toISOString();
       o.updatedAt = now;
       const trackUrl = `https://${req.headers['x-forwarded-host'] || req.headers.host}/shop.html?u=${encodeURIComponent(uid)}&track=${o.orderNo}`;
-      const notification = o.status === 'new' && !resend ? null : await notify(o, owner, trackUrl);
+      const invUrl = o.status === 'completed' && o.invoice ? invoiceUrl(origin, uid, o.orderNo) : null;
+      const notification = o.status === 'new' && !resend ? null : await notify(o, owner, trackUrl, invUrl);
       o.history = [...(o.history || []), { status: o.status, at: now, emailSent: !!notification?.emailSent }].slice(-30);
       await saveOrders(uid, orders);
-      return send(res, 200, { orders, notification });
+      return send(res, 200, { orders: withLinks(orders), notification });
     }
     res.setHeader('Allow', 'GET, PUT');
     send(res, 405, { error: 'Method not allowed' });

@@ -98,3 +98,11 @@ their shop currency (converted from AED; falls back to AED if Stripe can't charg
 renewal date. Plan changes switch the Stripe subscription with proration. Settings has Pay now and Manage billing
 (Stripe customer portal). Shops whose subscription is pending, unpaid or cancelled are closed to customers. Without
 `STRIPE_SECRET_KEY` the site works as before (payment skipped). Accounts created before Stripe stay active.
+
+## Invoices
+
+When an order is marked **Completed** it gets the shop's next invoice number (INV-0001, INV-0002 …) and a private
+link `/invoice.html?u=<shop>&o=<orderNo>&t=<token>` (the token is an HMAC, so links can't be guessed). The link is in
+the "completed" email and WhatsApp message, on the customer's order tracking, and on the owner's order card (View /
+Copy link). The invoice page prints to an A4 PDF ("Download PDF"). Completed orders from before this feature get their
+invoice the first time the owner opens Orders. Items from VAT-registered prices show the 5% VAT included.

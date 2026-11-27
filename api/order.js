@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       const qty = Math.min(99, Math.max(1, Math.round(Number(it?.qty) || 0)));
       if (!p) continue;
       const unit = p.pricing.retail ? Math.round(p.pricing.retail * (p.costing.vat ? 1.05 : 1) * 100) / 100 : p.pricing.customerPrice;
-      items.push({ productId: p.id, name: p.name, qty, unitPrice: unit, lineTotal: Math.round(unit * qty * 100) / 100 });
+      items.push({ productId: p.id, name: p.name, qty, unitPrice: unit, lineTotal: Math.round(unit * qty * 100) / 100, vat: !!p.costing.vat });
     }
     if (!items.length) return send(res, 400, { error: 'Your order is empty, or those products are no longer available.' });
     const total = Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100;

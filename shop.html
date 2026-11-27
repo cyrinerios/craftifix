@@ -315,6 +315,7 @@ function renderTrack(o,sh){
       <h3>${cancelled?'This order was cancelled':esc(cur[1])}</h3><span class="note">${cancelled?'Contact the shop if you have questions.':esc(cur[2])} · updated ${esc(fmtD(o.updatedAt))}</span></div>
     ${cancelled?'':`<ol class="tl">${STEPS.map((st,i)=>`<li class="${i<idx?'tdone':i===idx?(o.status==='completed'?'tdone':'cur'):'todo'}"><span class="dot">${i<idx||o.status==='completed'&&i===idx?'✓':''}</span><b>${st[1]}</b><small>${i<=idx?esc(when(st[0])||''):''}</small></li>`).join('')}</ol>`}
     <div class="tsum">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}<div><b>Total</b><b>${aed(o.total)}</b></div><div><span>Delivery to</span><span style="text-align:right">${esc(o.deliveryArea)}</span></div></div>
+    ${o.invoice?`<a class="btn plumb" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="${esc(o.invoice.url)}">🧾 View &amp; download invoice ${esc(o.invoice.no)}</a>`:''}
     ${sh.whatsapp?`<a class="btn wa" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="https://wa.me/${esc(sh.whatsapp.replace(/\D/g,''))}?text=${encodeURIComponent(`Hi ${sh.business}, I'd like to ask about my order ${o.orderNo}.`)}">Ask the shop on WhatsApp</a>`:''}
     <button class="btn ghost" type="button" id="trackAnother" style="width:100%;margin-top:10px">Track another order</button>`;
   $('trackAnother').addEventListener('click',()=>{$('trackResult').innerHTML='';$('trackForm').hidden=false;$('tNo').value='';$('tNo').focus()});

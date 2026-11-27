@@ -120,6 +120,23 @@ export function setSession(res, uid) {
 export function clearSession(res) {
   res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
 }
+// ---------- Invoices ----------
+// Each completed order gets a shop-numbered invoice (INV-0001, INV-0002 …) and a private link the customer can open.
+export const invoiceToken = (uid, orderNo) => crypto.createHmac('sha256', SECRET).update(`inv:${uid}:${orderNo}`).digest('base64url').slice(0, 24);
+export const invoiceUrl = (origin, uid, orderNo) => `${origin}/invoice.html?u=${encodeURIComponent(uid)}&o=${encodeURIComponent(orderNo)}&t=${invoiceToken(uid, orderNo)}`;
+// Gives completed orders without an invoice the next number. Returns true if anything changed (caller saves both).
+export function assignInvoices(owner, orders) {
+  let changed = false;
+  for (const o of [...orders].reverse()) { // oldest first, so numbers follow completion order for older orders
+    if (o.status === 'completed' && !o.invoice) {
+      owner.invoiceSeq = (owner.invoiceSeq || 0) + 1;
+      o.invoice = { no: 'INV-' + String(owner.invoiceSeq).padStart(4, '0'), issuedAt: new Date().toISOString() };
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 // ---------- Password reset ----------
 // A reset link carries a signed token: account, expiry (1 hour) and a fingerprint of the current password hash.
 // Once the password changes the fingerprint no longer matches, so each link works only once.

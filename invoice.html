@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Invoice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap" rel="stylesheet">
+<style>
+:root{--plum:#4a1d4f;--ink:#2a1430;--mute:#6d5670;--line:#ecd9e4;--blush:#fff3f7;--gold:#ffb627}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:#f6eef3;color:var(--ink);font:15.5px/1.55 "Nunito Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:Outfit,system-ui,sans-serif;margin:0}
+.tools{max-width:860px;margin:22px auto 12px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tools p{margin:0;color:var(--mute);font-size:13.5px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:11px 20px;font:700 15px Outfit,sans-serif;cursor:pointer;text-decoration:none}
+.btn.plumb{background:var(--plum);color:#fff}.btn.ghost{background:#fff;color:var(--plum);border:1.5px solid var(--line)}
+.sheet{max-width:860px;margin:0 auto 40px;background:#fff;border-radius:18px;box-shadow:0 10px 40px rgba(74,29,79,.10);padding:44px 48px;position:relative;overflow:hidden}
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.brand{display:flex;gap:14px;align-items:center}
+.logo{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--plum);color:#fff;display:grid;place-items:center;font:800 22px Outfit,sans-serif;flex:none}
+.brand h2{font-size:22px}.brand p{margin:2px 0 0;color:var(--mute);font-size:13.5px}
+.title{text-align:right}.title h1{font-size:34px;letter-spacing:.06em;color:var(--plum)}
+.title dl{margin:8px 0 0;display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:14px;justify-content:end}
+.title dt{color:var(--mute)}.title dd{margin:0;font-weight:700;text-align:right}
+.band{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--plum),#f48fb1 60%,var(--gold));margin:26px 0}
+.parties{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.parties h3{font:700 12px "Nunito Sans",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:6px}
+.parties p{margin:0;font-size:14.5px;overflow-wrap:anywhere}.parties b{font-size:16px}
+table{width:100%;border-collapse:collapse;margin-top:28px;font-size:14.5px}
+th{text-align:left;font:700 12px "Nunito Sans",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);padding:10px 8px;border-bottom:2px solid var(--line)}
+td{padding:12px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.n{text-align:right;white-space:nowrap}
+.totals{margin-left:auto;margin-top:14px;width:min(320px,100%);font-size:15px}
+.totals div{display:flex;justify-content:space-between;padding:6px 8px}
+.totals .grand{background:var(--blush);border-radius:12px;font:800 20px Outfit,sans-serif;color:var(--plum);padding:12px 14px;margin-top:6px}
+.note{margin-top:30px;padding-top:18px;border-top:1px dashed var(--line);color:var(--mute);font-size:13.5px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.stamp{position:absolute;top:120px;right:-60px;transform:rotate(35deg);background:#c62f5f;color:#fff;font:800 16px Outfit,sans-serif;letter-spacing:.2em;padding:6px 80px}
+.msg{max-width:520px;margin:80px auto;text-align:center;padding:0 16px}
+.made{color:var(--mute);font-size:12px}
+@media(max-width:640px){.sheet{padding:26px 20px;border-radius:0}.title{text-align:left}.title dl{justify-content:start}.title dd{text-align:left}.parties{grid-template-columns:1fr}th.hide-s,td.hide-s{display:none}}
+@page{size:A4;margin:14mm}
+@media print{body{background:#fff}.tools{display:none}.sheet{box-shadow:none;border-radius:0;padding:0;margin:0;max-width:none}.band,.totals .grand,.stamp{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+<div class="tools" id="tools" hidden>
+  <p>Tip: in the print window choose <b>Save as PDF</b> to download it.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn ghost" id="shopBtn" href="#">Visit shop</a><button class="btn plumb" type="button" id="dl">⬇ Download PDF</button></div>
+</div>
+<main id="main"><p class="msg">Loading invoice…</p></main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=(n,c)=>{try{return new Intl.NumberFormat('en-US',{style:'currency',currency:c||'AED',currencyDisplay:'code'}).format(Number(n)||0).replace(/ /g,' ')}catch{return (c||'AED')+' '+(Number(n)||0).toFixed(2)}};
+const day=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+(async()=>{
+  const q=new URLSearchParams(location.search);
+  try{
+    const r=await fetch(`/api/invoice?u=${encodeURIComponent(q.get('u')||'')}&o=${encodeURIComponent(q.get('o')||'')}&t=${encodeURIComponent(q.get('t')||'')}`);
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error||'This invoice link is not valid.');
+    const {invoice:inv,order:o,customer:c,shop:s}=j,cur=o.currency,m=n=>fmt(n,cur);
+    document.title=`Invoice ${inv.no} — ${s.business}`;
+    const initials=s.business.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const vatIncl=o.items.filter(i=>i.vat).reduce((a,i)=>a+i.lineTotal,0);
+    const vat=vatIncl?Math.round(vatIncl/1.05*0.05*100)/100:0;
+    $('main').innerHTML=`<article class="sheet">
+      ${inv.status==='cancelled'?'<div class="stamp">CANCELLED</div>':''}
+      <div class="top">
+        <div class="brand">${s.logo?`<img class="logo" src="${esc(s.logo)}" alt="">`:`<div class="logo">${esc(initials)}</div>`}
+          <div><h2>${esc(s.business)}</h2><p>${esc(s.owner||'')}</p></div></div>
+        <div class="title"><h1>INVOICE</h1><dl>
+          <dt>Invoice no.</dt><dd>${esc(inv.no)}</dd>
+          <dt>Date</dt><dd>${day(inv.issuedAt)}</dd>
+          <dt>Order no.</dt><dd>${esc(o.orderNo)}</dd>
+          <dt>Order date</dt><dd>${day(o.createdAt)}</dd></dl></div>
+      </div>
+      <div class="band"></div>
+      <div class="parties">
+        <div><h3>From</h3><p><b>${esc(s.business)}</b></p>${s.email?`<p>${esc(s.email)}</p>`:''}${s.whatsapp?`<p>WhatsApp ${esc(s.whatsapp)}</p>`:''}</div>
+        <div><h3>Bill to</h3><p><b>${esc(c.name)}</b></p><p>${esc(c.address)}</p><p>${esc(c.email)}</p>${c.whatsapp?`<p>${esc(c.whatsapp)}</p>`:''}</div>
+      </div>
+      <table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n hide-s">Unit price</th><th class="n">Amount</th></tr></thead>
+        <tbody>${o.items.map(i=>`<tr><td>${esc(i.name)}</td><td class="n">${i.qty}</td><td class="n hide-s">${m(i.unitPrice)}</td><td class="n">${m(i.lineTotal)}</td></tr>`).join('')}</tbody></table>
+      <div class="totals">
+        ${vat?`<div><span>Subtotal (excl. VAT)</span><span>${m(o.total-vat)}</span></div><div><span>VAT 5%</span><span>${m(vat)}</span></div>`:''}
+        <div class="grand"><span>Total</span><span>${m(o.total)}</span></div>
+      </div>
+      <div class="note"><span>Thank you for supporting handmade! 💕${o.fromInquiry?' · Custom order':''}</span><span class="made">Invoice created with Craftifix</span></div>
+    </article>`;
+    $('tools').hidden=false;
+    $('shopBtn').href='/shop.html?u='+encodeURIComponent(s.userId);
+    $('dl').addEventListener('click',()=>window.print());
+  }catch(e){$('main').innerHTML=`<div class="msg"><h2>Invoice not found</h2><p>${esc(e.message)} Please check the link or contact the shop.</p></div>`}
+})();
+</script>
+</body>
+</html>
