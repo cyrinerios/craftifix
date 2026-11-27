@@ -8,8 +8,18 @@ import { PLANS, pricingFor, validCurrency } from './_lib.js';
 
 // Keys are trimmed of stray spaces/quotes from copy-pasting.
 const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
-const secretKey = () => clean(process.env.STRIPE_SECRET_KEY);
-export const stripeKeyKind = () => { const k = secretKey(); return !k ? 'missing' : /^sk_(test|live)_/.test(k) ? 'ok' : /^rk_/.test(k) ? 'restricted' : /^pk_/.test(k) ? 'publishable' : 'unrecognised'; };
+// If extra text was pasted around the key (e.g. "STRIPE_SECRET_KEY=sk_test_…"), pick the key out of it.
+const secretKey = () => { const raw = clean(process.env.STRIPE_SECRET_KEY); const m = raw.match(/sk_(test|live)_[A-Za-z0-9]+/); return m ? m[0] : raw; };
+export const stripeKeyKind = () => {
+  const k = secretKey();
+  if (!k) return 'missing';
+  if (/^sk_(test|live)_[A-Za-z0-9]+$/.test(k)) return 'ok';
+  if (/rk_(test|live)_/.test(k)) return 'restricted-key';
+  if (/pk_(test|live)_/.test(k)) return 'publishable-key';
+  if (/whsec_/.test(k)) return 'webhook-signing-secret';
+  if (/\.\.\./.test(k) || /…/.test(k)) return 'shortened-key-with-dots';
+  return `unrecognised (${k.length} characters)`;
+};
 export const stripeEnabled = () => stripeKeyKind() === 'ok';
 export const stripeMode = () => (secretKey().startsWith('sk_live_') ? 'live' : 'test');
 
