@@ -582,7 +582,7 @@ async function showPrices(cur){
   else n.hidden=true;
 }
 $('scur').addEventListener('change',e=>showPrices(e.target.value));
-fetch('/api/rates?currency=AED').then(r=>r.json()).then(j=>{if(j.onlinePayment)$('payNote').innerHTML='After creating your account you’ll pay securely by card on <b>Stripe</b>. Your shop opens to customers as soon as the payment goes through. Cancel any time.'}).catch(()=>{});
+fetch('/api/rates?currency=AED').then(r=>r.json()).then(j=>{if(j.onlinePayment)$('payNote').innerHTML='After creating your account you’ll pay securely by card on <b>Stripe</b>. Your shop opens to customers as soon as the payment goes through. Cancel any time.'+(j.paymentMode==='test'?' <b>(Test mode — use card 4242 4242 4242 4242; no real money is charged.)</b>':'')}).catch(()=>{});
 const fields={currency:'scur',userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw',instagram:'sig',facebook:'sfb',tiktok:'stt'};
 let logoData='';
 function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=400,k=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(file.type==='image/png'?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',.9))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}
