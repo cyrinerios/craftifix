@@ -206,6 +206,8 @@ a.mini{text-decoration:none;display:inline-flex;align-items:center}
 @media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.wide{grid-column:auto}.welcome{grid-template-columns:minmax(0,1fr)}}
 
 footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding:18px}
+.bar .logo{flex:none}.bar .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .logo .bname{max-width:min(260px,40vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .logo img.shopicon{border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 </style>
 </head>
@@ -213,7 +215,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 <header class="bar"><div class="in">
   <a class="logo" href="/" aria-label="Craftifix home">
     <img src="/favicon.svg" width="30" height="30" alt="" aria-hidden="true">
-    Craftifix
+    <span class="bname">Craftifix</span>
   </a>
   <span class="who" id="who"></span>
   <a class="planpill" id="planPill" href="/account.html#settings" hidden title="Your plan — open Settings"></a>
@@ -464,6 +466,9 @@ function setNav(view){
 /* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
 function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
   if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
+  // Header name: the shop's business name when logged in, Craftifix otherwise.
+  const a=document.querySelector('.bar .logo');if(a){let t=a.querySelector('.bname');if(!t){[...a.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());t=document.createElement('span');t.className='bname';a.appendChild(t)}
+    t.textContent=u&&u.business||'Craftifix';a.title=u&&u.business?u.business+' — powered by Craftifix':'';a.setAttribute('aria-label',(u&&u.business||'Craftifix')+' home')}
   document.querySelectorAll('link[rel="icon"]').forEach(l=>l.remove());
   const add=(href,extra)=>{const l=document.createElement('link');l.rel='icon';l.href=href;Object.assign(l,extra||{});document.head.appendChild(l)};
   if(url)add(url);else{add('/favicon.ico',{sizes:'48x48'});add('/favicon.svg',{type:'image/svg+xml'})}}

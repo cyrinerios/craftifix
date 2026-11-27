@@ -142,6 +142,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
 .center{display:grid;place-items:center;min-height:50vh;text-align:center;color:var(--mute)}
 @media(max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:560px){.row,.row3{grid-template-columns:minmax(0,1fr)}.photo{grid-template-columns:96px minmax(0,1fr)}.thumb{width:96px;height:96px}.bar .in{flex-wrap:wrap;row-gap:2px}.bar nav{order:3;width:100%;justify-content:space-between}.bar nav .hide-s{display:none}.who{display:none}.planpill{font-size:12px;padding:4px 9px}}
+.bar .logo{flex:none}.bar .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .logo .bname{max-width:min(260px,40vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar .logo img.shopicon{border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 </style>
 </head>
@@ -149,7 +151,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
 <header class="bar"><div class="in">
   <a class="logo" href="/" aria-label="Craftifix home">
     <img src="/favicon.svg" width="30" height="30" alt="" aria-hidden="true">
-    <span>Craftifix</span>
+    <span class="bname">Craftifix</span>
   </a>
   <span class="who" id="who"></span>
   <a class="planpill" id="planPill" href="/account.html#settings" hidden title="Your plan — open Settings"></a>
@@ -450,6 +452,9 @@ $('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method
 /* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
 function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
   if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
+  // Header name: the shop's business name when logged in, Craftifix otherwise.
+  const a=document.querySelector('.bar .logo');if(a){let t=a.querySelector('.bname');if(!t){[...a.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());t=document.createElement('span');t.className='bname';a.appendChild(t)}
+    t.textContent=u&&u.business||'Craftifix';a.title=u&&u.business?u.business+' — powered by Craftifix':'';a.setAttribute('aria-label',(u&&u.business||'Craftifix')+' home')}
   document.querySelectorAll('link[rel="icon"]').forEach(l=>l.remove());
   const add=(href,extra)=>{const l=document.createElement('link');l.rel='icon';l.href=href;Object.assign(l,extra||{});document.head.appendChild(l)};
   if(url)add(url);else{add('/favicon.ico',{sizes:'48x48'});add('/favicon.svg',{type:'image/svg+xml'})}}
