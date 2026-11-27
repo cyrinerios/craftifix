@@ -163,5 +163,17 @@ export function verifyWebhook(raw, header, secret = clean(process.env.STRIPE_WEB
   return sigs.some((s) => s.length === expected.length && crypto.timingSafeEqual(Buffer.from(s), Buffer.from(expected)));
 }
 
+// If an account still waits for payment but Stripe already has a subscription for it (e.g. a missed webhook),
+// pick it up. Returns true when the record changed.
+export async function reconcile(rec) {
+  if (!stripeEnabled() || !rec?.stripe?.customerId) return false;
+  if (!['pending', 'past_due', 'unpaid'].includes(rec.subscription?.status)) return false;
+  const list = await stripe(`subscriptions?customer=${encodeURIComponent(rec.stripe.customerId)}&status=all&limit=5`);
+  const sub = (list.data || []).find((s) => ['active', 'trialing'].includes(s.status)) || (list.data || [])[0];
+  if (!sub || (sub.status === rec.stripe.status && sub.id === rec.stripe.subscriptionId)) return false;
+  applySubscription(rec, sub);
+  return true;
+}
+
 // Accounts that must pay before their shop is open to customers.
 export const shopPaused = (rec) => ['pending', 'canceled', 'unpaid'].includes(rec?.subscription?.status);

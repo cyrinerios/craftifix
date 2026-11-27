@@ -15,9 +15,19 @@ async function rawBody(req) {
 }
 
 async function onWebhook(req, res) {
-  const raw = await rawBody(req);
-  if (!verifyWebhook(raw, req.headers['stripe-signature'])) return send(res, 400, { error: 'Invalid signature' });
-  const event = JSON.parse(raw);
+  const raw = await rawBody(req).catch(() => '');
+  let event = null;
+  if (raw && verifyWebhook(raw, req.headers['stripe-signature'])) event = JSON.parse(raw);
+  else {
+    // Signature couldn't be checked (body re-encoded on the way in, or secret mismatch): only trust the event if
+    // Stripe itself returns it when we ask with our secret key.
+    let id = null;
+    try { id = (raw ? JSON.parse(raw) : req.body)?.id; } catch {}
+    if (!id && req.body && typeof req.body === 'object') id = req.body.id;
+    if (!/^evt_[A-Za-z0-9]+$/.test(String(id || ''))) { console.warn('stripe webhook: rejected', { rawLength: raw.length, bodyType: typeof req.body, hasSig: !!req.headers['stripe-signature'] }); return send(res, 400, { error: 'Invalid signature' }); }
+    try { event = await stripe('events/' + id); console.log('stripe webhook: verified via API', event.type); }
+    catch (e) { console.warn('stripe webhook: unknown event', id, e.message); return send(res, 400, { error: 'Unknown event' }); }
+  }
   const obj = event.data?.object || {};
   let sub = null;
   if (event.type === 'checkout.session.completed' && obj.mode === 'subscription' && obj.subscription) sub = await stripe('subscriptions/' + obj.subscription);
