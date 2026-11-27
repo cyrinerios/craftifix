@@ -371,7 +371,7 @@ $('order').addEventListener('submit',async e=>{e.preventDefault();
   finally{b.disabled=false;b.textContent='Send order'}
 });
 /* ---------- order tracking ---------- */
-const STEPS=[['new','Order received','The shop has your order'],['confirmed','Confirmed','The shop confirmed your order'],['in_production','Being handmade','Your piece is being crocheted'],['ready','Ready for delivery','The shop will arrange delivery'],['shipped','Shipped','Your parcel is on its way'],['completed','Completed','Delivered — thank you!']];
+const ALLSTEPS=[['new','Order received','The shop has your order'],['confirmed','Confirmed','The shop confirmed your order'],['payment_requested','Payment requested','Please pay and send the shop a screenshot of your payment'],['payment_done','Payment received','The shop confirmed your payment'],['in_production','Being handmade','Your piece is being crocheted'],['ready','Ready for delivery','The shop will arrange delivery'],['shipped','Shipped','Your parcel is on its way'],['completed','Completed','Delivered — thank you!']];
 const fmtD=d=>new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const store={get(){try{return JSON.parse(localStorage.getItem('ch_last_order')||'null')}catch{return null}},set(v){try{localStorage.setItem('ch_last_order',JSON.stringify(v))}catch{}}};
 function openTrack(no,contact){
@@ -384,6 +384,8 @@ function openTrack(no,contact){
 }
 function renderTrack(o,sh){
   const cancelled=o.status==='cancelled';
+  // Payment steps only appear for orders where the shop used them.
+  const STEPS=ALLSTEPS.filter(s=>!s[0].startsWith('payment_')||o.status===s[0]||o.history.some(h=>h.status===s[0]));
   const idx=STEPS.findIndex(x=>x[0]===o.status);
   const when=st=>{const h=[...o.history].reverse().find(x=>x.status===st);return h?fmtD(h.at):''};
   const cur=STEPS[idx]||['cancelled','Cancelled',''];
@@ -392,6 +394,8 @@ function renderTrack(o,sh){
       <h3>${cancelled?'This order was cancelled':esc(cur[1])}</h3><span class="note">${cancelled?'Contact the shop if you have questions.':esc(cur[2])} · updated ${esc(fmtD(o.updatedAt))}</span></div>
     ${cancelled?'':`<ol class="tl">${STEPS.map((st,i)=>`<li class="${i<idx?'tdone':i===idx?(o.status==='completed'?'tdone':'cur'):'todo'}"><span class="dot">${i<idx||o.status==='completed'&&i===idx?'✓':''}</span><b>${st[1]}</b><small>${i<=idx?esc(when(st[0])||''):''}</small></li>`).join('')}</ol>`}
     <div class="tsum">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}${o.shipping?`<div><span>${esc(o.shipping.label)}</span><b>${o.shipping.pending?'To be confirmed':o.shipping.fee?aed(o.shipping.fee):'Free'}</b></div>`:''}<div><b>Total</b><b>${aed(o.total)}</b></div><div><span>Delivery to</span><span style="text-align:right">${esc(o.deliveryArea)}</span></div></div>
+    ${o.status==='payment_requested'?`<div class="shipcard" style="background:#fff4e8"><b>💳 Payment requested — ${aed(o.total)}</b>${o.payment?.instructions?`<span style="white-space:pre-line">${esc(o.payment.instructions)}</span>`:''}<span>After paying, send ${esc(sh.business)} a screenshot of the payment showing the <b>transaction / reference number</b>.</span>${sh.whatsapp?`<a class="btn wa" style="width:100%;margin-top:8px" target="_blank" rel="noopener" href="https://wa.me/${esc(sh.whatsapp.replace(/\D/g,''))}?text=${encodeURIComponent(`Hi ${sh.business}, here is my payment screenshot for order ${o.orderNo}.`)}">Send payment screenshot on WhatsApp</a>`:''}</div>`:''}
+    ${o.payment?.ref?`<div class="shipcard" style="background:#e9f7ef"><b>✅ Payment received</b><span>Transaction no.: <b>${esc(o.payment.ref)}</b></span></div>`:''}
     ${o.shipment?`<div class="shipcard"><b>🚚 Your parcel is on its way</b>${o.shipment.courier?`<span>Courier: ${esc(o.shipment.courier)}</span>`:''}${o.shipment.trackingNo?`<span>Tracking number: <b>${esc(o.shipment.trackingNo)}</b></span>`:''}<a class="btn plumb" style="width:100%;margin-top:8px" target="_blank" rel="noopener" href="${esc(o.shipment.url)}">Track your parcel${o.shipment.courier?' with '+esc(o.shipment.courier):''}</a></div>`:''}
     ${o.invoice?`<a class="btn plumb" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="${esc(o.invoice.url)}">🧾 View &amp; download invoice ${esc(o.invoice.no)}</a>`:''}
     ${sh.whatsapp?`<a class="btn wa" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="https://wa.me/${esc(sh.whatsapp.replace(/\D/g,''))}?text=${encodeURIComponent(`Hi ${sh.business}, I'd like to ask about my order ${o.orderNo}.`)}">Ask the shop on WhatsApp</a>`:''}

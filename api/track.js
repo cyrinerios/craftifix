@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       order: {
         orderNo: o.orderNo, status: o.status, createdAt: o.createdAt, updatedAt: o.updatedAt || o.createdAt,
         items: o.items.map((i) => ({ name: i.name, qty: i.qty, lineTotal: i.lineTotal })), total: o.total,
+        payment: o.payment ? { instructions: o.payment.instructions || '', ref: o.payment.ref || '', paidAt: o.payment.paidAt || null } : null,
         shipment: o.shipment?.url ? { courier: o.shipment.courier, trackingNo: o.shipment.trackingNo, url: o.shipment.url } : null,
         shipping: o.shipping ? { label: o.shipping.label, fee: o.shipping.fee, pending: !!o.shipping.pending, method: o.shipping.method } : null,
         customerName: o.customer.name.split(/\s+/)[0], deliveryArea: o.customer.address,

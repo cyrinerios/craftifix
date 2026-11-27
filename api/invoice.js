@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         orderNo: o.orderNo, createdAt: o.createdAt, currency: o.currency || owner.currency || 'AED', total: o.total,
         shipping: o.shipping ? { label: o.shipping.label, fee: o.shipping.fee, method: o.shipping.method, pending: !!o.shipping.pending } : null,
         items: o.items.map((i) => ({ name: i.name, qty: i.qty, unitPrice: i.unitPrice ?? (i.qty ? i.lineTotal / i.qty : i.lineTotal), lineTotal: i.lineTotal, vat: !!i.vat })),
+        payment: o.payment?.ref ? { ref: o.payment.ref, paidAt: o.payment.paidAt || null } : null,
         fromInquiry: o.source?.type === 'inquiry' ? o.source.inqNo || true : null
       },
       customer: { name: o.customer.name, email: o.customer.email, whatsapp: o.customer.whatsapp, address: o.customer.address },

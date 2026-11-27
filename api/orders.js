@@ -3,8 +3,8 @@ import { money, assertConfigured, requireUser, getUser, saveUser, getOrders, sav
 // GET /api/orders                 -> the logged-in owner's received orders
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
 // PUT /api/orders?id=...&notify=1 -> re-send the customer update for the current status
-const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'shipped', 'completed', 'cancelled'];
-export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', shipped: 'Order shipped', completed: 'Completed', cancelled: 'Cancelled' };
+const STATUSES = ['new', 'confirmed', 'payment_requested', 'payment_done', 'in_production', 'ready', 'shipped', 'completed', 'cancelled'];
+export const LABEL = { new: 'New', confirmed: 'Confirmed', payment_requested: 'Payment requested', payment_done: 'Payment done', in_production: 'In production', ready: 'Ready for delivery', shipped: 'Order shipped', completed: 'Completed', cancelled: 'Cancelled' };
 
 // Shipment details the owner gives when marking an order as shipped. The tracking link is required.
 const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
@@ -15,6 +15,10 @@ export function cleanShipment(b = {}) {
   return { courier: txt(b.courier, 60), trackingNo: txt(b.trackingNo, 60), url };
 }
 
+// Payment details for "Payment requested" (how to pay; newlines kept) and "Payment done" (transaction no.).
+const multi = (v, n) => String(v ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f]/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, n);
+export const cleanPayment = (b = {}) => ({ instructions: multi(b.instructions, 600), ref: txt(b.ref, 80) });
+
 export function customerMessage(order, owner, trackUrl, invUrl) {
   const aed = (n) => money(n, order.currency || owner.currency);
   const first = order.customer.name.split(/\s+/)[0];
@@ -23,6 +27,8 @@ export function customerMessage(order, owner, trackUrl, invUrl) {
   const ref = `Order ${order.orderNo} (${items}) — total ${aed(order.total)}.`;
   const body = {
     confirmed: `Good news — your order is confirmed! ✅\n${ref}\nWe'll start crocheting it soon and keep you updated.`,
+    payment_requested: `Please complete your payment of ${aed(order.total)} 💳\n${ref}${order.payment?.instructions ? `\n\nHow to pay:\n${order.payment.instructions}\n` : ''}\nOnce you've paid, please reply to this message with a screenshot of the payment transaction showing the transaction / reference number, so we can confirm it.`,
+    payment_done: `We've received your payment — thank you! ✅\n${ref}${order.payment?.ref ? `\nTransaction no.: ${order.payment.ref}` : ''}\nWe'll start on your order and keep you updated.`,
     in_production: `Your order is now being handmade 🧶\n${ref}\nWe'll let you know as soon as it's ready.`,
     ready: `Your order is ready for delivery 📦\n${ref}\nDelivery address: ${order.customer.address}\nWe'll contact you to arrange the delivery time.`,
     shipped: `Your order is on its way! 🚚\n${ref}${order.shipment?.courier ? `\nCourier: ${order.shipment.courier}` : ''}${order.shipment?.trackingNo ? `\nTracking number: ${order.shipment.trackingNo}` : ''}${order.shipment?.url ? `\nTrack your parcel: ${order.shipment.url}` : ''}\nDelivery address: ${order.customer.address}`,
@@ -87,7 +93,17 @@ export default async function handler(req, res) {
           if (status === 'shipped' && !sh.url) return send(res, 400, { error: 'Add the shipment tracking link (for example the courier’s tracking page) so the customer can follow the parcel.', field: 'shipmentUrl' });
           if (sh.url) o.shipment = { ...sh, at: o.shipment?.url === sh.url ? o.shipment.at : new Date().toISOString() };
         }
-        if (status === o.status && !b.shipment) return send(res, 200, { orders: withLinks(orders), notification: null });
+        if (status === 'payment_requested' || status === 'payment_done') {
+          const pay = cleanPayment(b.payment || {});
+          if (status === 'payment_done' && !pay.ref) return send(res, 400, { error: 'Enter the transaction / reference number from the customer’s payment screenshot.', field: 'paymentRef' });
+          const now = new Date().toISOString();
+          if (status === 'payment_requested') {
+            o.payment = { ...(o.payment || {}), instructions: pay.instructions, requestedAt: now };
+            // Remember how-to-pay details so they're filled in next time.
+            if (pay.instructions !== (owner.paymentInstructions || '')) { owner.paymentInstructions = pay.instructions; await saveUser(owner); }
+          } else o.payment = { ...(o.payment || {}), ref: pay.ref, paidAt: o.payment?.ref === pay.ref && o.payment?.paidAt ? o.payment.paidAt : now };
+        }
+        if (status === o.status && !b.shipment && !b.payment) return send(res, 200, { orders: withLinks(orders), notification: null });
         o.status = status;
         if (status === 'completed' && assignInvoices(owner, [o])) await saveUser(owner);
       }

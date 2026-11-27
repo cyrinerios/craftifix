@@ -89,6 +89,7 @@ const day=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'long',
         ${o.shipping?`<div><span>Items</span><span>${m(o.items.reduce((a,i)=>a+i.lineTotal,0))}</span></div><div><span>${esc(o.shipping.label)}</span><span>${o.shipping.pending?'—':o.shipping.fee?m(o.shipping.fee):'Free'}</span></div>`:''}
         ${vat?`<div><span>Of which VAT 5%</span><span>${m(vat)}</span></div>`:''}
         <div class="grand"><span>Total</span><span>${m(o.total)}</span></div>
+        ${o.payment?`<div style="color:#155c3b;font-weight:700"><span>Paid${o.payment.paidAt?' '+esc(new Date(o.payment.paidAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})):''}</span><span>Txn ${esc(o.payment.ref)}</span></div>`:''}
       </div>
       <div class="note"><span>Thank you for supporting handmade! 💕${o.fromInquiry?' · Custom order':''}</span><span class="made">Invoice created with Craftifix</span></div>
     </article>`;
