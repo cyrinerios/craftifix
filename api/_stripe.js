@@ -6,8 +6,12 @@
 import crypto from 'node:crypto';
 import { PLANS, pricingFor, validCurrency } from './_lib.js';
 
-export const stripeEnabled = () => /^sk_(test|live)_/.test(process.env.STRIPE_SECRET_KEY || '');
-export const stripeMode = () => (String(process.env.STRIPE_SECRET_KEY || '').startsWith('sk_live_') ? 'live' : 'test');
+// Keys are trimmed of stray spaces/quotes from copy-pasting.
+const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
+const secretKey = () => clean(process.env.STRIPE_SECRET_KEY);
+export const stripeKeyKind = () => { const k = secretKey(); return !k ? 'missing' : /^sk_(test|live)_/.test(k) ? 'ok' : /^rk_/.test(k) ? 'restricted' : /^pk_/.test(k) ? 'publishable' : 'unrecognised'; };
+export const stripeEnabled = () => stripeKeyKind() === 'ok';
+export const stripeMode = () => (secretKey().startsWith('sk_live_') ? 'live' : 'test');
 
 // Stripe wants form encoding with bracketed keys: items[0][price_data][currency]=aed
 function form(obj, prefix = '', out = []) {
@@ -23,7 +27,7 @@ function form(obj, prefix = '', out = []) {
 export async function stripe(path, params, method = params ? 'POST' : 'GET') {
   const r = await fetch('https://api.stripe.com/v1/' + path, {
     method,
-    headers: { Authorization: 'Bearer ' + process.env.STRIPE_SECRET_KEY, 'Content-Type': 'application/x-www-form-urlencoded', 'Stripe-Version': '2024-06-20' },
+    headers: { Authorization: 'Bearer ' + secretKey(), 'Content-Type': 'application/x-www-form-urlencoded', 'Stripe-Version': '2024-06-20' },
     body: params ? form(params).join('&') : undefined
   });
   const j = await r.json().catch(() => ({}));
@@ -139,7 +143,7 @@ export function applySubscription(rec, sub) {
 }
 
 // Webhook signature check (Stripe-Signature: t=...,v1=...). Rejects events older than 5 minutes.
-export function verifyWebhook(raw, header, secret = process.env.STRIPE_WEBHOOK_SECRET) {
+export function verifyWebhook(raw, header, secret = clean(process.env.STRIPE_WEBHOOK_SECRET)) {
   if (!secret || !header) return false;
   const parts = Object.fromEntries(String(header).split(',').map((p) => p.split('=')).filter((p) => p.length === 2).map(([k, v]) => [k, v]));
   const sigs = String(header).split(',').filter((p) => p.startsWith('v1=')).map((p) => p.slice(3));
