@@ -1,4 +1,28 @@
 {
+  "redirects": [
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "craftifix-app.vercel.app"
+        }
+      ],
+      "destination": "https://www.craftifix.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/((?!api/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "crochethub-tan.vercel.app"
+        }
+      ],
+      "destination": "https://www.craftifix.com/$1",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/signup",
