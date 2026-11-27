@@ -496,10 +496,8 @@ footer a:hover{color:#fff}
           <label><span class="sl">Facebook</span><input id="sfb" placeholder="facebook.com/yourshop" autocapitalize="none" spellcheck="false"></label>
           <label><span class="sl">TikTok</span><input id="stt" placeholder="@yourshop or tiktok.com/@yourshop" autocapitalize="none" spellcheck="false"></label>
         </div>
-        <span class="lbl">Choose your plan</span>
-        <div class="pick" id="pick" role="radiogroup" aria-label="Plan"></div>
-        <p class="paynote"><b>Standard:</b> up to 5 product listings and 5 confirmed orders from inquiries a month. <b>Premium:</b> unlimited. You can upgrade any time.</p>
-        <p class="paynote" id="payNote"><b>30 days free, no card needed.</b> Your shop opens as soon as you create the account. We'll ask for billing details when the trial ends.</p>
+        <div class="pick" id="pick" hidden></div>
+        <p class="paynote" id="payNote"><b>30 days free, no card needed, every feature unlocked.</b> Your shop opens as soon as you create the account. A week before your trial ends, you'll choose Standard or Premium.</p>
         <div class="err" id="serr" role="alert"></div>
         <button class="btn plumb" type="submit" id="sbtn">Start my 30-day free trial</button>
         <p class="have">Already have an account? <a href="/account.html">Log in</a></p>
@@ -610,7 +608,7 @@ $('calcForm').querySelectorAll('input').forEach(i=>i.readOnly=true);
 calc();
 
 /* flows */
-const flows=[['Get set up',['Sign up with your email','Verify your email address','Choose your plan','Add your business profile and logo','Open your dashboard and add products']],
+const flows=[['Get set up',['Sign up with your email','Verify your email address','Start your 30-day free trial','Add your business profile and logo','Open your dashboard and add products']],
  ['Add a product',['Go to Products → Add product','Enter details and upload photos','Open the pricing calculator','Check the suggested price and save it','Publish to your storefront']],
  ['Quote to invoice',['Pick a customer and add items','Send the branded quotation PDF','Mark it accepted when they say yes','Convert it to an invoice in one click','Record payment — status updates itself']]];
 $('flows').innerHTML=flows.map(([t,s])=>`<div class="flow"><h3>${t}</h3><ol class="st8">${s.map(x=>`<li>${x}</li>`).join('')}</ol></div>`).join('');
@@ -640,7 +638,7 @@ $('road').innerHTML=road.map(([a,b,c,col])=>`<div class="ph" style="--c:${col}">
 const faqs=[['Who is Craftifix for?','Crocheters, handmade product creators and small craft businesses who want one place to price, sell, invoice and track their work. We are starting in the UAE, with international support planned.'],
  ['Is my business data private?','Yes. Every business has its own isolated workspace. Your products, customers, orders and financial records can only be seen by you and the staff you give access to.'],
  ['Do I need to be VAT registered?','No. Tax is optional and configurable. If you are VAT registered you can add your details and VAT appears on quotations and invoices; if not, it stays off.'],
- ['Can I change plans later?','Yes. You can upgrade, downgrade or cancel from your account. Every new shop starts with a 30-day free trial on the plan you pick — no card needed until the trial ends.'],
+ ['Can I change plans later?','Yes. You can upgrade, downgrade or cancel from your account. Every new shop starts with a 30-day free trial with every feature unlocked. A week before it ends, you choose Standard or Premium. No card needed until then.'],
  ['How does the pricing calculator work?','You enter materials, accessories, packaging, hours and your hourly rate. Craftifix adds your overhead and applies the method you choose — markup, gross margin, hourly, wholesale or retail — then you save the price to the product.'],
  ['Can I use it on my phone?','Yes. Craftifix and your storefront work in current versions of Chrome, Edge, Firefox and Safari on phones, tablets and computers.']];
 $('faqs').innerHTML=faqs.map(([q,a],i)=>`<details${i===0?' open':''}><summary>${q}</summary><p>${a}</p></details>`).join('');
@@ -661,7 +659,7 @@ async function showPrices(cur){
 $('scur').addEventListener('change',e=>showPrices(e.target.value));
 document.querySelector('.watch').addEventListener('click',()=>{setTimeout(()=>{const v=$('promo');v.play().catch(()=>{})},450)});
 showPrices($('scur').value);
-fetch('/api/rates?currency=AED').then(r=>r.json()).then(j=>{if(j.onlinePayment)$('payNote').innerHTML='<b>30 days free, no card needed.</b> Your shop opens as soon as you create the account. When the trial ends we’ll ask for your billing details (paid securely by card on <b>Stripe</b>) to keep your shop open. Cancel any time.'+(j.paymentMode==='test'?' <b>(Test mode — no real money is charged.)</b>':'')}).catch(()=>{});
+fetch('/api/rates?currency=AED').then(r=>r.json()).then(j=>{if(j.onlinePayment)$('payNote').innerHTML='<b>30 days free, no card needed, every feature unlocked.</b> Your shop opens as soon as you create the account. A week before your trial ends, you’ll choose Standard or Premium and add billing details (paid securely by card on <b>Stripe</b>) to keep your shop open. Cancel any time.'+(j.paymentMode==='test'?' <b>(Test mode — no real money is charged.)</b>':'')}).catch(()=>{});
 const fields={currency:'scur',userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw',shopAddress:'saddr',instagram:'sig',facebook:'sfb',tiktok:'stt'};
 let logoData='';
 function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=400,k=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(file.type==='image/png'?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',.9))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}

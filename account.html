@@ -115,6 +115,18 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .planpill{display:inline-flex;align-items:center;gap:6px;flex:none;background:#ffb627;color:#2a1430;font:700 13px Outfit,sans-serif;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap}
 .planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .planpill:hover{filter:brightness(1.05)}
+dialog#planModal{border:0;padding:0;border-radius:22px;width:min(680px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;box-shadow:0 30px 80px rgba(46,16,49,.45)}
+dialog#planModal::backdrop{background:rgba(36,12,40,.6)}
+#planModal .pmh{background:linear-gradient(135deg,#4a1d4f,#7a2f73);color:#fff;padding:24px 26px 20px;position:relative}
+#planModal .pmh h3{margin:0 0 8px;font:700 24px Outfit,sans-serif;padding-right:40px}#planModal .pmh p{margin:0;color:#f6d3e2;line-height:1.5}
+#planModal .pmx{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:22px;cursor:pointer}
+#planModal .pmg{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px 22px 6px}
+#planModal .pmc{border:2px solid #ecd9e4;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:8px}#planModal .pmc.pop{border-color:#ffb627}
+#planModal .pmc b{font:700 19px Outfit,sans-serif}#planModal .pmp{font:700 26px Outfit,sans-serif;color:#4a1d4f}#planModal .pmp small{font:500 14px Inter,sans-serif;color:#7a6380}
+#planModal .pmc p{margin:0;font-size:14px;line-height:1.45;color:#5a4560;flex:1}#planModal .pmc .pmn{flex:0;color:#9a3b00}
+#planModal .pmc .btn{width:100%}#planModal .fxn,#planModal .pmm{padding:0 22px}#planModal .pmm{padding-bottom:18px;color:#b02a5a}
+#planModal .pmf{display:flex;gap:10px;padding:20px 22px 22px;flex-wrap:wrap}
+@media(max-width:560px){#planModal .pmg{grid-template-columns:1fr}}
 @media(max-width:640px){.planpill .pst{display:none}}
 .mylogo{width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;border:1px solid var(--line)}
 .soclinks a{color:var(--plum);text-decoration:underline}
@@ -243,6 +255,36 @@ let billingInfo=null;
 const SUBLBL={trial:['Free trial','#2f9e6b'],trial_ended:['Free trial ended','#c62f5f'],active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
 const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
 const longDay=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+/* Free trial: no plan is chosen at sign-up (everything is unlocked). In the last 7 days, or once it has ended, the owner chooses Standard or Premium. */
+const needsPlan=u=>u&&u.subscription?.provider==='stripe'&&['trial','trial_ended'].includes(u.subscription?.status)&&u.subscription?.planChosen===false;
+const choosePlanNow=u=>needsPlan(u)&&(u.subscription.status==='trial_ended'||!!(u.trial&&u.trial.daysLeft<=7));
+const chooseFrom=u=>u.trial&&u.trial.endsAt?longDay(new Date(new Date(u.trial.endsAt).getTime()-7*864e5)):'';
+function openPlanChooser(){const u=curUser;if(!u)return;
+  let d=$('planModal');if(!d){d=document.createElement('dialog');d.id='planModal';d.setAttribute('aria-labelledby','pmTitle');document.body.appendChild(d);
+    d.addEventListener('click',e=>{if(e.target===d)d.close()})}
+  const ended=u.subscription?.status==='trial_ended',n=u.usage?u.usage.products.used:(u.productCount||0),tooMany=n>5;
+  const card=(id,name,lim)=>`<div class="pmc${id==='premium'?' pop':''}"><b>${name}</b><div class="pmp">${planLabel(u,id)}<small>/month</small></div><p>${lim}</p>
+    ${id==='standard'&&tooMany?`<p class="pmn">You have ${n} products listed. Premium keeps them all in your shop.</p>`:''}
+    <button class="btn ${id==='premium'?'gold':'plumb'}" type="button" data-pick="${id}"${id==='standard'&&tooMany?' disabled':''}>Choose ${name}</button></div>`;
+  d.innerHTML=`<div class="pmh"><button class="pmx" type="button" aria-label="Close" data-pmclose>×</button><h3 id="pmTitle">Choose your plan</h3>
+    <p>${ended?'Your free trial has ended. Choose a plan and add your billing details to reopen your shop. Your products, orders and settings are all still here.':`Your free trial ends on <b>${longDay(u.trial.endsAt)}</b>. Choose the plan that fits your shop. You can switch any time.`}</p></div>
+    <div class="pmg">${card('standard','Standard','Up to 5 product listings and 5 orders from custom inquiries a month. Orders placed in your shop are unlimited.')}${card('premium','Premium','Unlimited product listings and unlimited orders from custom inquiries.')}</div>
+    ${fxNote(u)}<div class="msg pmm" role="status"></div>`;
+  d.querySelector('[data-pmclose]').onclick=()=>d.close();
+  d.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{
+    d.querySelectorAll('[data-pick]').forEach(x=>x.disabled=true);b.textContent='Saving…';
+    const r=await api('/api/plan',{method:'POST',body:JSON.stringify({plan:b.dataset.pick})}).catch(()=>({ok:false,data:{}}));
+    if(r.ok&&r.data.checkoutUrl){location.href=r.data.checkoutUrl;return}
+    if(!r.ok){d.querySelector('.pmm').textContent=r.data.error||'Could not save your plan. Please try again.';d.querySelectorAll('[data-pick]').forEach(x=>x.disabled=false);b.textContent='Choose '+(b.dataset.pick==='premium'?'Premium':'Standard');return}
+    const nu={...r.data.user,pricing:r.data.user.pricing||u.pricing};
+    showAccount(nu,false);
+    d.innerHTML=`<div class="pmh"><button class="pmx" type="button" aria-label="Close" data-pmclose>×</button><h3>✓ ${esc(nu.planDetails.name)} plan chosen</h3>
+      <p>Add your billing details now so your shop stays open after <b>${longDay(nu.trial.endsAt)}</b>. You won't be charged until then: ${planLabel(nu,nu.plan)}/month from that day.</p></div>
+      <div class="pmf"><button class="btn gold" type="button" data-bill="checkout">Add billing details</button><button class="btn ghost" type="button" data-pmclose style="color:var(--ink);border-color:var(--line)">Later</button></div>`;
+    d.querySelectorAll('[data-pmclose]').forEach(x=>x.onclick=()=>d.close());
+  });
+  if(!d.open)d.showModal()}
+document.addEventListener('click',e=>{if(e.target.closest('[data-chooseplan]')){e.preventDefault();openPlanChooser()}});
 function payRow(u){const s=u.subscription||{};
   if(s.provider!=='stripe')return s.paymentStatus==='skipped'?'Skipped (early account)':'—';
   if(s.status==='trial')return u.trial?`No card needed yet · trial ends ${longDay(u.trial.endsAt)}`:'Free trial';
@@ -254,14 +296,17 @@ function payRow(u){const s=u.subscription||{};
   return 'Subscription ended';}
 /* Banner when the subscription needs attention — the shop is closed to customers until it's paid. */
 function billingBanner(u){const s=u.subscription||{};if(!billingInfo||!billingInfo.online)return'';
+  if(s.status==='trial'&&u.trial&&!u.trial.ended&&needsPlan(u)){const d=u.trial.daysLeft,soon=d<=7;
+    return soon?`<div class="billbar"><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Time to choose your plan: Standard ${planLabel(u,'standard')} or Premium ${planLabel(u,'premium')} a month. Then add your billing details to keep your shop open. You won't be charged until the trial ends.</span><button class="btn gold" type="button" data-chooseplan>Choose your plan</button></div>`
+      :`<div class="billbar" style="background:#e9f7ef;color:#1d5c3c"><span><b>Free trial: ${d} days left</b> (until ${longDay(u.trial.endsAt)}). Every feature is unlocked: unlimited products and custom orders. On ${chooseFrom(u)} we'll ask you to choose Standard or Premium. No card needed until then.</span></div>`}
   if(s.status==='trial'&&u.trial&&!u.trial.ended){const d=u.trial.daysLeft,soon=d<=7;
     return `<div class="billbar"${soon?'':' style="background:#e9f7ef;color:#1d5c3c"'}><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Your shop is open and everything on the ${esc(u.planDetails.name)} plan is unlocked. ${soon?`Add your billing details before ${longDay(u.trial.endsAt)} to keep your shop open — you won't be charged until the trial ends.`:`No card needed yet — you'll be asked for billing details when the trial ends. It's ${planLabel(u,u.plan)}/month after that.`}</span><button class="btn ${soon?'gold':'plumb'}" type="button" data-bill="checkout">Add billing details</button></div>`}
-  const msg={trial_ended:`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Add your billing details to reopen it — your products, orders and settings are all still here. ${esc(u.planDetails.name)} plan: ${planLabel(u,u.plan)}/month.`,pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
+  const msg={trial_ended:needsPlan(u)?`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Choose your plan and add your billing details to reopen it. Your products, orders and settings are all still here.`:`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Add your billing details to reopen it — your products, orders and settings are all still here. ${esc(u.planDetails.name)} plan: ${planLabel(u,u.plan)}/month.`,pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
     past_due:`<b>Your last payment didn't go through.</b> Stripe will try again. Update your card to keep your shop open.`,
     unpaid:`<b>Your subscription is unpaid, so your shop is closed to customers.</b> Pay to reopen it.`,
     canceled:`<b>Your subscription has ended, so your shop is closed to customers.</b> Subscribe again to reopen it.`}[s.status];
   if(!msg)return'';
-  const btn=s.status==='past_due'&&u.stripe?.customerId?`<button class="btn gold" type="button" data-bill="portal">Update card</button>`:s.status==='trial_ended'?`<button class="btn gold" type="button" data-bill="checkout">Add billing details</button>`:`<button class="btn gold" type="button" data-bill="checkout">Pay ${planLabel(u,u.plan)}/mo</button>`;
+  const btn=s.status==='past_due'&&u.stripe?.customerId?`<button class="btn gold" type="button" data-bill="portal">Update card</button>`:s.status==='trial_ended'?(needsPlan(u)?`<button class="btn gold" type="button" data-chooseplan>Choose plan &amp; add billing</button>`:`<button class="btn gold" type="button" data-bill="checkout">Add billing details</button>`):`<button class="btn gold" type="button" data-bill="checkout">Pay ${planLabel(u,u.plan)}/mo</button>`;
   return `<div class="billbar"><span>${msg}</span>${btn}</div>`}
 async function goBilling(kind,btn){if(btn){btn.disabled=true;btn.textContent='Opening Stripe…'}
   const r=await api('/api/billing?action='+kind,{method:'POST',body:JSON.stringify({plan:curUser&&curUser.plan})}).catch(()=>({ok:false,data:{}}));
@@ -475,10 +520,12 @@ function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .
   if(url)add(url);else{add('/favicon.ico',{sizes:'48x48'});add('/favicon.svg',{type:'image/svg+xml'})}}
 function showAccount(u,welcome){
   curUser=u;brandIcon(u);
+  if(choosePlanNow(u)){let asked=false;try{asked=sessionStorage.getItem('planAsked')==='1';sessionStorage.setItem('planAsked','1')}catch{}
+    if(!asked)setTimeout(()=>{if(curUser&&choosePlanNow(curUser))openPlanChooser()},600)}
   const p=u.planDetails;
   const view=({'#settings':'settings','#orders':'orders','#inquiries':'inquiries','#shipping':'shipping'})[location.hash]||'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
-  const [stl,stc]=subLbl(u);$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${stc}"></i>${esc(p.name)}<span class="pst"> · ${esc(stl)}</span>`;
+  const [stl,stc]=subLbl(u);$('planPill').hidden=false;$('planPill').innerHTML=needsPlan(u)?`<i style="background:${stc}"></i>${esc(stl)}<span class="pst"> · ${u.subscription.status==='trial_ended'?'choose a plan':'all features'}</span>`:`<i style="background:${stc}"></i>${esc(p.name)}<span class="pst"> · ${esc(stl)}</span>`;
   document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard',shipping:'Shipping'})[view]+' — '+(u.business||'Craftifix');
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Product listings',u.usage?u.usage.products.used:(u.productCount||0),p.limits.products],['Orders from inquiries this month',u.usage?u.usage.inquiryOrders.used:0,p.limits.inquiryOrdersPerMonth]];
@@ -528,7 +575,7 @@ function showAccount(u,welcome){
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
       <div><span>Orders from inquiries</span><b>${p.limits.inquiryOrdersPerMonth===null?'Unlimited':p.limits.inquiryOrdersPerMonth+' a month'}</b></div>
     </div>
-    ${billingInfo&&billingInfo.online?`<div class="billbtns">${['pending','canceled','unpaid','trial','trial_ended'].includes(u.subscription?.status)||u.subscription?.provider!=='stripe'?`<button class="btn gold" type="button" data-bill="checkout">${['trial','trial_ended'].includes(u.subscription?.status)?'Add billing details':u.subscription?.provider==='stripe'?'Pay now':'Start paid subscription'}</button>`:''}${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>
+    ${billingInfo&&billingInfo.online?`<div class="billbtns">${needsPlan(u)?(choosePlanNow(u)?`<button class="btn gold" type="button" data-chooseplan>Choose your plan</button>`:''):['pending','canceled','unpaid','trial','trial_ended'].includes(u.subscription?.status)||u.subscription?.provider!=='stripe'?`<button class="btn gold" type="button" data-bill="checkout">${['trial','trial_ended'].includes(u.subscription?.status)?'Add billing details':u.subscription?.provider==='stripe'?'Pay now':'Start paid subscription'}</button>`:''}${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>
     <p class="msg" style="font-size:12.5px;margin-top:8px">Payments are handled securely by Stripe.${u.subscription?.status==='trial'&&u.trial?` If you add your card during the free trial, the first charge is on ${longDay(u.trial.endsAt)}.`:''}${billingInfo.mode==='test'?' <b>Test mode</b> — no real money is charged.':''}</p>`:''}
     </div>
     <div class="card"><h3>Plan usage</h3>
@@ -538,11 +585,12 @@ function showAccount(u,welcome){
     <div class="card wide"><h3>What your plan includes</h3><div class="kv">
       ${FEAT.map(([k,t])=>`<div><span>${t}</span><b>${esc(p.features[k])}</b></div>`).join('')}
     </div></div>
-    <div class="card"><h3>Change plan</h3>
+    ${needsPlan(u)?`<div class="card"><h3>Your plan</h3><p class="msg">${choosePlanNow(u)?`It's time to choose: Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`:`During your free trial every feature is unlocked. On <b>${chooseFrom(u)}</b>, a week before the trial ends, we'll ask you to choose Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`}</p>
+      ${choosePlanNow(u)?`<button class="btn gold" type="button" data-chooseplan style="margin-top:10px">Choose your plan</button>`:''}${fxNote(u)}<div class="msg" id="pmsg" role="status"></div><div id="plans" hidden></div></div>`:`<div class="card"><h3>Change plan</h3>
       <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
       ${fxNote(u)}
       <div class="msg" id="pmsg" role="status"></div>
-    </div>
+    </div>`}
   </div>`;
   $('plans').addEventListener('click',async e=>{const b=e.target.closest('[data-plan]');if(!b)return;
     b.disabled=true;b.textContent='Switching…';

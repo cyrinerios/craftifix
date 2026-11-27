@@ -21,9 +21,10 @@ export default async function handler(req, res) {
     const pricing = await pricingFor(rec.currency);
     // During the free trial (no card yet) the plan changes straight away; the trial end date stays the same.
     if (rec.subscription?.status === 'trial' && !rec.stripe?.subscriptionId) {
-      if (plan === rec.plan) return send(res, 400, { error: `You're already on ${PLANS[plan].name}.` });
+      // A trial shop that hasn't chosen yet may pick the plan it is already on (that records the choice).
+      if (plan === rec.plan && rec.subscription.planChosen !== false) return send(res, 400, { error: `You're already on ${PLANS[plan].name}.` });
       rec.plan = plan;
-      rec.subscription = { ...rec.subscription, changedAt: new Date().toISOString(), currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, rate: pricing.rate };
+      rec.subscription = { ...rec.subscription, planChosen: true, changedAt: new Date().toISOString(), currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, rate: pricing.rate };
       rec.updatedAt = rec.subscription.changedAt;
       await saveUser(rec);
       await syncAccount(rec);
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
         const usage = planUsage(rec, products, await getOrders(uid));
         return send(res, 200, { user: { ...publicUser(rec), productCount: products.length, usage, pricing }, switched: true });
       }
+      if (rec.subscription?.planChosen === false) rec.subscription = { ...rec.subscription, planChosen: true };
       const { url } = await createCheckout(rec, plan, origin);
       await saveUser(rec);
       return send(res, 200, { checkoutUrl: url });

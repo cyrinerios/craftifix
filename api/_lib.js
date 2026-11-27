@@ -640,7 +640,7 @@ export function accountForSheet(rec) {
   const st = rec.subscription?.status || 'active';
   return {
     userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
-    plan: p.name, planPrice: money(p.price, BASE_CURRENCY), status: ({ trial: 'Free trial', trial_ended: 'Trial ended', past_due: 'Past due' })[st] || st[0].toUpperCase() + st.slice(1),
+    plan: rec.subscription?.planChosen === false ? `${p.name} (free trial, plan not chosen yet)` : p.name, planPrice: money(p.price, BASE_CURRENCY), status: ({ trial: 'Free trial', trial_ended: 'Trial ended', past_due: 'Past due' })[st] || st[0].toUpperCase() + st.slice(1),
     payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : rec.subscription?.trialEndsAt && ['trial', 'trial_ended'].includes(st) ? `Trial ends ${rec.subscription.trialEndsAt.slice(0, 10)}` : (rec.subscription?.paymentStatus || ''),
     createdAt: rec.createdAt, updatedAt: rec.updatedAt || rec.createdAt, currency: rec.currency || 'AED',
     logo: rec.logo || '', social: rec.social || {}

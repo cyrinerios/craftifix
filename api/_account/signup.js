@@ -12,7 +12,9 @@ export default async function handler(req, res) {
     const name = clean(b.name);
     const business = clean(b.business);
     const email = clean(b.email, 254).toLowerCase();
-    const plan = String(b.plan || '').toLowerCase();
+    // New shops don't pick a plan at sign-up: the free trial unlocks everything (Premium), and the owner chooses
+    // Standard or Premium in the last week of the trial. Without Stripe (no trial) a sent plan is used, else Standard.
+    const plan = stripeEnabled() ? 'premium' : (PLANS[String(b.plan || '').toLowerCase()] ? String(b.plan).toLowerCase() : 'standard');
     const whatsapp = normWhatsApp(b.whatsapp);
     const shopAddressText = clean(b.shopAddress, 300);
     const currency = validCurrency(b.currency || 'AED');
@@ -32,7 +34,6 @@ export default async function handler(req, res) {
     if (!validEmail(email)) return send(res, 400, { error: 'Please enter a valid email address.', field: 'email' });
     if (!whatsapp) return send(res, 400, { error: 'Please enter a valid WhatsApp number with country code, e.g. +971 55 123 4567.', field: 'whatsapp' });
     if (shopAddressText.length < 10) return send(res, 400, { error: 'Please enter your full shop address (building, street, area, city).', field: 'shopAddress' });
-    if (!PLANS[plan]) return send(res, 400, { error: 'Please choose a plan.', field: 'plan' });
 
     if (await getUser(userId)) return send(res, 409, { error: 'That user ID is already taken. Please choose another.', field: 'userId' });
 
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
       // With Stripe set up, every new shop starts on a 30-day free trial — no card needed. Billing details are
       // asked for when the trial ends (or earlier if the owner chooses). Without Stripe, payment is skipped.
       subscription: stripeEnabled()
-        ? { status: 'trial', billing: 'monthly', provider: 'stripe', paymentStatus: 'trial', startedAt: now, trialEndsAt: trialEndFrom(now),
+        ? { status: 'trial', billing: 'monthly', provider: 'stripe', paymentStatus: 'trial', startedAt: now, trialEndsAt: trialEndFrom(now), planChosen: false,
           currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate }
         : { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
         currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate },

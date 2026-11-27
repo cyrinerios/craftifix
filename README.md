@@ -131,3 +131,11 @@ invoice the first time the owner opens Orders. Items from VAT-registered prices 
 - **Fallback:** set `STORAGE=blob` in Vercel and redeploy to go back to Vercel Blob. Changes made while on Postgres
   are not copied back.
 - Product photos and logos stay in Vercel Blob. The Google Sheet keeps getting updates as before.
+
+### Choosing a plan during the free trial
+- Sign-up no longer asks for a plan. New shops start the 30-day trial with every feature unlocked (stored as Premium,
+  `subscription.planChosen = false`).
+- In the last 7 days of the trial (and after it ends) the workspace asks the owner to choose Standard or Premium:
+  the trial banner, a pop-up once per visit, and Settings. Then they add billing details; the first charge is on the
+  day the trial ends. A shop with more than 5 products can't pick Standard.
+- Accounts created before this change keep the plan they picked at sign-up.
