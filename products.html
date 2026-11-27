@@ -142,6 +142,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;bo
 .center{display:grid;place-items:center;min-height:50vh;text-align:center;color:var(--mute)}
 @media(max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:560px){.row,.row3{grid-template-columns:minmax(0,1fr)}.photo{grid-template-columns:96px minmax(0,1fr)}.thumb{width:96px;height:96px}.bar .in{flex-wrap:wrap;row-gap:2px}.bar nav{order:3;width:100%;justify-content:space-between}.bar nav .hide-s{display:none}.who{display:none}.planpill{font-size:12px;padding:4px 9px}}
+.bar .logo img.shopicon{border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 </style>
 </head>
 <body>
@@ -446,8 +447,14 @@ $('dlgYes').addEventListener('click',async()=>{const id=$('dlgYes').dataset.id;$
   if(r.ok){state.products=r.data.products;if(state.editing===id)fillForm(null);else renderList();toast('Product deleted')}else toast(r.data.error||'Could not delete')});
 $('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method:'POST',credentials:'same-origin'}).catch(()=>{});location.href='/account.html'});
 
+/* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
+function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
+  if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
+  document.querySelectorAll('link[rel="icon"]').forEach(l=>l.remove());
+  const add=(href,extra)=>{const l=document.createElement('link');l.rel='icon';l.href=href;Object.assign(l,extra||{});document.head.appendChild(l)};
+  if(url)add(url);else{add('/favicon.ico',{sizes:'48x48'});add('/favicon.svg',{type:'image/svg+xml'})}}
 (async()=>{
-  try{const me=await api('/api/me');state.user=me.data.user;
+  try{const me=await api('/api/me');state.user=me.data.user;brandIcon(state.user);
     const r=await api('/api/products');state.products=r.data.products||[];state.limit=r.data.limit;CUR=state.user.currency||r.data.currency||'AED';mount();
     for(const el of document.querySelectorAll('[data-cur]'))el.dataset.u=CUR;for(const o of document.querySelectorAll('#round option[data-r]'))o.textContent=CUR+' '+o.dataset.r;renderMats();render()}
   catch(e){if(e.message!=='auth')$('main').innerHTML='<div class="center">Could not load your products. Please refresh the page.</div>'}

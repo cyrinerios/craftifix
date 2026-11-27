@@ -206,6 +206,7 @@ a.mini{text-decoration:none;display:inline-flex;align-items:center}
 @media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.wide{grid-column:auto}.welcome{grid-template-columns:minmax(0,1fr)}}
 
 footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding:18px}
+.bar .logo img.shopicon{border-radius:50%;object-fit:cover;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 </style>
 </head>
 <body>
@@ -286,6 +287,7 @@ async function api(path,opts={}){
 }
 
 function showLogin(note){
+  brandIcon(null);
   $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;$('planPill').hidden=true;
   main.innerHTML=`<div class="center"><form class="box" id="lf" novalidate>
     <h1>Log in</h1><p>Welcome back to your Craftifix workspace.</p>
@@ -459,8 +461,14 @@ function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img
 function setNav(view){
   for(const a of document.querySelectorAll('#wnav a'))a.classList.toggle('on',a.dataset.v===view);
 }
+/* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
+function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
+  if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
+  document.querySelectorAll('link[rel="icon"]').forEach(l=>l.remove());
+  const add=(href,extra)=>{const l=document.createElement('link');l.rel='icon';l.href=href;Object.assign(l,extra||{});document.head.appendChild(l)};
+  if(url)add(url);else{add('/favicon.ico',{sizes:'48x48'});add('/favicon.svg',{type:'image/svg+xml'})}}
 function showAccount(u,welcome){
-  curUser=u;
+  curUser=u;brandIcon(u);
   const p=u.planDetails;
   const view=({'#settings':'settings','#orders':'orders','#inquiries':'inquiries','#shipping':'shipping'})[location.hash]||'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
@@ -534,7 +542,7 @@ function showAccount(u,welcome){
     b.disabled=true;b.textContent='Switching…';
     const r=await api('/api/plan',{method:'POST',body:JSON.stringify({plan:b.dataset.plan})}).catch(()=>({ok:false,data:{}}));
     if(r.ok&&r.data.checkoutUrl){location.href=r.data.checkoutUrl;return}
-    if(r.ok){showAccount({...r.data.user,pricing:r.data.user.pricing||u.pricing},false);$('pmsg').textContent=r.data.switched?'Plan changed. Stripe adjusts your next invoice for the difference.':'Plan updated — payment skipped for now.'}
+    if(r.ok){showAccount({...r.data.user,pricing:r.data.user.pricing||u.pricing},false);$('pmsg').textContent=r.data.user.trial&&!r.data.user.trial.ended?`Plan changed — it's still free until ${longDay(r.data.user.trial.endsAt)}.`:r.data.switched?'Plan changed. Stripe adjusts your next invoice for the difference.':'Plan updated — payment skipped for now.'}
     else if(r.status===401)showLogin('Your session ended. Please log in again.');
     else{$('pmsg').textContent=r.data.error||'Could not change plan.';b.disabled=false;b.textContent='Switch'}
   });
