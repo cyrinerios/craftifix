@@ -2,7 +2,7 @@
 // Files starting with "_" are not exposed as routes by Vercel.
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { put, head, BlobNotFoundError } from '@vercel/blob';
+import { put, head, list, BlobNotFoundError } from '@vercel/blob';
 
 const scrypt = promisify(crypto.scrypt);
 const SECRET = process.env.AUTH_SECRET || '';
@@ -120,6 +120,47 @@ export function setSession(res, uid) {
 export function clearSession(res) {
   res.setHeader('Set-Cookie', `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
 }
+// ---------- Password reset ----------
+// A reset link carries a signed token: account, expiry (1 hour) and a fingerprint of the current password hash.
+// Once the password changes the fingerprint no longer matches, so each link works only once.
+const pwPrint = (hash) => crypto.createHash('sha256').update(String(hash || '')).digest('hex').slice(0, 16);
+export function makeResetToken(rec, minutes = 60) {
+  const payload = b64u(JSON.stringify({ u: rec.userId, exp: Date.now() + minutes * 60e3, p: pwPrint(rec.passwordHash) }));
+  return payload + '.' + sign('reset.' + payload);
+}
+export function readResetToken(token) {
+  const [payload, sig] = String(token || '').split('.');
+  if (!payload || !sig) return null;
+  const a = Buffer.from(sig), b = Buffer.from(sign('reset.' + payload));
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const t = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return t.exp > Date.now() ? t : { expired: true };
+  } catch { return null; }
+}
+export const resetTokenMatches = (t, rec) => !!(t && rec && t.p === pwPrint(rec.passwordHash));
+
+// Find accounts by email (owners may forget their user ID). Reads the stored accounts; fine at small scale.
+export async function findUsersByEmail(email) {
+  const want = String(email || '').trim().toLowerCase();
+  if (!want) return [];
+  const found = [];
+  let cursor;
+  do {
+    const page = await list({ prefix: 'users/', cursor, limit: 1000 });
+    for (const b of page.blobs) {
+      try {
+        const r = await fetch(b.url + '?v=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) continue;
+        const rec = decrypt(await r.text());
+        if (String(rec.email || '').toLowerCase() === want) found.push(rec);
+      } catch { /* skip unreadable */ }
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  return found;
+}
+
 export function readSession(req) {
   const raw = String(req.headers.cookie || '').split(/;\s*/).find((c) => c.startsWith(COOKIE + '='));
   if (!raw) return null;

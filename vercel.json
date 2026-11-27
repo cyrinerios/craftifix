@@ -2,6 +2,8 @@
   "rewrites": [
     { "source": "/api/signup", "destination": "/api/account?action=signup" },
     { "source": "/api/login", "destination": "/api/account?action=login" },
+    { "source": "/api/forgot-password", "destination": "/api/account?action=forgot" },
+    { "source": "/api/reset-password", "destination": "/api/account?action=reset" },
     { "source": "/api/logout", "destination": "/api/account?action=logout" },
     { "source": "/api/me", "destination": "/api/account?action=me" },
     { "source": "/api/plan", "destination": "/api/account?action=plan" },

@@ -59,6 +59,7 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .billbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:#fff5f8;border:1.5px solid #e7a1bd;border-radius:16px;padding:12px 16px;margin:0 0 16px;font-size:14.5px}
 .billbar b{color:#b02a5a}.billbar .btn{white-space:nowrap}
 .billbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.box .ok{background:#e9f7f0;border:1.5px solid #bfe5d2;color:#165a3c;border-radius:12px;padding:10px 12px;font-size:14px;margin:4px 0 10px}
 .plim{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
 .limbar{border:1.5px solid #f0d2df;background:#fff;border-radius:18px;padding:14px 16px;margin:0 0 16px}
 .limbar.ok{background:#e9f7f0;border-color:#bfe5d2;color:#165a3c;font-size:14.5px}
@@ -255,11 +256,13 @@ function showLogin(note){
     ${note?`<div class="ribbon">${esc(note)}</div>`:''}
     <label><span>User ID</span><input id="lu" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
     <label><span>Password</span><input id="lp" type="password" autocomplete="current-password" required></label>
+    <p class="small" style="text-align:right;margin:-6px 0 0"><a href="#" id="forgotLink">Forgot password?</a></p>
     <div class="err" id="lerr" role="alert"></div>
     <button class="btn plumb" id="lbtn" type="submit">Log in</button>
     <p class="small">New to Craftifix? <a href="/#join">Create an account</a></p>
   </form></div>`;
   $('lu').focus();
+  $('forgotLink').addEventListener('click',e=>{e.preventDefault();showForgot($('lu').value.trim())});
   $('lf').addEventListener('submit',async e=>{e.preventDefault();
     const userId=$('lu').value.trim(),password=$('lp').value;
     if(!userId||!password){$('lerr').textContent='Please enter your user ID and password.';return}
@@ -269,6 +272,61 @@ function showLogin(note){
       const m=await api('/api/me');billingInfo=m.data.billing||null;showAccount(m.ok?m.data.user:r.data.user,false)}
     catch{$('lerr').textContent='Network problem — please try again.'}
     finally{b.disabled=false;b.textContent='Log in'}
+  });
+}
+
+/* Forgot password: email a reset link */
+function showForgot(prefill){
+  $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;$('planPill').hidden=true;
+  main.innerHTML=`<div class="center"><form class="box" id="ff" novalidate>
+    <h1>Forgot password?</h1><p>Enter your user ID or the email on your account. We'll email you a link to set a new password.</p>
+    <label><span>User ID or email</span><input id="fl" autocomplete="username" autocapitalize="none" spellcheck="false" required value="${esc(prefill||'')}"></label>
+    <div class="err" id="ferr" role="alert"></div><div class="ok" id="fok" role="status" hidden></div>
+    <button class="btn plumb" id="fbtn" type="submit">Send reset link</button>
+    <p class="small"><a href="#" id="backLogin">← Back to log in</a></p>
+  </form></div>`;
+  $('fl').focus();
+  $('backLogin').addEventListener('click',e=>{e.preventDefault();showLogin()});
+  $('ff').addEventListener('submit',async e=>{e.preventDefault();
+    const login=$('fl').value.trim();$('ferr').textContent='';
+    if(!login){$('ferr').textContent='Enter your user ID or email.';return}
+    const b=$('fbtn');b.disabled=true;b.textContent='Sending…';
+    try{const r=await api('/api/forgot-password',{method:'POST',body:JSON.stringify({login})});
+      if(!r.ok){$('ferr').textContent=r.data.error||'Something went wrong — please try again.';return}
+      $('fok').hidden=false;$('fok').innerHTML=`<b>Check your email.</b> ${esc(r.data.message)} Don't see it? Check spam, or try again in 2 minutes.`;b.textContent='Send again'}
+    catch{$('ferr').textContent='Network problem — please try again.'}
+    finally{b.disabled=false;if(b.textContent==='Sending…')b.textContent='Send reset link'}
+  });
+}
+
+/* Reset password from the emailed link (/account.html?reset=TOKEN) */
+async function showReset(token){
+  $('who').textContent='';$('logout').hidden=true;$('wnav').hidden=true;$('planPill').hidden=true;
+  main.innerHTML='<div class="center"><div class="box"><p>Checking your link…</p></div></div>';
+  const c=await api('/api/reset-password',{method:'POST',body:JSON.stringify({token,check:true})}).catch(()=>({ok:false,data:{}}));
+  if(!c.ok){main.innerHTML=`<div class="center"><div class="box"><h1>Link expired</h1><p>${esc(c.data.error||'This reset link is no longer valid.')}</p><button class="btn plumb" id="again" type="button">Get a new link</button></div></div>`;$('again').addEventListener('click',()=>showForgot());return}
+  main.innerHTML=`<div class="center"><form class="box" id="rf" novalidate>
+    <h1>Set a new password</h1><p>For your account <b>${esc(c.data.userId)}</b>.</p>
+    <input type="text" autocomplete="username" value="${esc(c.data.userId)}" hidden>
+    <label><span>New password</span><input id="rp1" type="password" autocomplete="new-password" minlength="8" required></label>
+    <label><span>Confirm new password</span><input id="rp2" type="password" autocomplete="new-password" required></label>
+    <p class="small" style="margin:-4px 0 0">At least 8 characters, with a letter and a number.</p>
+    <div class="err" id="rerr" role="alert"></div>
+    <button class="btn plumb" id="rbtn" type="submit">Save new password</button>
+  </form></div>`;
+  $('rp1').focus();
+  $('rf').addEventListener('submit',async e=>{e.preventDefault();
+    const p1=$('rp1').value,p2=$('rp2').value;$('rerr').textContent='';
+    if(p1.length<8||!/[a-zA-Z]/.test(p1)||!/[0-9]/.test(p1)){$('rerr').textContent='Use at least 8 characters, with a letter and a number.';return}
+    if(p1!==p2){$('rerr').textContent='The two passwords don’t match.';return}
+    const b=$('rbtn');b.disabled=true;b.textContent='Saving…';
+    try{const r=await api('/api/reset-password',{method:'POST',body:JSON.stringify({token,password:p1})});
+      if(!r.ok){$('rerr').textContent=r.data.error||'Could not save the password.';return}
+      const m=await api('/api/me');if(!m.ok)return showLogin('Password changed — please log in.');
+      billingInfo=m.data.billing||null;showAccount(m.data.user,false);
+      main.insertAdjacentHTML('afterbegin','<div class="ribbon">Your password has been changed and you’re logged in.</div>')}
+    catch{$('rerr').textContent='Network problem — please try again.'}
+    finally{b.disabled=false;b.textContent='Save new password'}
   });
 }
 
@@ -624,6 +682,7 @@ $('logout').addEventListener('click',async()=>{await api('/api/logout',{method:'
 
 (async()=>{
   const qs=new URLSearchParams(location.search),welcome=qs.has('welcome'),billing=qs.get('billing');
+  if(qs.get('reset')){const tok=qs.get('reset');history.replaceState(null,'','/account.html');return showReset(tok)}
   if(welcome||billing)history.replaceState(null,'','/account.html'+location.hash);
   try{const r=await api('/api/me');if(!r.ok)return showLogin();billingInfo=r.data.billing||null;showAccount(r.data.user,welcome);
     if(billing==='cancelled')main.insertAdjacentHTML('afterbegin','<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Payment cancelled — nothing was charged. You can pay any time from Settings.</div>');
