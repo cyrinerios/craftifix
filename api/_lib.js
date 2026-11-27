@@ -200,7 +200,27 @@ const r2 = (v) => Math.round(v * 100) / 100;
 const roundTo = (v, step) => step > 0 ? Math.ceil(v / step) * step : r2(v);
 
 // Same maths as the calculator on the website. The server recomputes so stored prices are always consistent.
+// Itemised costs: each row is a material bought in packs (e.g. 100 g yarn ball for AED 12, 35 g used).
+export const COST_GROUPS = ['yarn', 'material', 'accessory', 'packaging'];
+export const UNITS = ['g', 'kg', 'oz', 'lb', 'm', 'cm', 'mm', 'yd', 'in', 'ft', 'pcs', 'pair', 'set', 'ball', 'skein', 'roll', 'sheet', 'pack', 'ml'];
+const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+export function cleanItems(list) {
+  if (!Array.isArray(list)) return null;
+  return list.slice(0, 80).map((it) => {
+    const packSize = num(it?.packSize, 1e7), packPrice = num(it?.packPrice, 1e7), used = num(it?.used, 1e7);
+    return {
+      group: COST_GROUPS.includes(it?.group) ? it.group : 'material',
+      name: txt(it?.name, 80), desc: txt(it?.desc, 120),
+      unit: UNITS.includes(it?.unit) ? it.unit : 'pcs',
+      packSize, packPrice, used,
+      cost: packSize > 0 ? r2(packPrice / packSize * used) : 0
+    };
+  }).filter((it) => it.name || it.packPrice || it.used);
+}
+const sumGroup = (items, ...g) => r2(items.filter((i) => g.includes(i.group)).reduce((a, i) => a + i.cost, 0));
+
 export function calcPrice(input = {}) {
+  const items = cleanItems(input.items);
   const c = {
     materials: num(input.materials), accessories: num(input.accessories), packaging: num(input.packaging),
     overheadPct: num(input.overheadPct, 100), hours: num(input.hours, 1000), rate: num(input.rate, 10000),
@@ -209,6 +229,13 @@ export function calcPrice(input = {}) {
     vat: !!input.vat
   };
   if (c.method === 'margin') c.pct = Math.min(c.pct, 95);
+  // With an itemised list, the three totals always come from the rows.
+  if (items) {
+    c.items = items;
+    c.materials = sumGroup(items, 'yarn', 'material');
+    c.accessories = sumGroup(items, 'accessory');
+    c.packaging = sumGroup(items, 'packaging');
+  }
   const extras = c.materials + c.accessories + c.packaging;
   const labour = c.hours * c.rate;
   const overhead = (extras + labour) * c.overheadPct / 100;
@@ -221,7 +248,7 @@ export function calcPrice(input = {}) {
   return {
     input: c,
     result: {
-      extras: r2(extras), labour: r2(labour), overhead: r2(overhead), cost: r2(cost),
+      extras: r2(extras), yarn: items ? sumGroup(items, 'yarn') : null, otherMaterials: items ? sumGroup(items, 'material') : null, labour: r2(labour), overhead: r2(overhead), cost: r2(cost),
       price: r2(price), retail, vatAmount, customerPrice: r2(price + vatAmount),
       profit: r2(profit), margin: price > 0 ? r2(profit / price * 100) : 0
     }
