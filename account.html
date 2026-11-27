@@ -115,6 +115,9 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .planpill{display:inline-flex;align-items:center;gap:6px;flex:none;background:#ffb627;color:#2a1430;font:700 13px Outfit,sans-serif;padding:5px 11px;border-radius:999px;text-decoration:none;white-space:nowrap}
 .planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .planpill:hover{filter:brightness(1.05)}
+s.was{opacity:.6;font-weight:500;margin-right:2px}
+.promonote{margin:12px 0 4px;padding:10px 14px;border-radius:12px;background:#fff4d9;border:1px solid #ffd77a;font-size:14px;color:#4a1d4f}
+#planModal .promonote{margin:16px 22px 0}#planModal .pmp s.was{font-size:17px;color:#7a6380}
 dialog#planModal{border:0;padding:0;border-radius:22px;width:min(680px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;box-shadow:0 30px 80px rgba(46,16,49,.45)}
 dialog#planModal::backdrop{background:rgba(36,12,40,.6)}
 #planModal .pmh{background:linear-gradient(135deg,#4a1d4f,#7a2f73);color:#fff;padding:24px 26px 20px;position:relative}
@@ -247,10 +250,15 @@ const main=$('main');
 const ALL=[['standard','Standard',5,'Up to 5 product listings · 5 orders from inquiries a month'],['premium','Premium',15,'Unlimited product listings · unlimited orders from inquiries']];
 const FEAT=[['dashboard','Dashboard'],['pricingCalculator','Pricing calculator'],['onlineStore','Online store'],['customers','Customer management'],['inventory','Inventory'],['salesReports','Sales reports'],['productionTracking','Production tracking'],['staffAccounts','Staff accounts']];
 const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
+/* Promotion (set on the server): the normal price is shown crossed out next to the promo price. */
+const promoOf=u=>u&&u.pricing&&u.pricing.promo;
+const wasLabel=(u,id)=>{const p=u&&u.pricing&&u.pricing.plans[id];return p&&p.percentOff?`<s class="was">${esc(p.fullLabel)}</s> `:''};
+const promoNote=u=>{const pr=promoOf(u);return pr?`<p class="promonote">🎉 <b>${esc(pr.label)}: ${pr.percentOff}% off both plans</b>, until further notice.</p>`:''};
 const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'USD '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
 function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='USD')return'';
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
-  return `<p class="msg fxn">Plan prices are set in US dollars (Standard USD 5, Premium USD 15) and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 USD = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
+  const pl=pr.plans,off=pr.promo&&pr.promo.percentOff;
+  return `<p class="msg fxn">Plan prices are set in US dollars (Standard ${esc(pl.standard.baseLabel)}, Premium ${esc(pl.premium.baseLabel)}${off?`, ${off}% off the normal ${esc(pl.standard.fullBaseLabel)} and ${esc(pl.premium.fullBaseLabel)}`:''}) and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 USD = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
 let billingInfo=null;
 const SUBLBL={trial:['Free trial','#2f9e6b'],trial_ended:['Free trial ended','#c62f5f'],active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
 const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
@@ -263,12 +271,12 @@ function openPlanChooser(){const u=curUser;if(!u)return;
   let d=$('planModal');if(!d){d=document.createElement('dialog');d.id='planModal';d.setAttribute('aria-labelledby','pmTitle');document.body.appendChild(d);
     d.addEventListener('click',e=>{if(e.target===d)d.close()})}
   const ended=u.subscription?.status==='trial_ended',n=u.usage?u.usage.products.used:(u.productCount||0),tooMany=n>5;
-  const card=(id,name,lim)=>`<div class="pmc${id==='premium'?' pop':''}"><b>${name}</b><div class="pmp">${planLabel(u,id)}<small>/month</small></div><p>${lim}</p>
+  const card=(id,name,lim)=>`<div class="pmc${id==='premium'?' pop':''}"><b>${name}</b><div class="pmp">${wasLabel(u,id)}${planLabel(u,id)}<small>/month</small></div><p>${lim}</p>
     ${id==='standard'&&tooMany?`<p class="pmn">You have ${n} products listed. Premium keeps them all in your shop.</p>`:''}
     <button class="btn ${id==='premium'?'gold':'plumb'}" type="button" data-pick="${id}"${id==='standard'&&tooMany?' disabled':''}>Choose ${name}</button></div>`;
   d.innerHTML=`<div class="pmh"><button class="pmx" type="button" aria-label="Close" data-pmclose>×</button><h3 id="pmTitle">Choose your plan</h3>
     <p>${ended?'Your free trial has ended. Choose a plan and add your billing details to reopen your shop. Your products, orders and settings are all still here.':`Your free trial ends on <b>${longDay(u.trial.endsAt)}</b>. Choose the plan that fits your shop. You can switch any time.`}</p></div>
-    <div class="pmg">${card('standard','Standard','Up to 5 product listings and 5 orders from custom inquiries a month. Orders placed in your shop are unlimited.')}${card('premium','Premium','Unlimited product listings and unlimited orders from custom inquiries.')}</div>
+    ${promoNote(u)}<div class="pmg">${card('standard','Standard','Up to 5 product listings and 5 orders from custom inquiries a month. Orders placed in your shop are unlimited.')}${card('premium','Premium','Unlimited product listings and unlimited orders from custom inquiries.')}</div>
     ${fxNote(u)}<div class="msg pmm" role="status"></div>`;
   d.querySelector('[data-pmclose]').onclick=()=>d.close();
   d.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{
@@ -586,9 +594,9 @@ function showAccount(u,welcome){
       ${FEAT.map(([k,t])=>`<div><span>${t}</span><b>${esc(p.features[k])}</b></div>`).join('')}
     </div></div>
     ${needsPlan(u)?`<div class="card"><h3>Your plan</h3><p class="msg">${choosePlanNow(u)?`It's time to choose: Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`:`During your free trial every feature is unlocked. On <b>${chooseFrom(u)}</b>, a week before the trial ends, we'll ask you to choose Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`}</p>
-      ${choosePlanNow(u)?`<button class="btn gold" type="button" data-chooseplan style="margin-top:10px">Choose your plan</button>`:''}${fxNote(u)}<div class="msg" id="pmsg" role="status"></div><div id="plans" hidden></div></div>`:`<div class="card"><h3>Change plan</h3>
-      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
-      ${fxNote(u)}
+      ${choosePlanNow(u)?`<button class="btn gold" type="button" data-chooseplan style="margin-top:10px">Choose your plan</button>`:''}${promoNote(u)}${fxNote(u)}<div class="msg" id="pmsg" role="status"></div><div id="plans" hidden></div></div>`:`<div class="card"><h3>Change plan</h3>
+      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>${wasLabel(u,id)}${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
+      ${promoNote(u)}${fxNote(u)}
       <div class="msg" id="pmsg" role="status"></div>
     </div>`}
   </div>`;

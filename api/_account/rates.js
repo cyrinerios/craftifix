@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'GET')) return;
   try {
     const pricing = await pricingFor(req.query?.currency);
-    res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400');
+    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
     res.status(200).json({ pricing, onlinePayment: stripeEnabled(), paymentMode: stripeEnabled() ? stripeMode() : null, paymentKey: stripeKeyKind() });
   } catch (e) { fail(res, e); }
 }

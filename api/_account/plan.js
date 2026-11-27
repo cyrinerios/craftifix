@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       // A trial shop that hasn't chosen yet may pick the plan it is already on (that records the choice).
       if (plan === rec.plan && rec.subscription.planChosen !== false) return send(res, 400, { error: `You're already on ${PLANS[plan].name}.` });
       rec.plan = plan;
-      rec.subscription = { ...rec.subscription, planChosen: true, changedAt: new Date().toISOString(), currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, rate: pricing.rate };
+      rec.subscription = { ...rec.subscription, planChosen: true, changedAt: new Date().toISOString(), currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: pricing.plans[plan].base, rate: pricing.rate };
       rec.updatedAt = rec.subscription.changedAt;
       await saveUser(rec);
       await syncAccount(rec);
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     rec.plan = plan;
     rec.subscription = { ...rec.subscription, status: 'active', paymentStatus: 'skipped', changedAt: now,
-      currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate };
+      currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: pricing.plans[plan].base, baseCurrency: BASE_CURRENCY, rate: pricing.rate };
     rec.updatedAt = now;
     await saveUser(rec);
     await syncAccount(rec);

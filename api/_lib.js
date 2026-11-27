@@ -389,16 +389,34 @@ export function convertFromBase(base, cur, rates) {
   const f = 10 ** decimals(c);
   return { amount: Math.round(base * rate * f) / f, rate };
 }
+// Subscription promotion: percent off both plans, until further notice.
+// Change it in Vercel → Settings → Environment Variables: PROMO_PERCENT_OFF (e.g. 50), or 0 to end the promotion,
+// then redeploy. Without that setting the default below applies. PROMO_LABEL changes the promotion's name.
+const DEFAULT_PROMO_PERCENT_OFF = 70;
+export function promoPercentOff() {
+  const v = process.env.PROMO_PERCENT_OFF;
+  const n = v === undefined || String(v).trim() === '' ? DEFAULT_PROMO_PERCENT_OFF : Number(v);
+  return Number.isFinite(n) ? Math.min(Math.max(Math.round(n), 0), 95) : 0;
+}
+export const promoLabel = () => String(process.env.PROMO_LABEL || 'Launch promo').slice(0, 40);
+const promoBase = (price, off) => Math.round(price * (100 - off)) / 100;   // USD price after the promotion, to the cent
+
 export async function pricingFor(cur) {
   const currency = validCurrency(cur) || BASE_CURRENCY;
   const fx = await getFx();
+  const off = promoPercentOff();
   const plans = {};
   for (const p of Object.values(PLANS)) {
-    const { amount } = convertFromBase(p.price, currency, fx.rates);
-    plans[p.id] = { base: p.price, baseLabel: money(p.price, BASE_CURRENCY), amount, label: money(amount, currency) };
+    // base/amount/label are what the owner pays now (after any promotion); full* are the normal prices.
+    const base = off ? promoBase(p.price, off) : p.price;
+    const { amount } = convertFromBase(base, currency, fx.rates);
+    const full = convertFromBase(p.price, currency, fx.rates).amount;
+    plans[p.id] = { base, baseLabel: money(base, BASE_CURRENCY), amount, label: money(amount, currency),
+      fullBase: p.price, fullBaseLabel: money(p.price, BASE_CURRENCY), fullAmount: full, fullLabel: money(full, currency), percentOff: off };
   }
   return { currency, baseCurrency: BASE_CURRENCY, rate: convertFromBase(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
-    source: 'ExchangeRate-API', sourceUrl: 'https://www.exchangerate-api.com', plans };
+    source: 'ExchangeRate-API', sourceUrl: 'https://www.exchangerate-api.com', plans,
+    promo: off ? { percentOff: off, label: promoLabel() } : null };
 }
 
 export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');
@@ -640,7 +658,7 @@ export function accountForSheet(rec) {
   const st = rec.subscription?.status || 'active';
   return {
     userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
-    plan: rec.subscription?.planChosen === false ? `${p.name} (free trial, plan not chosen yet)` : p.name, planPrice: money(p.price, BASE_CURRENCY), status: ({ trial: 'Free trial', trial_ended: 'Trial ended', past_due: 'Past due' })[st] || st[0].toUpperCase() + st.slice(1),
+    plan: rec.subscription?.planChosen === false ? `${p.name} (free trial, plan not chosen yet)` : p.name, planPrice: promoPercentOff() ? `${money(promoBase(p.price, promoPercentOff()), BASE_CURRENCY)} (${promoPercentOff()}% off ${money(p.price, BASE_CURRENCY)})` : money(p.price, BASE_CURRENCY), status: ({ trial: 'Free trial', trial_ended: 'Trial ended', past_due: 'Past due' })[st] || st[0].toUpperCase() + st.slice(1),
     payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : rec.subscription?.trialEndsAt && ['trial', 'trial_ended'].includes(st) ? `Trial ends ${rec.subscription.trialEndsAt.slice(0, 10)}` : (rec.subscription?.paymentStatus || ''),
     createdAt: rec.createdAt, updatedAt: rec.updatedAt || rec.createdAt, currency: rec.currency || 'AED',
     logo: rec.logo || '', social: rec.social || {}

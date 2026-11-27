@@ -49,9 +49,9 @@ export default async function handler(req, res) {
       // asked for when the trial ends (or earlier if the owner chooses). Without Stripe, payment is skipped.
       subscription: stripeEnabled()
         ? { status: 'trial', billing: 'monthly', provider: 'stripe', paymentStatus: 'trial', startedAt: now, trialEndsAt: trialEndFrom(now), planChosen: false,
-          currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate }
+          currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: pricing.plans[plan].base, baseCurrency: BASE_CURRENCY, rate: pricing.rate }
         : { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
-        currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate },
+        currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: pricing.plans[plan].base, baseCurrency: BASE_CURRENCY, rate: pricing.rate },
       createdAt: now, updatedAt: now
     };
     try { await saveUser(rec, { create: true }); }

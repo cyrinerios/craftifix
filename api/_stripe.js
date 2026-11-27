@@ -73,7 +73,7 @@ const minor = (amount, cur) => THREE_DEC.has(cur) ? Math.round(amount * 100) * 1
 // Monthly price for a plan in the shop's currency (falls back to AED).
 export async function planPrice(plan, currency) {
   const p = await pricingFor(validCurrency(currency) || BASE_CURRENCY);
-  return { currency: p.currency, amount: p.plans[plan].amount, rate: p.rate, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY };
+  return { currency: p.currency, amount: p.plans[plan].amount, rate: p.rate, basePrice: p.plans[plan].base, baseCurrency: BASE_CURRENCY, percentOff: p.plans[plan].percentOff };
 }
 const priceData = (product, price) => ({ currency: price.currency.toLowerCase(), product, unit_amount: minor(price.amount, price.currency), recurring: { interval: 'month' } });
 
@@ -96,7 +96,7 @@ export async function createCheckout(rec, plan, origin) {
   const make = (price) => stripe('checkout/sessions', {
     mode: 'subscription', customer, client_reference_id: rec.userId,
     line_items: [{ quantity: 1, price_data: priceData(product, price) }],
-    subscription_data: { metadata: meta, description: `Craftifix ${PLANS[plan].name} plan for ${rec.business}`, trial_end: trialEnd },
+    subscription_data: { metadata: meta, description: `Craftifix ${PLANS[plan].name} plan for ${rec.business}${price.percentOff ? ` (${price.percentOff}% off promotion)` : ''}`, trial_end: trialEnd },
     metadata: meta, allow_promotion_codes: 'true',
     success_url: `${origin}/account.html?billing=success#settings`,
     cancel_url: `${origin}/account.html?billing=cancelled#settings`

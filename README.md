@@ -139,3 +139,12 @@ invoice the first time the owner opens Orders. Items from VAT-registered prices 
   the trial banner, a pop-up once per visit, and Settings. Then they add billing details; the first charge is on the
   day the trial ends. A shop with more than 5 products can't pick Standard.
 - Accounts created before this change keep the plan they picked at sign-up.
+
+## Subscription promotion
+- Both plans are discounted by a percentage, until further notice. Default: **70% off** (Standard USD 1.50, Premium
+  USD 4.50, converted to the shop's currency). Set in `api/_lib.js` (`DEFAULT_PROMO_PERCENT_OFF`).
+- Change it without code: Vercel → craftifix → Settings → Environment Variables → `PROMO_PERCENT_OFF` (e.g. `50`),
+  or `0` to end the promotion, then redeploy. `PROMO_LABEL` changes its name (default "Launch promo").
+- New checkouts and plan switches are charged the promo price. Subscriptions keep the price they started with
+  when the promotion changes (Stripe keeps each subscription's price).
+- The homepage, the plan chooser and Settings show the normal price crossed out next to the promo price.

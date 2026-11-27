@@ -211,6 +211,10 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .join p.l{font-size:18.5px;color:#f6d3e2;margin-top:12px}
 .sform{background:var(--panel);color:var(--ink);border-radius:20px;padding:24px}
 .sform .btn{width:100%;margin-top:6px}
+.promoban{margin:0 auto 22px;max-width:760px;text-align:center;padding:12px 18px;border-radius:14px;background:#fff4d9;border:1px solid #ffd77a;color:#4a1d4f;font-size:16px}
+.offtag{display:inline-block;margin-left:10px;vertical-align:middle;background:#c62f5f;color:#fff;font:700 13px/1 Inter,sans-serif;padding:5px 9px;border-radius:999px}
+.plan s.was{display:block;font-size:.5em;line-height:1.2;opacity:.55;font-weight:600}
+.plan .p{flex-wrap:wrap}
 /* free-account pop-up for the pricing calculator */
 dialog#joinModal{border:0;padding:0;border-radius:24px;width:min(720px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);color:var(--ink);box-shadow:0 30px 80px rgba(46,16,49,.45)}
 dialog#joinModal::backdrop{background:rgba(36,12,40,.6);backdrop-filter:blur(2px)}
@@ -340,7 +344,7 @@ footer a:hover{color:#fff}
         Your browser can't play this video. <a href="/media/craftifix-how-it-works.mp4?v=2">Download it</a>.
       </video>
     </div>
-    <div class="vidpoints"><span>0% commission on your sales</span><span>Standard &amp; same-day delivery fees</span><span>Invoices, tracking &amp; WhatsApp updates</span><span>From USD 5 a month</span></div>
+    <div class="vidpoints"><span>0% commission on your sales</span><span>Standard &amp; same-day delivery fees</span><span>Invoices, tracking &amp; WhatsApp updates</span><span id="fromPrice">From USD 5 a month</span></div>
   </div>
 </section>
 
@@ -422,6 +426,7 @@ footer a:hover{color:#fff}
 <section class="band" id="plans">
   <div class="wrap">
     <div class="head"><h2>Simple monthly plans</h2><p>Try any plan free for 30 days — no card needed. After the trial it's a simple monthly price, and you can upgrade any time.</p></div>
+    <p class="promoban" id="promoBan" hidden></p>
     <div class="plans" id="planGrid"></div>
     <p class="fxnote" id="fxnote" hidden></p>
     <p class="fine">Prices are introductory and may change. Upgrade, downgrade or cancel from your account at any time.</p>
@@ -627,7 +632,7 @@ $('prods').addEventListener('click',e=>{if(e.target.matches('[data-add]')){cart+
 const plans=[
  ['Standard',5,'For makers just starting to sell online.',[['Up to 5 product listings',1],['Up to 5 confirmed orders from inquiries a month',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Unlimited listings & inquiry orders',0]]],
  ['Premium',15,'For growing shops with steady custom orders.',[['Unlimited product listings',1],['Unlimited confirmed orders from inquiries',1],['Unlimited orders placed in your shop',1],['Pricing calculator',1],['Online shop with cart & order tracking',1],['Custom inquiries with inspo photos',1],['Dashboard & analytics',1],['Priority access to new features',1]],1]];
-$('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}</h3><div class="p"><span data-pp="${n.toLowerCase()}">USD ${p}</span><small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
+$('planGrid').innerHTML=plans.map(([n,p,f,l,pop])=>`<div class="plan${pop?' pop':''}">${pop?'<span class="badge">Most popular</span>':''}<h3>${n}<span class="offtag" data-off hidden></span></h3><div class="p"><span data-pp="${n.toLowerCase()}">USD ${p}</span><small> /month</small></div><div class="for">${f}</div><ul>${l.map(([t,y])=>`<li class="${y?'':'x'}">${y?t:'No '+t.toLowerCase()}</li>`).join('')}</ul><a class="btn ${pop?'gold':'plumb'}" href="#join" data-plan="${n}">Choose ${n}</a></div>`).join('');
 $('planGrid').addEventListener('click',e=>{const a=e.target.closest('[data-plan]');if(!a)return;const r=document.querySelector(`#pick input[value="${a.dataset.plan.toLowerCase()}"]`);if(r)r.checked=true});
 
 /* roadmap */
@@ -648,12 +653,17 @@ $('pick').innerHTML=plans.map(([n,p,,,pop])=>`<label><input type="radio" name="p
 /* plan prices are set in USD and shown in the chosen shop currency at today's rate */
 async function showPrices(cur){
   const base=Object.fromEntries(plans.map(([n,p])=>[n.toLowerCase(),'USD '+p]));
-  let labels=base,pr=null;
-  if(cur&&cur!=='USD'){try{const r=await fetch('/api/rates?currency='+encodeURIComponent(cur));if(r.ok){pr=(await r.json()).pricing;labels=Object.fromEntries(Object.entries(pr.plans).map(([k,v])=>[k,v.label]))}}catch{}}
-  for(const el of document.querySelectorAll('[data-pp]'))el.textContent=labels[el.dataset.pp]||base[el.dataset.pp];
-  for(const el of document.querySelectorAll('[data-pk]'))el.textContent=(labels[el.dataset.pk]||base[el.dataset.pk])+'/mo';
+  let pr=null;
+  try{const r=await fetch('/api/rates?currency='+encodeURIComponent(cur||'USD'));if(r.ok)pr=(await r.json()).pricing}catch{}
+  const P=pr?pr.plans:null,off=pr&&pr.promo?pr.promo.percentOff:0;
+  // Promotion: the normal price is shown crossed out next to the promo price.
+  for(const el of document.querySelectorAll('[data-pp]')){const x=P&&P[el.dataset.pp];el.innerHTML=x?(off?`<s class="was">${x.fullLabel}</s> ${x.label}`:x.label):base[el.dataset.pp]}
+  for(const el of document.querySelectorAll('[data-pk]')){const x=P&&P[el.dataset.pk];el.textContent=(x?x.label:base[el.dataset.pk])+'/mo'}
+  for(const el of document.querySelectorAll('[data-off]')){el.hidden=!off;el.textContent=off+'% off'}
+  const b=$('promoBan');b.hidden=!off;if(off)b.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off both plans</b>, until further notice. Start with 30 days free, then pay the promo price.`;
+  if(P)$('fromPrice').textContent=off?`From ${P.standard.baseLabel} a month (${off}% off)`:`From ${P.standard.baseLabel} a month`;
   const n=$('fxnote');
-  if(pr&&pr.currency!=='USD'){n.hidden=false;n.innerHTML=`Prices shown in ${pr.currency}, converted from US dollars (Standard ${pr.plans.standard.baseLabel}, Premium ${pr.plans.premium.baseLabel}) at ${pr.live?'today’s':'an approximate'} rate: 1 USD = ${pr.rate} ${pr.currency}. <a href="${pr.sourceUrl}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`}
+  if(pr&&pr.currency!=='USD'){n.hidden=false;n.innerHTML=`Prices shown in ${pr.currency}, converted from US dollars (Standard ${P.standard.baseLabel}, Premium ${P.premium.baseLabel}${off?`, ${off}% off the normal ${P.standard.fullBaseLabel} and ${P.premium.fullBaseLabel}`:''}) at ${pr.live?'today’s':'an approximate'} rate: 1 USD = ${pr.rate} ${pr.currency}. <a href="${pr.sourceUrl}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`}
   else n.hidden=true;
 }
 $('scur').addEventListener('change',e=>showPrices(e.target.value));
