@@ -4,7 +4,7 @@
 // Addresses are located with OpenStreetMap (Nominatim) and road distance comes from the OSRM routing service;
 // if routing is unavailable, straight-line distance × 1.3 is used and the fee is marked approximate.
 
-const UA = 'Craftifix/1.0 (crochet shop platform; https://craftifix-app.vercel.app)';
+const UA = 'Craftifix/1.0 (crochet shop platform; https://craftifix.com)';
 const r2 = (v) => Math.round(v * 100) / 100;
 const num = (v, max = 1e6) => { const n = Number(v); return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0; };
 const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);

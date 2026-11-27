@@ -3,7 +3,7 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { put, head, list, BlobNotFoundError } from '@vercel/blob';
-import { useDb, q, tx, setFirstRun } from './_db.js';
+import { useDb, q, tx, setFirstRun, dbEnvName } from './_db.js';
 
 const scrypt = promisify(crypto.scrypt);
 const SECRET = process.env.AUTH_SECRET || '';
@@ -557,7 +557,7 @@ export async function storageStatus() {
   const [c] = await q(`SELECT (SELECT count(*) FROM accounts)::int AS accounts, (SELECT count(*) FROM products)::int AS products,
     (SELECT count(*) FROM orders)::int AS orders, (SELECT count(*) FROM inquiries)::int AS inquiries`);
   const [m] = await q(`SELECT value FROM app_meta WHERE key = 'blob_import'`);
-  return { storage: 'prisma-postgres', counts: c, blobImport: m?.value || null };
+  return { storage: 'prisma-postgres', connection: dbEnvName(), counts: c, blobImport: m?.value || null };
 }
 
 export const getUser = (uid) => (useDb() ? dbGetUser(uid) : blobGetUser(uid));

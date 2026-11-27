@@ -4,15 +4,17 @@
 // Set STORAGE=blob in Vercel to fall back to the old Vercel Blob storage.
 import pg from 'pg';
 
-const URL_KEYS = ['DATABASE_URL', 'POSTGRES_URL', 'DIRECT_URL', 'DIRECT_DATABASE_URL', 'POSTGRES_URL_NON_POOLING', 'POSTGRES_PRISMA_URL', 'PRISMA_DATABASE_URL'];
-export function dbUrl() {
-  for (const k of URL_KEYS) {
-    const v = String(process.env[k] || '').trim().replace(/^['"]|['"]$/g, '');
-    if (/^postgres(ql)?:\/\//i.test(v)) return v;   // prisma+postgres:// (Accelerate) URLs need Prisma Client, so they are skipped
-  }
+// Standard names first, then the same names with a custom prefix (e.g. CRAFTIFIX_ACCOUNTS_DATABASE_URL). Direct URLs before pooled ones.
+const URL_NAMES = ['DATABASE_URL', 'POSTGRES_URL', 'DIRECT_URL', 'DIRECT_DATABASE_URL', 'POSTGRES_URL_NON_POOLING', 'DATABASE_URL_POOLED', 'POSTGRES_PRISMA_URL', 'PRISMA_DATABASE_URL'];
+const clean = (v) => String(v || '').trim().replace(/^['"]|['"]$/g, '');
+const isPg = (v) => /^postgres(ql)?:\/\//i.test(v);   // prisma+postgres:// (Accelerate) URLs need Prisma Client, so they are skipped
+export function dbEnvName() {
+  for (const n of URL_NAMES) if (isPg(clean(process.env[n]))) return n;
+  const keys = Object.keys(process.env);
+  for (const n of URL_NAMES) { const k = keys.find((x) => x.endsWith('_' + n) && isPg(clean(process.env[x]))); if (k) return k; }
   return null;
 }
-export const dbEnvName = () => URL_KEYS.find((k) => /^postgres(ql)?:\/\//i.test(String(process.env[k] || '').trim().replace(/^['"]|['"]$/g, ''))) || null;
+export function dbUrl() { const k = dbEnvName(); return k ? clean(process.env[k]) : null; }
 export const useDb = () => String(process.env.STORAGE || '').toLowerCase() !== 'blob' && !!dbUrl();
 
 let pool;
