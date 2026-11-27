@@ -451,6 +451,7 @@ $('logout').addEventListener('click',async()=>{await fetch('/api/logout',{method
 
 /* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
 function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
+  document.title=document.title.replace(/ — .*$/,' — '+(u&&u.business||'Craftifix'));
   if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
   // Header name: the shop's business name when logged in, Craftifix otherwise.
   const a=document.querySelector('.bar .logo');if(a){let t=a.querySelector('.bname');if(!t){[...a.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());t=document.createElement('span');t.className='bname';a.appendChild(t)}

@@ -465,6 +465,7 @@ function setNav(view){
 }
 /* Logged-in owners see their own shop logo in the header and on the browser tab (Craftifix icon otherwise). */
 function brandIcon(u){const url=u&&u.logo||'',img=document.querySelector('.bar .logo img');
+  document.title=document.title.replace(/ — .*$/,' — '+(u&&u.business||'Craftifix'));
   if(img){img.src=url||'/favicon.svg';img.classList.toggle('shopicon',!!url);img.alt=url?(u.business||'')+' logo':''}
   // Header name: the shop's business name when logged in, Craftifix otherwise.
   const a=document.querySelector('.bar .logo');if(a){let t=a.querySelector('.bname');if(!t){[...a.childNodes].filter(n=>n.nodeType===3).forEach(n=>n.remove());t=document.createElement('span');t.className='bname';a.appendChild(t)}
@@ -478,7 +479,7 @@ function showAccount(u,welcome){
   const view=({'#settings':'settings','#orders':'orders','#inquiries':'inquiries','#shipping':'shipping'})[location.hash]||'dashboard';
   $('who').textContent='@'+u.userId;$('logout').hidden=false;$('wnav').hidden=false;setNav(view);
   const [stl,stc]=subLbl(u);$('planPill').hidden=false;$('planPill').innerHTML=`<i style="background:${stc}"></i>${esc(p.name)}<span class="pst"> · ${esc(stl)}</span>`;
-  document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard',shipping:'Shipping'})[view]+' — Craftifix';
+  document.title=({settings:'Settings',orders:'Orders',inquiries:'Inquiries',dashboard:'Dashboard',shipping:'Shipping'})[view]+' — '+(u.business||'Craftifix');
   const since=new Date(u.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
   const usage=[['Product listings',u.usage?u.usage.products.used:(u.productCount||0),p.limits.products],['Orders from inquiries this month',u.usage?u.usage.inquiryOrders.used:0,p.limits.inquiryOrdersPerMonth]];
   if(view==='shipping'){showShipping(u);return}
