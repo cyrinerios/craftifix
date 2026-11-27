@@ -70,7 +70,8 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .row3s{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .unit2{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
 .unit2 span{padding:0 10px;font-weight:700;font-size:13px;color:var(--mute)}.unit2 input{border:0;border-radius:0;min-height:44px;padding-left:4px}
-.regrow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:8px;margin-bottom:8px;align-items:center}
+.regrow,.reghead{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:8px;margin-bottom:8px;align-items:center}
+.reghead span{font-size:12.5px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
 .mdel2{border:0;background:none;color:var(--mute);font-size:22px;cursor:pointer;padding:4px 6px}.mdel2:hover{color:#b02a5a}
 .madd2{border:1.5px dashed var(--line);background:none;border-radius:999px;padding:7px 14px;font:700 14px inherit;color:var(--ink);cursor:pointer}
 .sep2{height:1px;background:var(--line);margin:16px 0}
@@ -355,8 +356,9 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-copy
 function showShipping(u){
   const cur=u.currency||'AED',m=n=>fmtMoney(n,cur);
   const sh=JSON.parse(JSON.stringify(u.shipping||{mode:'off',km:{base:0,perKm:0,maxKm:0},regions:[],freeOver:0,pickup:{enabled:false,note:''}}));
+  sh.km.express=sh.km.express||{enabled:false,base:0,perKm:0};sh.speeds=sh.speeds||{standardEta:'2–3 days',expressEta:'Same day',expressNote:''};
   const addr=u.shopAddress||{};
-  const regRow=(r,i)=>`<div class="regrow" data-i="${i}"><input data-r="name" maxlength="60" value="${esc(r.name)}" placeholder="Region or area, e.g. Dubai"><div class="unit2"><span>${esc(cur)}</span><input data-r="fee" type="number" min="0" step="any" inputmode="decimal" value="${r.fee??''}" placeholder="No delivery"></div><button type="button" class="mdel2" data-rdel="${i}" aria-label="Remove">×</button></div>`;
+  const regRow=(r,i)=>`<div class="regrow" data-i="${i}"><input data-r="name" maxlength="60" value="${esc(r.name)}" placeholder="Region or area, e.g. Dubai" aria-label="Region"><div class="unit2"><span>${esc(cur)}</span><input data-r="fee" type="number" min="0" step="any" inputmode="decimal" value="${r.fee??''}" placeholder="—" aria-label="Standard fee"></div><div class="unit2"><span>${esc(cur)}</span><input data-r="express" type="number" min="0" step="any" inputmode="decimal" value="${r.express??''}" placeholder="—" aria-label="Express fee"></div><button type="button" class="mdel2" data-rdel="${i}" aria-label="Remove">×</button></div>`;
   main.innerHTML=`
   <section class="sethead"><div><h1>Shipping</h1><p>Set how much delivery costs. The fee is added to the customer's cart and total, and shows on the order, emails and invoice.</p></div><a class="mini" href="/account.html">← Back to dashboard</a></section>
   <div class="shipgrid">
@@ -370,16 +372,25 @@ function showShipping(u){
       <div class="row3s"><label><span>Base fee</span><div class="unit2"><span>${esc(cur)}</span><input id="kBase" type="number" min="0" step="any" inputmode="decimal" value="${sh.km.base||0}"></div></label>
       <label><span>Per km</span><div class="unit2"><span>${esc(cur)}</span><input id="kPer" type="number" min="0" step="any" inputmode="decimal" value="${sh.km.perKm||0}"></div></label>
       <label><span>Max distance</span><div class="unit2"><span>km</span><input id="kMax" type="number" min="0" step="1" inputmode="numeric" value="${sh.km.maxKm||0}"></div></label></div>
+      <label class="checkrow" style="margin-top:14px"><input type="checkbox" id="kExOn"${sh.km.express.enabled?' checked':''}> <span><b>Also offer Express (same day)</b><small>Its own base fee and rate per km.</small></span></label>
+      <div class="row3s" id="kExBox"${sh.km.express.enabled?'':' hidden'}><label><span>Express base fee</span><div class="unit2"><span>${esc(cur)}</span><input id="kxBase" type="number" min="0" step="any" inputmode="decimal" value="${sh.km.express.base||0}"></div></label>
+      <label><span>Express per km</span><div class="unit2"><span>${esc(cur)}</span><input id="kxPer" type="number" min="0" step="any" inputmode="decimal" value="${sh.km.express.perKm||0}"></div></label></div>
       <p class="msg" id="kEx"></p>
       <p class="msg" style="font-size:13px">Distance is by road from your shop address to the customer's address. Max distance 0 = no limit.</p>
     </div>
     <div id="regBox" class="sbox"${sh.mode==='region'?'':' hidden'}>
-      <p class="msg" style="margin-bottom:8px">Customers pick their area at checkout. Leave a fee empty if you don't deliver there.</p>
+      <p class="msg" style="margin-bottom:8px">Customers pick their area and delivery speed at checkout. Leave a price empty if you don't offer that speed there (both empty = no delivery to that area).</p>
+      <div class="reghead"><span>Region</span><span>Standard</span><span>Express</span><span></span></div>
       <div id="regs">${sh.regions.map(regRow).join('')}</div>
       <button type="button" class="madd2" id="regAdd">+ Add region</button>
     </div>
+    <div id="spBox"${sh.mode==='off'?' hidden':''}><div class="sep2"></div>
+    <h3 style="font-size:17px">Delivery times</h3>
+    <div class="row3s"><label><span>Standard takes</span><input id="spStd" maxlength="30" value="${esc(sh.speeds.standardEta)}" placeholder="2–3 days"></label>
+    <label><span>Express takes</span><input id="spEx" maxlength="30" value="${esc(sh.speeds.expressEta)}" placeholder="Same day"></label>
+    <label><span>Express note (optional)</span><input id="spNote" maxlength="120" value="${esc(sh.speeds.expressNote)}" placeholder="Order before 2 pm"></label></div></div>
     <div class="sep2"></div>
-    <label><span>Free delivery for orders over</span><div class="unit2"><span>${esc(cur)}</span><input id="sFree" type="number" min="0" step="any" inputmode="decimal" value="${sh.freeOver||0}"></div><small class="hint2">0 = always charge delivery. Based on the items total before delivery.</small></label>
+    <label><span>Free delivery for orders over</span><div class="unit2"><span>${esc(cur)}</span><input id="sFree" type="number" min="0" step="any" inputmode="decimal" value="${sh.freeOver||0}"></div><small class="hint2">Applies to Standard delivery. 0 = always charge. Based on the items total before delivery.</small></label>
     <label class="checkrow"><input type="checkbox" id="sPick"${sh.pickup?.enabled?' checked':''}> <span><b>Offer free self-pickup from my shop</b><small>Customers can choose to collect instead of delivery. Your shop address is shown to them.</small></span></label>
     <label id="pickNoteL"${sh.pickup?.enabled?'':' hidden'}><span>Pickup note (optional)</span><input id="sPickNote" maxlength="160" value="${esc(sh.pickup?.note||'')}" placeholder="e.g. Pick up Sat–Thu, 4–9 pm. Call when you arrive."></label>
     <div class="err" id="shErr" role="alert"></div>
@@ -394,16 +405,21 @@ function showShipping(u){
     <h3>What customers see</h3><div id="shPrev" class="prevbox"></div>
   </div></div>`;
   const read=()=>{sh.mode=(document.querySelector('input[name=smode]:checked')||{}).value||'off';
-    sh.km={base:+$('kBase').value||0,perKm:+$('kPer').value||0,maxKm:+$('kMax').value||0};
-    sh.regions=[...document.querySelectorAll('.regrow')].map(r=>({name:r.querySelector('[data-r=name]').value.trim(),fee:r.querySelector('[data-r=fee]').value===''?null:Math.max(0,+r.querySelector('[data-r=fee]').value)}));
+    sh.km={base:+$('kBase').value||0,perKm:+$('kPer').value||0,maxKm:+$('kMax').value||0,express:{enabled:$('kExOn').checked,base:+$('kxBase').value||0,perKm:+$('kxPer').value||0}};
+    const pv=(r,k)=>{const v=r.querySelector(`[data-r=${k}]`).value;return v===''?null:Math.max(0,+v)};
+    sh.regions=[...document.querySelectorAll('.regrow')].map(r=>({name:r.querySelector('[data-r=name]').value.trim(),fee:pv(r,'fee'),express:pv(r,'express')}));
+    sh.speeds={standardEta:$('spStd').value.trim()||'2–3 days',expressEta:$('spEx').value.trim()||'Same day',expressNote:$('spNote').value.trim()};
     sh.freeOver=+$('sFree').value||0;sh.pickup={enabled:$('sPick').checked,note:$('sPickNote').value.trim()};return sh};
-  const preview=()=>{read();$('kmBox').hidden=sh.mode!=='km';$('regBox').hidden=sh.mode!=='region';$('pickNoteL').hidden=!sh.pickup.enabled;
-    $('kEx').innerHTML=`Example: 8 km → <b>${m(sh.km.base+sh.km.perKm*8)}</b> · 20 km → <b>${m(sh.km.base+sh.km.perKm*20)}</b>${sh.km.maxKm&&sh.km.maxKm<20?' (beyond your max)':''}`;
+  const preview=()=>{read();$('kmBox').hidden=sh.mode!=='km';$('regBox').hidden=sh.mode!=='region';$('pickNoteL').hidden=!sh.pickup.enabled;$('kExBox').hidden=!sh.km.express.enabled;$('spBox').hidden=sh.mode==='off';
+    const kx=k=>`<b>${m(sh.km.base+sh.km.perKm*k)}</b>${sh.km.express.enabled?` standard / <b>${m(sh.km.express.base+sh.km.express.perKm*k)}</b> express`:''}`;
+    $('kEx').innerHTML=`Example: 8 km → ${kx(8)} · 20 km → ${kx(20)}${sh.km.maxKm&&sh.km.maxKm<20?' (beyond your max)':''}`;
+    const sp=sh.speeds,std=`Standard (${esc(sp.standardEta)})`,exp=`Express (${esc(sp.expressEta)})`;
     const lines=[];
     if(sh.mode==='off')lines.push('Delivery fee: <b>to be confirmed by the shop</b>');
-    if(sh.mode==='km')lines.push(`Delivery: <b>${m(sh.km.base)} + ${m(sh.km.perKm)} per km</b>${sh.km.maxKm?`, up to ${sh.km.maxKm} km`:''}`);
-    if(sh.mode==='region'){const ok=sh.regions.filter(r=>r.name&&r.fee!==null);lines.push(ok.length?'Choose your area:<br>'+ok.map(r=>`• ${esc(r.name)} — <b>${m(r.fee)}</b>`).join('<br>'):'<span style="color:#c62f5f">Add a fee to at least one region</span>')}
-    if(sh.freeOver>0)lines.push(`🎉 Free delivery on orders over <b>${m(sh.freeOver)}</b>`);
+    if(sh.mode==='km')lines.push(`${std}: <b>${m(sh.km.base)} + ${m(sh.km.perKm)}/km</b>`+(sh.km.express.enabled?`<br>${exp}: <b>${m(sh.km.express.base)} + ${m(sh.km.express.perKm)}/km</b>`:'')+(sh.km.maxKm?`<br>Up to ${sh.km.maxKm} km`:''));
+    if(sh.mode==='region'){const ok=sh.regions.filter(r=>r.name&&(r.fee!==null||r.express!==null));lines.push(ok.length?'Choose your area:<br>'+ok.map(r=>`• ${esc(r.name)} — ${[r.fee!==null?`Standard <b>${m(r.fee)}</b>`:'',r.express!==null?`Express <b>${m(r.express)}</b>`:''].filter(Boolean).join(' · ')}`).join('<br>')+`<br><small>Standard: ${esc(sp.standardEta)} · Express: ${esc(sp.expressEta)}</small>`:'<span style="color:#c62f5f">Add a Standard or Express fee to at least one region</span>')}
+    if(sp.expressNote&&sh.mode!=='off')lines.push(`⚡ ${esc(sp.expressNote)}`);
+    if(sh.freeOver>0)lines.push(`🎉 Free standard delivery on orders over <b>${m(sh.freeOver)}</b>`);
     if(sh.pickup.enabled)lines.push(`🏪 Free self-pickup${sh.pickup.note?` — ${esc(sh.pickup.note)}`:''}`);
     $('shPrev').innerHTML=lines.map(l=>`<p>${l}</p>`).join('')};
   $('shipForm').addEventListener('input',preview);$('shipForm').addEventListener('change',preview);

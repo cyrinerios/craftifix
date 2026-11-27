@@ -44,9 +44,9 @@ export default async function handler(req, res) {
     const subtotal = Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100;
     // Shipping is always worked out here from the shop's own settings, never taken from the browser.
     const sb = b.shipping || {};
-    const q = await quoteShipping(owner, { method: sb.method === 'pickup' ? 'pickup' : 'delivery', region: sb.region, address: customer.address, lat: sb.lat, lng: sb.lng, subtotal });
+    const q = await quoteShipping(owner, { method: sb.method === 'pickup' ? 'pickup' : 'delivery', speed: sb.speed === 'express' ? 'express' : 'standard', region: sb.region, address: customer.address, lat: sb.lat, lng: sb.lng, subtotal });
     if (!q.ok) return send(res, 400, { error: q.error, field: q.field === 'address' ? 'address' : 'shipping' });
-    const shipping = { method: q.method, fee: q.fee, label: q.label, ...(q.region ? { region: q.region } : {}), ...(q.km != null ? { km: q.km, road: q.road } : {}), ...(q.free ? { free: true } : {}), ...(q.pending ? { pending: true } : {}) };
+    const shipping = { method: q.method, fee: q.fee, label: q.label, ...(q.speed ? { speed: q.speed, eta: q.eta } : {}), ...(q.region ? { region: q.region } : {}), ...(q.km != null ? { km: q.km, road: q.road } : {}), ...(q.free ? { free: true } : {}), ...(q.pending ? { pending: true } : {}) };
     if (q.to) customer.location = q.to;
     const total = Math.round((subtotal + q.fee) * 100) / 100;
 

@@ -11,20 +11,32 @@ const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/
 
 export const UAE_REGIONS = ['Sharjah', 'Dubai', 'Ajman', 'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah', 'Abu Dhabi', 'Al Ain'];
 
+// Two delivery speeds: Standard (fee) and Express (express). A blank price means that speed isn't offered.
 export function defaultShipping(currency = 'AED') {
-  return { mode: 'off', km: { base: 0, perKm: 0, maxKm: 0 }, regions: currency === 'AED' ? UAE_REGIONS.map((name) => ({ name, fee: null })) : [], freeOver: 0, pickup: { enabled: false, note: '' } };
+  return {
+    mode: 'off',
+    km: { base: 0, perKm: 0, maxKm: 0, express: { enabled: false, base: 0, perKm: 0 } },
+    regions: currency === 'AED' ? UAE_REGIONS.map((name) => ({ name, fee: null, express: null })) : [],
+    speeds: { standardEta: '2–3 days', expressEta: 'Same day', expressNote: '' },
+    freeOver: 0, pickup: { enabled: false, note: '' }
+  };
 }
+const price = (v) => (v === null || v === '' || v === undefined ? null : r2(num(v, 1e5)));
 
 export function cleanShipping(b = {}, currency = 'AED') {
   const d = defaultShipping(currency);
   const mode = ['off', 'km', 'region'].includes(b.mode) ? b.mode : 'off';
   const regions = (Array.isArray(b.regions) ? b.regions : d.regions).slice(0, 40)
-    .map((r) => ({ name: txt(r?.name, 60), fee: r?.fee === null || r?.fee === '' || r?.fee === undefined ? null : r2(num(r.fee, 1e5)) }))
+    .map((r) => ({ name: txt(r?.name, 60), fee: price(r?.fee), express: price(r?.express) }))
     .filter((r) => r.name);
+  const ex = b.km?.express || {};
+  const sp = b.speeds || {};
   return {
     mode,
-    km: { base: r2(num(b.km?.base, 1e5)), perKm: r2(num(b.km?.perKm, 1e4)), maxKm: Math.round(num(b.km?.maxKm, 5000)) },
+    km: { base: r2(num(b.km?.base, 1e5)), perKm: r2(num(b.km?.perKm, 1e4)), maxKm: Math.round(num(b.km?.maxKm, 5000)),
+      express: { enabled: !!ex.enabled, base: r2(num(ex.base, 1e5)), perKm: r2(num(ex.perKm, 1e4)) } },
     regions,
+    speeds: { standardEta: txt(sp.standardEta, 30) || d.speeds.standardEta, expressEta: txt(sp.expressEta, 30) || d.speeds.expressEta, expressNote: txt(sp.expressNote, 120) },
     freeOver: r2(num(b.freeOver, 1e7)),
     pickup: { enabled: !!b.pickup?.enabled, note: txt(b.pickup?.note, 160) }
   };
@@ -36,7 +48,8 @@ export function publicShipping(owner) {
   return {
     mode: s.mode,
     km: s.mode === 'km' ? s.km : null,
-    regions: s.mode === 'region' ? s.regions.filter((r) => r.fee !== null) : [],
+    regions: s.mode === 'region' ? s.regions.filter((r) => r.fee !== null || r.express !== null) : [],
+    speeds: s.speeds,
     freeOver: s.freeOver,
     pickup: s.pickup.enabled ? { enabled: true, note: s.pickup.note, address: owner.shopAddress?.text || '' } : { enabled: false },
     located: !!(owner.shopAddress?.lat && owner.shopAddress?.lng)
@@ -89,15 +102,27 @@ export async function quoteShipping(owner, req = {}) {
     if (!s.pickup.enabled) return { ok: false, error: 'This shop does not offer pickup.' };
     return { ok: true, method: 'pickup', fee: 0, label: 'Self-pickup from the shop (free)' };
   }
-  const free = s.freeOver > 0 && subtotal >= s.freeOver;
   if (s.mode === 'off') return { ok: true, method: 'delivery', fee: 0, pending: true, label: 'Delivery fee to be confirmed by the shop' };
+
+  const sp = s.speeds;
+  const names = { standard: `Standard delivery (${sp.standardEta})`, express: `Express delivery (${sp.expressEta})` };
+  // options: { standard: fee|null, express: fee|null } before free-delivery; then pick the requested speed.
+  const finish = (options, extra, where) => {
+    const offered = Object.keys(options).filter((k) => options[k] !== null);
+    if (!offered.length) return { ok: false, error: 'Delivery isn’t available there. Choose pickup or contact the shop.', field: 'region' };
+    const speed = offered.includes(req.speed) ? req.speed : offered[0];
+    const freeStd = s.freeOver > 0 && subtotal >= s.freeOver;
+    const opts = Object.fromEntries(offered.map((k) => [k, k === 'standard' && freeStd ? 0 : options[k]]));
+    const fee = opts[speed];
+    return { ok: true, method: 'delivery', speed, fee, options: opts, eta: speed === 'express' ? sp.expressEta : sp.standardEta,
+      free: speed === 'standard' && freeStd, label: `${names[speed]}${where}${fee === 0 ? ' — free' : ''}`, ...extra };
+  };
 
   if (s.mode === 'region') {
     const name = txt(req.region, 60);
-    const reg = s.regions.find((r) => r.fee !== null && r.name.toLowerCase() === name.toLowerCase());
+    const reg = s.regions.find((r) => (r.fee !== null || r.express !== null) && r.name.toLowerCase() === name.toLowerCase());
     if (!reg) return { ok: false, error: 'Please choose your delivery area.', field: 'region' };
-    const fee = free ? 0 : reg.fee;
-    return { ok: true, method: 'delivery', fee, region: reg.name, free, label: free ? `Free delivery to ${reg.name}` : `Delivery to ${reg.name}` };
+    return finish({ standard: reg.fee, express: reg.express }, { region: reg.name }, ` to ${reg.name}`);
   }
 
   // per km
@@ -108,6 +133,8 @@ export async function quoteShipping(owner, req = {}) {
   if (!to) return { ok: false, error: 'We couldn’t find that address on the map. Add the area and city, or tap “Use my location”.', field: 'address' };
   const d = await distanceKm(shop, to);
   if (s.km.maxKm > 0 && d.km > s.km.maxKm) return { ok: false, error: `Sorry, this shop delivers up to ${s.km.maxKm} km and your address is about ${d.km} km away. Choose pickup or contact the shop.`, field: 'address', km: d.km };
-  const fee = free ? 0 : r2(s.km.base + s.km.perKm * d.km);
-  return { ok: true, method: 'delivery', fee, km: d.km, road: d.road, free, to, label: free ? `Free delivery (${d.km} km)` : `Delivery · ${d.km} km${d.road ? '' : ' (approx.)'}` };
+  return finish({
+    standard: r2(s.km.base + s.km.perKm * d.km),
+    express: s.km.express.enabled ? r2(s.km.express.base + s.km.express.perKm * d.km) : null
+  }, { km: d.km, road: d.road, to }, ` · ${d.km} km${d.road ? '' : ' (approx.)'}`);
 }

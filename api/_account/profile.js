@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       rec.shipping = cleanShipping(b.shipping || {}, rec.currency);
       if (rec.shipping.mode === 'km' && !(rec.shopAddress?.lat && rec.shopAddress?.lng))
         return send(res, 400, { error: 'Per-km pricing needs your shop location. Set it in Settings → Edit details (shop address), then try again.', field: 'mode' });
-      if (rec.shipping.mode === 'region' && !rec.shipping.regions.some((r) => r.fee !== null))
-        return send(res, 400, { error: 'Add a fee to at least one region (leave a region empty to not deliver there).', field: 'regions' });
+      if (rec.shipping.mode === 'region' && !rec.shipping.regions.some((r) => r.fee !== null || r.express !== null))
+        return send(res, 400, { error: 'Add a Standard or Express fee to at least one region (leave both empty where you don’t deliver).', field: 'regions' });
       rec.updatedAt = new Date().toISOString();
       await saveUser(rec);
       return send(res, 200, { user: { ...publicUser(rec), pricing: await pricingFor(rec.currency) } });

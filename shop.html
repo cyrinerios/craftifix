@@ -124,6 +124,10 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 .shipbox{border:1.5px solid var(--line);border-radius:16px;padding:10px 14px;margin:4px 0 12px}
 .shipopt{display:grid;gap:6px;margin-bottom:8px}.shipopt label{display:flex;gap:8px;align-items:center;font-weight:600;margin:0}.shipopt input{width:auto;min-height:0}
 .locrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.speeds{display:grid;gap:8px;margin:8px 0}
+.speed{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;margin:0;font-weight:400}
+.speed input{width:auto;min-height:0}.speed span{flex:1}.speed small{display:block;color:var(--mute);font-size:12.5px}
+.speed.on{border-color:var(--plum);background:#faf3fb}
 </style>
 </head>
 <body>
@@ -249,7 +253,7 @@ function grid(){
   const c=$('cats');if(c)c.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;cat=b.textContent;grid()});
 }
 /* ----- shipping in the cart ----- */
-const ship={method:'delivery',region:'',lat:null,lng:null,quote:null,busy:false};
+const ship={method:'delivery',speed:'standard',region:'',lat:null,lng:null,quote:null,busy:false};
 const cartItems=()=>[...cart].map(([id,q])=>({p:products.find(x=>x.id===id),q})).filter(x=>x.p);
 const subtotal=()=>Math.round(cartItems().reduce((s,x)=>s+x.p.price*x.q,0)*100)/100;
 function shipCfg(){return shop.shipping||{mode:'off',pickup:{enabled:false},freeOver:0,regions:[]}}
@@ -257,10 +261,11 @@ function renderShipBox(){
   const c=shipCfg(),box=$('shipBox');let h='<h3 style="font-size:18px;margin:6px 0 8px">Delivery</h3>';
   if(c.pickup&&c.pickup.enabled)h+=`<div class="shipopt"><label><input type="radio" name="smeth" value="delivery"${ship.method==='delivery'?' checked':''}> Deliver to my address</label><label><input type="radio" name="smeth" value="pickup"${ship.method==='pickup'?' checked':''}> Self-pickup (free)</label></div>`;
   if(ship.method==='pickup')h+=`<p class="note">📍 Pick up from: <b>${esc(c.pickup.address||shop.business)}</b>${c.pickup.note?`<br>${esc(c.pickup.note)}`:''}</p>`;
-  else if(c.mode==='region')h+=`<label><span>Delivery area <span class="req">*</span></span><select id="oreg"><option value="">Choose your area…</option>${c.regions.map(r=>`<option value="${esc(r.name)}"${r.name===ship.region?' selected':''}>${esc(r.name)} — ${aed(r.fee)}</option>`).join('')}</select></label>`;
+  else if(c.mode==='region')h+=`<label><span>Delivery area <span class="req">*</span></span><select id="oreg"><option value="">Choose your area…</option>${c.regions.map(r=>`<option value="${esc(r.name)}"${r.name===ship.region?' selected':''}>${esc(r.name)}</option>`).join('')}</select></label>`;
   else if(c.mode==='km')h+=`<div class="locrow"><button type="button" class="btn ghost" id="oloc" style="min-height:38px;padding:6px 14px;font-size:14px">📍 Use my location</button><span class="note" id="kmMsg">${ship.lat?'✓ Using your current location':'The fee is worked out from your address.'}</span></div>`;
   else h+='<p class="note">The shop will confirm the delivery fee with you.</p>';
-  if(c.freeOver>0&&ship.method!=='pickup')h+=`<p class="note">🎉 Free delivery on orders over ${aed(c.freeOver)}.</p>`;
+  if(ship.method!=='pickup'&&c.mode!=='off')h+='<div id="speeds" class="speeds"></div>';
+  if(c.freeOver>0&&ship.method!=='pickup'&&c.mode!=='off')h+=`<p class="note">🎉 Free standard delivery on orders over ${aed(c.freeOver)}.</p>`;
   h+='<p class="note" id="shipMsg"></p>';
   box.innerHTML=h;
 }
@@ -271,12 +276,17 @@ async function requote(){
   if(ship.method==='delivery'&&c.mode==='region'&&!ship.region){totals();return msg('')}
   if(ship.method==='delivery'&&c.mode==='km'&&!ship.lat&&$('oaddr').value.trim().length<8){totals();return msg('Enter your address to see the delivery fee.')}
   ship.busy=true;totals();msg('Working out delivery…');
-  try{const r=await fetch(`/api/shop?u=${encodeURIComponent(shop.userId)}&action=quote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:ship.method,region:ship.region,address:$('oaddr').value.trim(),lat:ship.lat,lng:ship.lng,subtotal:sub})});
-    const j=await r.json();ship.quote=j;
+  try{const r=await fetch(`/api/shop?u=${encodeURIComponent(shop.userId)}&action=quote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:ship.method,speed:ship.speed,region:ship.region,address:$('oaddr').value.trim(),lat:ship.lat,lng:ship.lng,subtotal:sub})});
+    const j=await r.json();ship.quote=j;if(j.ok&&j.speed)ship.speed=j.speed;renderSpeeds(j);
     msg(j.ok?(j.pending?'':`${esc(j.label)}${j.free?' 🎉':''}`):`<span style="color:#b02a5a">${esc(j.error)}</span>`)}
   catch{msg('Could not work out delivery right now — the shop will confirm it.')}
   ship.busy=false;totals();
 }
+function renderSpeeds(q){const el=$('speeds');if(!el)return;
+  const sp=(shipCfg().speeds)||{standardEta:'2–3 days',expressEta:'Same day',expressNote:''};
+  if(!q||!q.ok||!q.options){el.innerHTML='';return}
+  const meta={standard:['Standard',sp.standardEta,'🚚'],express:['Express',sp.expressEta,'⚡']};
+  el.innerHTML=Object.entries(q.options).map(([k,fee])=>`<label class="speed${k===ship.speed?' on':''}"><input type="radio" name="sspeed" value="${k}"${k===ship.speed?' checked':''}><span>${meta[k][2]} <b>${meta[k][0]}</b> · ${esc(meta[k][1])}${k==='express'&&sp.expressNote?`<small>${esc(sp.expressNote)}</small>`:''}</span><b>${fee===0?'Free':aed(fee)}</b></label>`).join('')}
 function totals(){
   const sub=subtotal(),q=ship.quote,c=shipCfg();
   $('subtotal').textContent=aed(sub);
@@ -292,6 +302,7 @@ function totals(){
 document.addEventListener('change',e=>{
   if(e.target.name==='smeth'){ship.method=e.target.value;renderShipBox();requote()}
   if(e.target.id==='oreg'){ship.region=e.target.value;requote()}
+  if(e.target.name==='sspeed'){ship.speed=e.target.value;requote()}
 });
 document.addEventListener('click',e=>{if(!e.target.closest('#oloc'))return;const m=$('kmMsg');
   if(!navigator.geolocation){m.textContent='Your browser can’t share location — we’ll use your address.';return}
@@ -330,7 +341,7 @@ $('order').addEventListener('submit',async e=>{e.preventDefault();
   if(ship.quote&&!ship.quote.ok)return err(ship.quote.error);
   err('');const b=$('sendBtn');b.disabled=true;b.textContent='Sending order…';
   try{
-    const r=await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shop:shop.userId,items,customer,shipping:{method:ship.method,region:ship.region,lat:ship.lat,lng:ship.lng}})});
+    const r=await fetch('/api/order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({shop:shop.userId,items,customer,shipping:{method:ship.method,speed:ship.speed,region:ship.region,lat:ship.lat,lng:ship.lng}})});
     const j=await r.json().catch(()=>({}));
     if(!r.ok){err(j.error||'Could not send the order. Please try again.');const map={name:'oname',email:'oemail',whatsapp:'owa',address:'oaddr'};if(j.field&&map[j.field])$(map[j.field]).focus();return}
     store.set({shop:uid,orderNo:j.orderNo,contact:customer.email});
