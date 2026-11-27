@@ -5,18 +5,6 @@ import { assertConfigured, normId, validId, getUser, getProducts, body, send, fa
 // GET /api/shop?u=<userId> -> public storefront data (published products only, no costs)
 // POST /api/shop?u=<userId>&action=quote { method, region, address, lat, lng, subtotal } -> shipping fee for the cart
 export default async function handler(req, res) {
-  // TEMPORARY (video asset export): small base64 copy of a shop image via Vercel image optimisation.
-  if (String(req.query?.action || '') === 'imgb64') {
-    try {
-      const src = String(req.query?.src || '');
-      if (!/^https:\/\/hkmfx1sggl44yv8n\.public\.blob\.vercel-storage\.com\/images\/[\w\/.-]+$/.test(src)) return send(res, 400, { error: 'bad src' });
-      const w = [256, 384, 640].includes(Number(req.query?.w)) ? Number(req.query.w) : 256;
-      const r = await fetch(`https://${req.headers['x-forwarded-host'] || req.headers.host}/_vercel/image?url=${encodeURIComponent(src)}&w=${w}&q=${Number(req.query?.q) || 70}`);
-      const buf = Buffer.from(await r.arrayBuffer());
-      if (!r.ok || buf.length > 60000) return send(res, 502, { error: 'resize failed', status: r.status, bytes: buf.length });
-      return send(res, 200, { type: r.headers.get('content-type'), bytes: buf.length, b64: buf.toString('base64') });
-    } catch (e) { return send(res, 500, { error: e.message }); }
-  }
   const quote = String(req.query?.action || '') === 'quote';
   if (req.method !== (quote ? 'POST' : 'GET')) { res.setHeader('Allow', quote ? 'POST' : 'GET'); return send(res, 405, { error: 'Method not allowed' }); }
   try {
