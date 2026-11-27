@@ -211,6 +211,20 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .join p.l{font-size:18.5px;color:#f6d3e2;margin-top:12px}
 .sform{background:var(--panel);color:var(--ink);border-radius:20px;padding:24px}
 .sform .btn{width:100%;margin-top:6px}
+/* free-account pop-up for the pricing calculator */
+dialog#joinModal{border:0;padding:0;border-radius:24px;width:min(720px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);color:var(--ink);box-shadow:0 30px 80px rgba(46,16,49,.45)}
+dialog#joinModal::backdrop{background:rgba(36,12,40,.6);backdrop-filter:blur(2px)}
+.jm-head{background:linear-gradient(135deg,#4a1d4f,#7a2f73);color:#fff;padding:26px 28px 22px;position:relative}
+.jm-head h3{font:700 clamp(22px,3vw,28px)/1.2 var(--display,Poppins),sans-serif;margin:0 0 8px;padding-right:40px}
+.jm-head p{margin:0;color:#f6d3e2;font-size:16px;line-height:1.5}
+.jm-head ul{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.jm-head li{background:rgba(255,255,255,.14);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:600}
+.jm-x{position:absolute;top:14px;right:14px;width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+.jm-x:hover{background:rgba(255,255,255,.28)}
+#joinModal .sform{border-radius:0;padding:22px 28px 26px}
+.calc.locked input,.calc.locked select{cursor:pointer}
+.calc-lock{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:12px 16px;border-radius:14px;background:#fff4d9;border:1px solid #ffd77a;font-size:15px}
+.calc-lock b{color:#4a1d4f}.calc-lock button{margin-left:auto}
 .err{color:#c62f5f;font-size:14px;min-height:20px;margin:-4px 0 8px}
 .ok{text-align:center;padding:20px 6px}
 .ok b{font:800 24px Outfit,sans-serif;display:block;margin-bottom:6px}
@@ -340,7 +354,8 @@ footer a:hover{color:#fff}
 <section class="band alt" id="calculator">
   <div class="wrap">
     <div class="head"><h2>What should you charge for that bouquet?</h2><p>Add your yarn, extras, packaging and the hours you spent. Craftifix adds overhead, applies your pricing method and shows a selling price you can save straight to the product.</p></div>
-    <div class="calc">
+    <div class="calc-lock" id="calcLock"><span>🔒 <b>Try it with your own numbers:</b> create a free account to use the pricing calculator. 30 days free, no card needed.</span><button class="btn gold" type="button" data-join>Create free account</button></div>
+    <div class="calc locked" id="calcBox">
       <form class="form" id="calcForm" onsubmit="return false">
         <label><span>Product name</span><input id="pname" value="Custom crochet rose bouquet (12 stems)"></label>
         <div class="row">
@@ -432,6 +447,16 @@ footer a:hover{color:#fff}
     <div class="faq" id="faqs"></div>
   </div>
 </section>
+
+<dialog id="joinModal" aria-labelledby="jmTitle">
+  <div class="jm-head">
+    <button class="jm-x" type="button" id="jmClose" aria-label="Close">×</button>
+    <h3 id="jmTitle">Use the pricing calculator for free</h3>
+    <p>Create your Craftifix account to price your own products and save the price straight to your listings.</p>
+    <ul><li>30 days free</li><li>No card needed</li><li>0% commission</li></ul>
+  </div>
+  <div id="jmBody"></div>
+</dialog>
 
 <section class="band join" id="join">
   <div class="wrap">
@@ -560,7 +585,28 @@ $('method').addEventListener('click',e=>{const b=e.target.closest('button');if(!
   $('pct').disabled=method==='hourly';
   if(method==='margin'&&num('pct')>90)$('pct').value=40;calc()});
 $('calcForm').addEventListener('input',calc);
-$('saveBtn').addEventListener('click',()=>{$('toast').textContent='Saved to “'+($('pname').value.trim()||'Your product')+'” — in the app this updates the product listing.';});
+$('saveBtn').addEventListener('click',()=>{if(!signedIn)return openJoin();location.href='/products.html';});
+
+/* The calculator is a preview for visitors: using it opens a free sign-up pop-up (the same sign-up form, moved into the pop-up). */
+let signedIn=false;
+const jm=$('joinModal'),sbox=$('sbox'),sboxHome=document.createComment('sbox');sbox.before(sboxHome);
+function openJoin(){
+  if(signedIn||jm.open)return;
+  if(document.activeElement)document.activeElement.blur();
+  $('jmBody').append(sbox);
+  if(jm.showModal)jm.showModal();else{location.hash='join';return}
+  setTimeout(()=>{const f=$('sn');if(f)f.focus()},50);
+}
+jm.addEventListener('close',()=>{sboxHome.after(sbox);$('saveBtn').focus({preventScroll:true})});
+$('jmClose').addEventListener('click',()=>jm.close());
+jm.addEventListener('click',e=>{if(e.target===jm)jm.close()});   // click outside the box closes it
+document.querySelectorAll('[data-join]').forEach(b=>b.addEventListener('click',openJoin));
+function gate(e){if(signedIn)return;e.preventDefault();openJoin()}
+$('calcForm').addEventListener('pointerdown',e=>{if(e.target.closest('input,select,button'))gate(e)});
+$('calcForm').addEventListener('focusin',e=>{if(!signedIn&&!jm.open)gate(e)});
+$('calcForm').addEventListener('keydown',gate);
+$('calcForm').addEventListener('click',e=>{if(!signedIn&&e.target.closest('button,select,input')){e.preventDefault();e.stopPropagation();openJoin()}},true);
+$('calcForm').querySelectorAll('input').forEach(i=>i.readOnly=true);
 calc();
 
 /* flows */
@@ -646,7 +692,9 @@ $('signup').addEventListener('submit',async e=>{e.preventDefault();
   }catch(x){err('Network problem — please check your connection and try again.')}
   finally{btn.disabled=false;btn.textContent='Start my 30-day free trial'}
 });
-fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.user)$('navAcct').textContent='My account'}).catch(()=>{});
+fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{if(j&&j.user){$('navAcct').textContent='My account';
+  // Signed-in owners can use the calculator here; saving takes them to My products.
+  signedIn=true;$('calcLock').hidden=true;$('calcBox').classList.remove('locked');$('calcForm').querySelectorAll('input').forEach(i=>i.readOnly=false);$('saveBtn').textContent='Open My products to save a price'}}).catch(()=>{});
 }
 </script>
 </body>
