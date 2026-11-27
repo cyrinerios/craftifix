@@ -3,8 +3,17 @@ import { money, assertConfigured, requireUser, getUser, saveUser, getOrders, sav
 // GET /api/orders                 -> the logged-in owner's received orders
 // PUT /api/orders?id=...          -> { status } update an order's status and notify the customer
 // PUT /api/orders?id=...&notify=1 -> re-send the customer update for the current status
-const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'completed', 'cancelled'];
-export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', completed: 'Completed', cancelled: 'Cancelled' };
+const STATUSES = ['new', 'confirmed', 'in_production', 'ready', 'shipped', 'completed', 'cancelled'];
+export const LABEL = { new: 'New', confirmed: 'Confirmed', in_production: 'In production', ready: 'Ready for delivery', shipped: 'Order shipped', completed: 'Completed', cancelled: 'Cancelled' };
+
+// Shipment details the owner gives when marking an order as shipped. The tracking link is required.
+const txt = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+export function cleanShipment(b = {}) {
+  let url = txt(b.url, 500);
+  if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+  try { const u = new URL(url); if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.')) url = ''; } catch { url = ''; }
+  return { courier: txt(b.courier, 60), trackingNo: txt(b.trackingNo, 60), url };
+}
 
 export function customerMessage(order, owner, trackUrl, invUrl) {
   const aed = (n) => money(n, order.currency || owner.currency);
@@ -16,6 +25,7 @@ export function customerMessage(order, owner, trackUrl, invUrl) {
     confirmed: `Good news — your order is confirmed! ✅\n${ref}\nWe'll start crocheting it soon and keep you updated.`,
     in_production: `Your order is now being handmade 🧶\n${ref}\nWe'll let you know as soon as it's ready.`,
     ready: `Your order is ready for delivery 📦\n${ref}\nDelivery address: ${order.customer.address}\nWe'll contact you to arrange the delivery time.`,
+    shipped: `Your order is on its way! 🚚\n${ref}${order.shipment?.courier ? `\nCourier: ${order.shipment.courier}` : ''}${order.shipment?.trackingNo ? `\nTracking number: ${order.shipment.trackingNo}` : ''}${order.shipment?.url ? `\nTrack your parcel: ${order.shipment.url}` : ''}\nDelivery address: ${order.customer.address}`,
     completed: `Your order is complete — thank you for shopping with us! 💕\n${ref}${invUrl ? `\nYour invoice (${order.invoice?.no || 'invoice'}): ${invUrl}` : ''}\nWe'd love to hear what you think.`,
     cancelled: `Your order has been cancelled.\n${ref}\nIf you have any questions, just reply to this message.`,
     new: `We've received your order and will confirm it shortly.\n${ref}`
@@ -33,6 +43,7 @@ export async function notify(order, owner, trackUrl, invUrl) {
     <table style="border-collapse:collapse;width:100%;margin-top:12px">${order.items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
     ${order.shipping ? `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${escHtml(order.shipping.label)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${order.shipping.pending ? 'to be confirmed' : aed(order.shipping.fee)}</td></tr>` : ''}
     <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(order.total)}</b></td></tr></table>
+    ${order.status === 'shipped' && order.shipment?.url ? `<p style="margin:18px 0"><a href="${escHtml(order.shipment.url)}" style="display:inline-block;background:#4a1d4f;color:#fff;text-decoration:none;padding:11px 20px;border-radius:999px;font-weight:bold">Track your parcel${order.shipment.courier ? ' with ' + escHtml(order.shipment.courier) : ''}</a></p>` : ''}
     ${invUrl ? `<p style="margin:18px 0"><a href="${escHtml(invUrl)}" style="display:inline-block;background:#4a1d4f;color:#fff;text-decoration:none;padding:11px 20px;border-radius:999px;font-weight:bold">View &amp; download invoice ${escHtml(order.invoice?.no || '')}</a></p>` : ''}</div>`;
   const email = await deliver({
     action: 'status_update',
@@ -70,7 +81,13 @@ export default async function handler(req, res) {
       if (!resend) {
         const status = String(body(req).status || '');
         if (!STATUSES.includes(status)) return send(res, 400, { error: 'Unknown status.' });
-        if (status === o.status) return send(res, 200, { orders: withLinks(orders), notification: null });
+        const b = body(req);
+        if (status === 'shipped' || b.shipment) {
+          const sh = cleanShipment(b.shipment || o.shipment || {});
+          if (status === 'shipped' && !sh.url) return send(res, 400, { error: 'Add the shipment tracking link (for example the courier’s tracking page) so the customer can follow the parcel.', field: 'shipmentUrl' });
+          if (sh.url) o.shipment = { ...sh, at: o.shipment?.url === sh.url ? o.shipment.at : new Date().toISOString() };
+        }
+        if (status === o.status && !b.shipment) return send(res, 200, { orders: withLinks(orders), notification: null });
         o.status = status;
         if (status === 'completed' && assignInvoices(owner, [o])) await saveUser(owner);
       }

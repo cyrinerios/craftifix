@@ -128,6 +128,7 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 .speed{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:14px;padding:10px 12px;cursor:pointer;margin:0;font-weight:400}
 .speed input{width:auto;min-height:0}.speed span{flex:1}.speed small{display:block;color:var(--mute);font-size:12.5px}
 .speed.on{border-color:var(--plum);background:#faf3fb}
+.shipcard{margin-top:14px;border:1.5px solid #bcd9f2;background:#eef6fd;border-radius:16px;padding:12px 14px;display:grid;gap:4px;font-size:15px}
 </style>
 </head>
 <body>
@@ -370,7 +371,7 @@ $('order').addEventListener('submit',async e=>{e.preventDefault();
   finally{b.disabled=false;b.textContent='Send order'}
 });
 /* ---------- order tracking ---------- */
-const STEPS=[['new','Order received','The shop has your order'],['confirmed','Confirmed','The shop confirmed your order'],['in_production','Being handmade','Your piece is being crocheted'],['ready','Ready for delivery','The shop will arrange delivery'],['completed','Completed','Delivered — thank you!']];
+const STEPS=[['new','Order received','The shop has your order'],['confirmed','Confirmed','The shop confirmed your order'],['in_production','Being handmade','Your piece is being crocheted'],['ready','Ready for delivery','The shop will arrange delivery'],['shipped','Shipped','Your parcel is on its way'],['completed','Completed','Delivered — thank you!']];
 const fmtD=d=>new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 const store={get(){try{return JSON.parse(localStorage.getItem('ch_last_order')||'null')}catch{return null}},set(v){try{localStorage.setItem('ch_last_order',JSON.stringify(v))}catch{}}};
 function openTrack(no,contact){
@@ -391,6 +392,7 @@ function renderTrack(o,sh){
       <h3>${cancelled?'This order was cancelled':esc(cur[1])}</h3><span class="note">${cancelled?'Contact the shop if you have questions.':esc(cur[2])} · updated ${esc(fmtD(o.updatedAt))}</span></div>
     ${cancelled?'':`<ol class="tl">${STEPS.map((st,i)=>`<li class="${i<idx?'tdone':i===idx?(o.status==='completed'?'tdone':'cur'):'todo'}"><span class="dot">${i<idx||o.status==='completed'&&i===idx?'✓':''}</span><b>${st[1]}</b><small>${i<=idx?esc(when(st[0])||''):''}</small></li>`).join('')}</ol>`}
     <div class="tsum">${o.items.map(i=>`<div><span>${i.qty} × ${esc(i.name)}</span><b>${aed(i.lineTotal)}</b></div>`).join('')}${o.shipping?`<div><span>${esc(o.shipping.label)}</span><b>${o.shipping.pending?'To be confirmed':o.shipping.fee?aed(o.shipping.fee):'Free'}</b></div>`:''}<div><b>Total</b><b>${aed(o.total)}</b></div><div><span>Delivery to</span><span style="text-align:right">${esc(o.deliveryArea)}</span></div></div>
+    ${o.shipment?`<div class="shipcard"><b>🚚 Your parcel is on its way</b>${o.shipment.courier?`<span>Courier: ${esc(o.shipment.courier)}</span>`:''}${o.shipment.trackingNo?`<span>Tracking number: <b>${esc(o.shipment.trackingNo)}</b></span>`:''}<a class="btn plumb" style="width:100%;margin-top:8px" target="_blank" rel="noopener" href="${esc(o.shipment.url)}">Track your parcel${o.shipment.courier?' with '+esc(o.shipment.courier):''}</a></div>`:''}
     ${o.invoice?`<a class="btn plumb" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="${esc(o.invoice.url)}">🧾 View &amp; download invoice ${esc(o.invoice.no)}</a>`:''}
     ${sh.whatsapp?`<a class="btn wa" style="width:100%;margin-top:14px" target="_blank" rel="noopener" href="https://wa.me/${esc(sh.whatsapp.replace(/\D/g,''))}?text=${encodeURIComponent(`Hi ${sh.business}, I'd like to ask about my order ${o.orderNo}.`)}">Ask the shop on WhatsApp</a>`:''}
     <button class="btn ghost" type="button" id="trackAnother" style="width:100%;margin-top:10px">Track another order</button>`;
