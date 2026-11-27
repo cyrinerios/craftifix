@@ -218,13 +218,13 @@ footer{background:#2f1233;color:#e7c5d5;font-size:14px;text-align:center;padding
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const main=$('main');
-const ALL=[['standard','Standard',10,'Up to 5 product listings · 5 orders from inquiries a month'],['premium','Premium',30,'Unlimited product listings · unlimited orders from inquiries']];
+const ALL=[['standard','Standard',5,'Up to 5 product listings · 5 orders from inquiries a month'],['premium','Premium',15,'Unlimited product listings · unlimited orders from inquiries']];
 const FEAT=[['dashboard','Dashboard'],['pricingCalculator','Pricing calculator'],['onlineStore','Online store'],['customers','Customer management'],['inventory','Inventory'],['salesReports','Sales reports'],['productionTracking','Production tracking'],['staffAccounts','Staff accounts']];
 const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
-const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'AED '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
-function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='AED')return'';
+const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'USD '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
+function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='USD')return'';
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
-  return `<p class="msg fxn">Prices are set in AED and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 AED = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
+  return `<p class="msg fxn">Plan prices are set in US dollars (Standard USD 5, Premium USD 15) and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 USD = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
 let billingInfo=null;
 const SUBLBL={active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
 const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
@@ -492,7 +492,7 @@ function showAccount(u,welcome){
     </div>
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
-      <div><span>Price</span><b>${planLabel(u,u.plan)} / month</b></div>${u.pricing&&u.pricing.currency!=='AED'?`<div><span>Base price</span><b>AED ${p.price} / month</b></div>`:''}
+      <div><span>Price</span><b>${planLabel(u,u.plan)} / month</b></div>${u.pricing&&u.pricing.currency!=='USD'?`<div><span>Base price</span><b>USD ${p.price} / month</b></div>`:''}
       <div><span>Status</span><b style="color:${subLbl(u)[1]}">${esc(subLbl(u)[0])}</b></div>
       <div><span>Payment</span><b>${esc(payRow(u))}</b></div>
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>

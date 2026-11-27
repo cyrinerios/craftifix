@@ -4,7 +4,7 @@
 //   STRIPE_WEBHOOK_SECRET  whsec_... from the webhook endpoint in Stripe
 // Without STRIPE_SECRET_KEY the site behaves as before (payment skipped).
 import crypto from 'node:crypto';
-import { PLANS, pricingFor, validCurrency } from './_lib.js';
+import { PLANS, BASE_CURRENCY, pricingFor, validCurrency } from './_lib.js';
 
 // Keys are trimmed of stray spaces/quotes from copy-pasting.
 const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
@@ -72,8 +72,8 @@ const minor = (amount, cur) => THREE_DEC.has(cur) ? Math.round(amount * 100) * 1
 
 // Monthly price for a plan in the shop's currency (falls back to AED).
 export async function planPrice(plan, currency) {
-  const p = await pricingFor(validCurrency(currency) || 'AED');
-  return { currency: p.currency, amount: p.plans[plan].amount, rate: p.rate, priceAED: PLANS[plan].price };
+  const p = await pricingFor(validCurrency(currency) || BASE_CURRENCY);
+  return { currency: p.currency, amount: p.plans[plan].amount, rate: p.rate, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY };
 }
 const priceData = (product, price) => ({ currency: price.currency.toLowerCase(), product, unit_amount: minor(price.amount, price.currency), recurring: { interval: 'month' } });
 
@@ -101,9 +101,9 @@ export async function createCheckout(rec, plan, origin) {
   let session;
   try { session = await make(price); }
   catch (e) {
-    // If Stripe can't charge in this currency, charge the AED price instead.
-    if (price.currency === 'AED' || !/currency/i.test(e.message)) throw e;
-    price = await planPrice(plan, 'AED');
+    // If Stripe can't charge in this currency, charge the US dollar price instead.
+    if (price.currency === BASE_CURRENCY || !/currency/i.test(e.message)) throw e;
+    price = await planPrice(plan, BASE_CURRENCY);
     session = await make(price);
   }
   return { url: session.url, price };
@@ -146,7 +146,7 @@ export function applySubscription(rec, sub) {
     cancelAtPeriodEnd: !!sub.cancel_at_period_end,
     currency: cur || rec.subscription?.currency,
     amount: amt != null ? amt / (THREE_DEC.has(cur) ? 1000 : 100) : rec.subscription?.amount,
-    priceAED: PLANS[plan].price, changedAt: new Date().toISOString()
+    basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, changedAt: new Date().toISOString()
   };
   rec.updatedAt = new Date().toISOString();
   return rec;

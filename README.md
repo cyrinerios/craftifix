@@ -2,7 +2,7 @@
 
 Marketing website for **Craftifix** — the subscription business platform for crocheters and handmade makers (storefront, pricing calculator, quotations, invoices, orders, inventory and reports).
 
-The site is a single self-contained `index.html` (no build step). It includes a working crochet pricing calculator, a dashboard preview, plans (Standard AED 10, Premium AED 30) and a sign-up form preview.
+The site is a single self-contained `index.html` (no build step). It includes a working crochet pricing calculator, a dashboard preview, plans (Standard USD 5, Premium USD 15) and a sign-up form preview.
 
 ## Deploy
 Connected to Vercel: every push to `main` deploys automatically.
@@ -70,15 +70,15 @@ Open `index.html` in a browser.
 
 ## Plan limits
 
-- **Standard (AED 10/month):** up to 5 product listings (drafts count) and 5 confirmed orders converted from inquiries per calendar month (UAE time; resets on the 1st). Orders customers place directly in the shop are not limited.
-- **Premium (AED 30/month):** unlimited product listings and unlimited orders from inquiries.
+- **Standard (USD 5/month):** up to 5 product listings (drafts count) and 5 confirmed orders converted from inquiries per calendar month (UAE time; resets on the 1st). Orders customers place directly in the shop are not limited.
+- **Premium (USD 15/month):** unlimited product listings and unlimited orders from inquiries.
 - Limits are enforced by the API (`/api/products` create, `/api/inquiries?action=convert`, and downgrading in `/api/plan`), and shown to the owner on the Dashboard, Inquiries, My products and Settings pages.
 - Older accounts map automatically: Starter → Standard, Professional/Business → Premium.
 
 ## Subscription price in the shop currency
 
-Plan prices are set in AED (Standard 10, Premium 30) and shown in each shop's currency, converted at the day's rate from
-ExchangeRate-API's free open endpoint (`https://open.er-api.com/v6/latest/AED`, updates daily, attribution link shown).
+Plan prices are set in US dollars (Standard 5, Premium 15) and shown in each shop's currency, converted at the day's rate from
+ExchangeRate-API's free open endpoint (`https://open.er-api.com/v6/latest/USD`, updates daily, attribution link shown).
 Rates are cached for 12 hours; if the service is unreachable, approximate built-in rates are used and labelled as such.
 `GET /api/rates?currency=PHP` returns the converted plan prices (public, CDN-cached). Signup and plan changes record the
 currency, converted amount, AED base price and rate on the account's subscription.
@@ -93,7 +93,7 @@ Stripe webhook endpoint: `https://craftifix-app.vercel.app/api/stripe/webhook`, 
 `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
 
 How it works (`api/billing.js`, `api/_stripe.js`): signup sends the owner to Stripe Checkout for a monthly subscription in
-their shop currency (converted from AED; falls back to AED if Stripe can't charge that currency). Products
+their shop currency (converted from USD; falls back to USD if Stripe can't charge that currency). Products
 `craftifix_standard` and `craftifix_premium` are created automatically. The webhook marks the account active and stores the
 renewal date. Plan changes switch the Stripe subscription with proration. Settings has Pay now and Manage billing
 (Stripe customer portal). Shops whose subscription is pending, unpaid or cancelled are closed to customers. Without

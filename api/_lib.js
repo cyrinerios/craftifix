@@ -11,12 +11,12 @@ const SESSION_DAYS = 7;
 
 export const PLANS = {
   standard: {
-    id: 'standard', name: 'Standard', price: 10,
+    id: 'standard', name: 'Standard', price: 5,
     limits: { products: 5, inquiryOrdersPerMonth: 5 },
     features: { dashboard: 'Basic', pricingCalculator: 'Full', onlineStore: 'Basic', customers: 'Basic', inventory: 'Limited', salesReports: 'Basic', productionTracking: 'No', staffAccounts: 'No' }
   },
   premium: {
-    id: 'premium', name: 'Premium', price: 30,
+    id: 'premium', name: 'Premium', price: 15,
     limits: { products: null, inquiryOrdersPerMonth: null },
     features: { dashboard: 'Advanced', pricingCalculator: 'Full', onlineStore: 'Customizable', customers: 'Full', inventory: 'Full', salesReports: 'Advanced', productionTracking: 'Full', staffAccounts: 'Multiple' }
   }
@@ -345,13 +345,15 @@ export function money(n, cur = 'AED') {
 }
 
 // ---------- Subscription prices in the shop's currency ----------
-// Plan prices are set in AED and converted with the day's rate from ExchangeRate-API's free endpoint
+// Plan prices are set in US dollars (BASE_CURRENCY) and converted with the day's rate from ExchangeRate-API's free endpoint
 // (https://www.exchangerate-api.com — attribution required, updates once a day). Rates are cached for
 // 12 hours per server instance; if the service can't be reached we fall back to approximate rates.
-const FX_URL = 'https://open.er-api.com/v6/latest/AED';
+export const BASE_CURRENCY = 'USD';
+const FX_URL = 'https://open.er-api.com/v6/latest/' + BASE_CURRENCY;
 const FX_TTL = 12 * 3600e3;
-const FX_FALLBACK = { AED: 1, SAR: 1.0211, QAR: 0.9912, KWD: 0.0836, BHD: 0.1026, OMR: 0.1047, USD: 0.2723, EUR: 0.235, GBP: 0.205,
-  PHP: 16.1, INR: 23.6, PKR: 76.4, EGP: 13.3, JOD: 0.1931, LKR: 82, NPR: 37.8, BDT: 33.2, CAD: 0.38, AUD: 0.42 };
+// Approximate rates per 1 USD, used only if the rate service can't be reached.
+const FX_FALLBACK = { USD: 1, AED: 3.6725, SAR: 3.75, QAR: 3.64, KWD: 0.307, BHD: 0.376, OMR: 0.385, EUR: 0.86, GBP: 0.75,
+  PHP: 63.8, INR: 86.7, PKR: 280, EGP: 49, JOD: 0.709, LKR: 300, NPR: 139, BDT: 122, CAD: 1.39, AUD: 1.53 };
 let fxCache = null;
 export async function getFx() {
   if (fxCache && Date.now() - fxCache.fetchedAt < FX_TTL) return fxCache;
@@ -367,22 +369,22 @@ export async function getFx() {
   return fxCache;
 }
 const decimals = (c) => { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: c }).resolvedOptions().maximumFractionDigits; } catch { return 2; } };
-export function convertFromAED(aed, cur, rates) {
-  const c = validCurrency(cur) || 'AED';
-  if (c === 'AED') return { amount: aed, rate: 1 };
+export function convertFromBase(base, cur, rates) {
+  const c = validCurrency(cur) || BASE_CURRENCY;
+  if (c === BASE_CURRENCY) return { amount: base, rate: 1 };
   const rate = Number(rates[c]) || FX_FALLBACK[c];
   const f = 10 ** decimals(c);
-  return { amount: Math.round(aed * rate * f) / f, rate };
+  return { amount: Math.round(base * rate * f) / f, rate };
 }
 export async function pricingFor(cur) {
-  const currency = validCurrency(cur) || 'AED';
+  const currency = validCurrency(cur) || BASE_CURRENCY;
   const fx = await getFx();
   const plans = {};
   for (const p of Object.values(PLANS)) {
-    const { amount, rate } = convertFromAED(p.price, currency, fx.rates);
-    plans[p.id] = { aed: p.price, amount, label: money(amount, currency) };
+    const { amount } = convertFromBase(p.price, currency, fx.rates);
+    plans[p.id] = { base: p.price, baseLabel: money(p.price, BASE_CURRENCY), amount, label: money(amount, currency) };
   }
-  return { currency, rate: convertFromAED(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
+  return { currency, baseCurrency: BASE_CURRENCY, rate: convertFromBase(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
     source: 'ExchangeRate-API', sourceUrl: 'https://www.exchangerate-api.com', plans };
 }
 
@@ -488,7 +490,7 @@ export function accountForSheet(rec) {
   const st = rec.subscription?.status || 'active';
   return {
     userId: rec.userId, name: rec.name, business: rec.business, email: rec.email, whatsapp: rec.whatsapp || '',
-    plan: p.name, planPrice: p.price, status: st[0].toUpperCase() + st.slice(1),
+    plan: p.name, planPrice: money(p.price, BASE_CURRENCY), status: st[0].toUpperCase() + st.slice(1),
     payment: rec.subscription?.paymentStatus === 'skipped' ? 'Skipped' : (rec.subscription?.paymentStatus || ''),
     createdAt: rec.createdAt, updatedAt: rec.updatedAt || rec.createdAt, currency: rec.currency || 'AED',
     logo: rec.logo || '', social: rec.social || {}

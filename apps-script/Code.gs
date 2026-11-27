@@ -226,7 +226,7 @@ function deleteProduct_(id) {
   return true;
 }
 
-const ACCOUNT_HEADERS = ['User ID', 'Name', 'Business', 'Email', 'WhatsApp', 'Plan', 'Plan price (AED/month)', 'Subscription status', 'Payment',
+const ACCOUNT_HEADERS = ['User ID', 'Name', 'Business', 'Email', 'WhatsApp', 'Plan', 'Plan price (per month)', 'Subscription status', 'Payment',
   'Member since', 'Last updated', 'Products', 'Orders', 'Order value', 'Shop currency', 'Logo', 'Instagram', 'Facebook', 'TikTok'];
 
 function upsertAccount_(a) {

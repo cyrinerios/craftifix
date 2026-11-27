@@ -1,6 +1,6 @@
 import { stripeEnabled, createCheckout } from '../_stripe.js';
 import { geocode, coords, defaultShipping } from '../_shipping.js';
-import { PLANS, pricingFor, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
+import { PLANS, BASE_CURRENCY, pricingFor, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'POST')) return;
@@ -46,9 +46,9 @@ export default async function handler(req, res) {
       passwordHash: await hashPassword(password),
       subscription: stripeEnabled()
         ? { status: 'pending', billing: 'monthly', provider: 'stripe', paymentStatus: 'pending', startedAt: now,
-          currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate }
+          currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate }
         : { status: 'active', billing: 'monthly', paymentStatus: 'skipped', startedAt: now,
-        currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate },
+        currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate },
       createdAt: now, updatedAt: now
     };
     try { await saveUser(rec, { create: true }); }

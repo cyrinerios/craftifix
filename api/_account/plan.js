@@ -1,5 +1,5 @@
 import { stripeEnabled, switchPlan, createCheckout, applySubscription } from '../_stripe.js';
-import { PLANS, assertConfigured, readSession, getUser, getProducts, getOrders, planUsage, pricingFor, saveUser, publicUser, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
+import { PLANS, BASE_CURRENCY, assertConfigured, readSession, getUser, getProducts, getOrders, planUsage, pricingFor, saveUser, publicUser, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 // Change the logged-in user's plan.
 // With Stripe set up: an active Stripe subscription is switched (prorated); otherwise the owner is sent to Stripe Checkout.
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     rec.plan = plan;
     rec.subscription = { ...rec.subscription, status: 'active', paymentStatus: 'skipped', changedAt: now,
-      currency: pricing.currency, amount: pricing.plans[plan].amount, priceAED: PLANS[plan].price, rate: pricing.rate };
+      currency: pricing.currency, amount: pricing.plans[plan].amount, basePrice: PLANS[plan].price, baseCurrency: BASE_CURRENCY, rate: pricing.rate };
     rec.updatedAt = now;
     await saveUser(rec);
     await syncAccount(rec);

@@ -1,7 +1,7 @@
 import { stripeEnabled, stripeMode, stripeKeyKind } from '../_stripe.js';
 import { pricingFor, send, onlyMethod, fail } from '../_lib.js';
 
-// Public: plan prices converted from AED into a currency. GET /api/rates?currency=PHP
+// Public: plan prices converted from US dollars into a currency. GET /api/rates?currency=PHP
 export default async function handler(req, res) {
   if (!onlyMethod(req, res, 'GET')) return;
   try {
