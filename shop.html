@@ -38,6 +38,24 @@ main{flex:1;max-width:1240px;width:100%;margin:0 auto;padding:clamp(22px,3vw,40p
 .p{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
 .p .im{aspect-ratio:1;background:var(--card);display:grid;place-items:center;overflow:hidden}
 .p .im img{width:100%;height:100%;object-fit:cover}
+.p .im{position:relative}
+.p .shr{position:absolute;top:10px;right:10px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;background:rgba(255,255,255,.94);color:#4a1d4f;font:700 14px Outfit,sans-serif;padding:8px 13px;cursor:pointer;box-shadow:0 4px 14px rgba(46,16,49,.18)}
+.p .shr:hover{background:#fff;transform:translateY(-1px)}
+.p.hilite{box-shadow:0 0 0 4px #ffb627,0 18px 40px rgba(74,29,79,.18);transition:box-shadow .4s}
+dialog#shareDlg{border:0;padding:0;border-radius:22px;width:min(560px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow:auto;box-shadow:0 30px 80px rgba(46,16,49,.45)}
+dialog#shareDlg::backdrop{background:rgba(36,12,40,.55)}
+#shareDlg .sh-top{display:flex;gap:14px;align-items:center;padding:20px 22px;border-bottom:1px solid #f1e4ec;position:relative}
+#shareDlg .sh-top img{width:64px;height:64px;border-radius:12px;object-fit:cover;flex:none;background:#fdf0f6}
+#shareDlg .sh-top b{display:block;font:700 18px Outfit,sans-serif;padding-right:34px}#shareDlg .sh-top small{color:#7a6380}
+#shareDlg .sh-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:0;background:#f6eef3;font-size:20px;cursor:pointer;color:#4a1d4f}
+#shareDlg .sh-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;padding:18px 22px 8px}
+#shareDlg .sh-g a,#shareDlg .sh-g button{display:flex;flex-direction:column;align-items:center;gap:7px;border:0;background:none;padding:6px 2px;border-radius:12px;font:600 13px Inter,sans-serif;color:#2a1430;text-decoration:none;cursor:pointer}
+#shareDlg .sh-g a:hover,#shareDlg .sh-g button:hover{background:#fdf0f6}
+#shareDlg .sh-ic{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 20px/1 Inter,sans-serif}
+#shareDlg .sh-ic svg{width:24px;height:24px}
+#shareDlg .sh-link{display:flex;gap:8px;padding:10px 22px 6px}
+#shareDlg .sh-link input{flex:1;min-width:0;border:1px solid #ecd9e4;border-radius:12px;padding:10px 12px;font:14px Inter,sans-serif;color:#4a3a48;background:#fbf7fa}
+#shareDlg .sh-msg{min-height:22px;padding:4px 22px 18px;font-size:14px;color:#1d5c3c}
 .p .tx{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
 .p h3{font-size:17px}
 .p .cat{font-size:13px;color:var(--mute)}
@@ -228,6 +246,40 @@ const aed=n=>fmtMoney(n,shop&&shop.currency);
 const ADDI='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/><path d="M2.5 3h2.6l2.4 11.6a1.5 1.5 0 0 0 1.5 1.2h8.8a1.5 1.5 0 0 0 1.5-1.1L21.5 7H6.1"/></svg>Add to cart';
 const uid=new URLSearchParams(location.search).get('u')||'';
 let shop=null,products=[],cat='All';const cart=new Map();
+/* ----- share a product (each product has its own link with a photo preview: /s/<shop>/<product>) ----- */
+const SHAREI='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
+const SH=[ // [key, label, colour, icon, url builder (or null = copy link / phone share sheet)]
+ ['facebook','Facebook','#1877f2','f',(u,t)=>`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}`],
+ ['instagram','Instagram','linear-gradient(45deg,#f9a825,#e1306c,#833ab4)','◎',null],
+ ['threads','Threads','#111','@',(u,t)=>`https://www.threads.net/intent/post?text=${encodeURIComponent(t+' '+u)}`],
+ ['tiktok','TikTok','#111','♪',null],
+ ['x','X','#000','𝕏',(u,t)=>`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(u)}`],
+ ['whatsapp','WhatsApp','#25d366','✆',(u,t)=>`https://wa.me/?text=${encodeURIComponent(t+' '+u)}`],
+ ['telegram','Telegram','#229ed9','➤',(u,t)=>`https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}`],
+ ['pinterest','Pinterest','#e60023','P',(u,t,img)=>`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(u)}&description=${encodeURIComponent(t)}${img?'&media='+encodeURIComponent(img):''}`],
+ ['linkedin','LinkedIn','#0a66c2','in',(u,t)=>`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(u)}`],
+ ['email','Email','#7a6380','✉',(u,t)=>`mailto:?subject=${encodeURIComponent(t)}&body=${encodeURIComponent(t+'\n\n'+u)}`]];
+const shareUrl=p=>`${location.origin}/s/${encodeURIComponent(uid)}/${encodeURIComponent(p.id)}`;
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch{const i=document.createElement('textarea');i.value=t;document.body.appendChild(i);i.select();let ok=false;try{ok=document.execCommand('copy')}catch{}i.remove();return ok}}
+function openShare(id){const p=products.find(x=>x.id===id);if(!p)return;
+  const url=shareUrl(p),text=`${p.name} · ${aed(p.price)} from ${shop.business}`;
+  let d=$('shareDlg');if(!d){d=document.createElement('dialog');d.id='shareDlg';d.setAttribute('aria-label','Share product');document.body.appendChild(d);d.addEventListener('click',e=>{if(e.target===d)d.close()})}
+  const canNative=!!navigator.share;
+  d.innerHTML=`<div class="sh-top">${p.image?`<img src="${esc(p.image)}" alt="">`:''}<div><b>Share “${esc(p.name)}”</b><small>${esc(aed(p.price))} · ${esc(shop.business)}</small></div><button class="sh-x" type="button" aria-label="Close" data-shclose>×</button></div>
+    <div class="sh-g">${SH.map(([k,l,c,ic,fn])=>fn?`<a href="${esc(fn(url,text,p.image))}" target="_blank" rel="noopener" data-sh="${k}"><span class="sh-ic" style="background:${c}">${ic}</span>${l}</a>`:`<button type="button" data-shapp="${k}"><span class="sh-ic" style="background:${c}">${ic}</span>${l}</button>`).join('')}
+    ${canNative?`<button type="button" data-shnative><span class="sh-ic" style="background:#4a1d4f">${SHAREI.replace('width="16" height="16"','width="22" height="22"')}</span>More…</button>`:''}</div>
+    <div class="sh-link"><input readonly value="${esc(url)}" aria-label="Product link"><button class="btn plumb" type="button" data-shcopy>Copy link</button></div><div class="sh-msg" role="status"></div>`;
+  const msg=t=>{d.querySelector('.sh-msg').textContent=t};
+  d.querySelector('[data-shclose]').onclick=()=>d.close();
+  d.querySelector('[data-shcopy]').onclick=async()=>msg(await copyText(url)?'Link copied ✓':'Select the link above and copy it.');
+  const nat=d.querySelector('[data-shnative]');if(nat)nat.onclick=()=>navigator.share({title:p.name,text,url}).catch(()=>{});
+  // Instagram and TikTok have no web share link: use the phone's share sheet when there is one, otherwise copy the link.
+  d.querySelectorAll('[data-shapp]').forEach(b=>b.onclick=async()=>{const app=b.dataset.shapp==='tiktok'?'TikTok':'Instagram';
+    if(navigator.share&&matchMedia('(pointer:coarse)').matches){try{await navigator.share({title:p.name,text,url});return}catch(e){if(e&&e.name==='AbortError')return}}
+    const ok=await copyText(url);msg(ok?`Link copied ✓ Open ${app} and paste it in your ${app==='Instagram'?'story (link sticker), bio or a message':'bio, video caption or a message'}.`:`Copy the link above, then paste it in ${app}.`)});
+  d.querySelector('.sh-link input').onfocus=e=>e.target.select();
+  d.showModal()}
+document.addEventListener('click',e=>{const s=e.target.closest('[data-share]');if(s){e.preventDefault();openShare(s.dataset.share)}});
 
 function head(){
   const initials=shop.business.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -249,8 +301,8 @@ function grid(){
   const cats=['All',...new Set(products.map(p=>p.category))];
   const list=products.filter(p=>cat==='All'||p.category===cat);
   $('main').innerHTML=`${cats.length>2?`<div class="cats" id="cats">${cats.map(c=>`<button type="button" aria-pressed="${c===cat}">${esc(c)}</button>`).join('')}</div>`:''}
-  <div class="grid">${list.map(p=>`<article class="p">
-    <div class="im">${p.image?`<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:'<svg width="70" height="70" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="12" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".6" stroke-width="1.8" fill="none"/></svg>'}</div>
+  <div class="grid">${list.map(p=>`<article class="p" id="p-${esc(p.id)}">
+    <div class="im"><button class="shr" type="button" data-share="${esc(p.id)}" aria-label="Share ${esc(p.name)}">${SHAREI} Share</button>${p.image?`<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy">`:'<svg width="70" height="70" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="12" fill="#f48fb1"/><path d="M5 11c6 4 14 4 20 0M4 16c7 4 15 4 22 0M6 21c6 3 12 3 18 0" stroke="#fff" stroke-opacity=".6" stroke-width="1.8" fill="none"/></svg>'}</div>
     <div class="tx"><span class="cat">${esc(p.category)}</span><h3>${esc(p.name)}</h3>
     ${p.description?`<p class="desc" style="margin:0">${esc(p.description)}</p>`:''}
     <div class="tags">${p.customizable?'<span class="tag">Customisable</span>':''}${p.productionDays?`<span class="tag">Made in ${p.productionDays} day${p.productionDays===1?'':'s'}</span>`:''}${p.inStock?'':'<span class="tag out">Made to order</span>'}</div>
@@ -472,6 +524,9 @@ document.addEventListener('click',e=>{const a=e.target.closest('.backlink');if(!
     if(!r.ok)throw new Error(j.error||'Shop not found');shop=j.shop;products=j.products;head();
     if(shop.paused){$('main').innerHTML=`<div class="center" style="text-align:center;padding:60px 16px"><h2>This shop is temporarily unavailable</h2><p>${esc(shop.business)} will be back soon. Please check again later.</p></div>`;for(const b of document.querySelectorAll('#head .cart,.fab'))b.hidden=true;return}
     grid();showView();
+    // Opened from a shared product link: scroll to that product and highlight it.
+    const pq=new URLSearchParams(location.search).get('p');
+    if(pq&&products.some(x=>x.id===pq)){cat='All';grid();setTimeout(()=>{const el=document.getElementById('p-'+pq);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('hilite');setTimeout(()=>el.classList.remove('hilite'),4000)}},300)}
     const tq=new URLSearchParams(location.search).get('track');if(tq)openTrack(tq.toUpperCase())}
   catch(e){$('head').innerHTML='<div><h1>Shop not found</h1><p>Check the link and try again.</p></div>';$('main').innerHTML='<div class="center"><a class="btn plumb" href="/">Go to Craftifix</a></div>'}
 })();
