@@ -116,6 +116,7 @@ input:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 
 .planpill i{width:8px;height:8px;border-radius:50%;background:#2f9e6b;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
 .planpill:hover{filter:brightness(1.05)}
 s.was{opacity:.6;font-weight:500;margin-right:2px}
+.offtag{display:inline-block;margin-left:6px;vertical-align:middle;background:#c62f5f;color:#fff;font:700 12px/1 Inter,sans-serif;padding:4px 8px;border-radius:999px;white-space:nowrap}
 .promonote{margin:12px 0 4px;padding:10px 14px;border-radius:12px;background:#fff4d9;border:1px solid #ffd77a;font-size:14px;color:#4a1d4f}
 #planModal .promonote{margin:16px 22px 0}#planModal .pmp s.was{font-size:17px;color:#7a6380}
 dialog#planModal{border:0;padding:0;border-radius:22px;width:min(680px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;box-shadow:0 30px 80px rgba(46,16,49,.45)}
@@ -254,6 +255,9 @@ const lim=v=>v===null?'Unlimited':v===0?'Not included':String(v);
 const promoOf=u=>u&&u.pricing&&u.pricing.promo;
 const wasLabel=(u,id)=>{const p=u&&u.pricing&&u.pricing.plans[id];return p&&p.percentOff?`<s class="was">${esc(p.fullLabel)}</s> `:''};
 const promoNote=u=>{const pr=promoOf(u);return pr?`<p class="promonote">🎉 <b>${esc(pr.label)}: ${pr.percentOff}% off both plans</b>, until further notice.</p>`:''};
+const offPct=u=>promoOf(u)?promoOf(u).percentOff:0;
+const offTag=u=>offPct(u)?` <span class="offtag">${offPct(u)}% off</span>`:'';
+const priceHtml=(u,id)=>`${wasLabel(u,id)}<b>${esc(planLabel(u,id))}</b>`;   // normal price crossed out + promo price
 const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'USD '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
 function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='USD')return'';
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
@@ -287,7 +291,7 @@ function openPlanChooser(){const u=curUser;if(!u)return;
     const nu={...r.data.user,pricing:r.data.user.pricing||u.pricing};
     showAccount(nu,false);
     d.innerHTML=`<div class="pmh"><button class="pmx" type="button" aria-label="Close" data-pmclose>×</button><h3>✓ ${esc(nu.planDetails.name)} plan chosen</h3>
-      <p>Add your billing details now so your shop stays open after <b>${longDay(nu.trial.endsAt)}</b>. You won't be charged until then: ${planLabel(nu,nu.plan)}/month from that day.</p></div>
+      <p>Add your billing details now so your shop stays open after <b>${longDay(nu.trial.endsAt)}</b>. You won't be charged until then: ${planLabel(nu,nu.plan)}/month from that day${offPct(nu)?` (${offPct(nu)}% off promotion)`:''}.</p></div>
       <div class="pmf"><button class="btn gold" type="button" data-bill="checkout">Add billing details</button><button class="btn ghost" type="button" data-pmclose style="color:var(--ink);border-color:var(--line)">Later</button></div>`;
     d.querySelectorAll('[data-pmclose]').forEach(x=>x.onclick=()=>d.close());
   });
@@ -305,15 +309,15 @@ function payRow(u){const s=u.subscription||{};
 /* Banner when the subscription needs attention — the shop is closed to customers until it's paid. */
 function billingBanner(u){const s=u.subscription||{};if(!billingInfo||!billingInfo.online)return'';
   if(s.status==='trial'&&u.trial&&!u.trial.ended&&needsPlan(u)){const d=u.trial.daysLeft,soon=d<=7;
-    return soon?`<div class="billbar"><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Time to choose your plan: Standard ${planLabel(u,'standard')} or Premium ${planLabel(u,'premium')} a month. Then add your billing details to keep your shop open. You won't be charged until the trial ends.</span><button class="btn gold" type="button" data-chooseplan>Choose your plan</button></div>`
+    return soon?`<div class="billbar"><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Time to choose your plan: Standard ${priceHtml(u,'standard')} or Premium ${priceHtml(u,'premium')} a month${offPct(u)?` (${offPct(u)}% off promotion)`:''}. Then add your billing details to keep your shop open. You won't be charged until the trial ends.</span><button class="btn gold" type="button" data-chooseplan>Choose your plan</button></div>`
       :`<div class="billbar" style="background:#e9f7ef;color:#1d5c3c"><span><b>Free trial: ${d} days left</b> (until ${longDay(u.trial.endsAt)}). Every feature is unlocked: unlimited products and custom orders. On ${chooseFrom(u)} we'll ask you to choose Standard or Premium. No card needed until then.</span></div>`}
   if(s.status==='trial'&&u.trial&&!u.trial.ended){const d=u.trial.daysLeft,soon=d<=7;
-    return `<div class="billbar"${soon?'':' style="background:#e9f7ef;color:#1d5c3c"'}><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Your shop is open and everything on the ${esc(u.planDetails.name)} plan is unlocked. ${soon?`Add your billing details before ${longDay(u.trial.endsAt)} to keep your shop open — you won't be charged until the trial ends.`:`No card needed yet — you'll be asked for billing details when the trial ends. It's ${planLabel(u,u.plan)}/month after that.`}</span><button class="btn ${soon?'gold':'plumb'}" type="button" data-bill="checkout">Add billing details</button></div>`}
+    return `<div class="billbar"${soon?'':' style="background:#e9f7ef;color:#1d5c3c"'}><span><b>Free trial: ${d} day${d===1?'':'s'} left</b> (until ${longDay(u.trial.endsAt)}). Your shop is open and everything on the ${esc(u.planDetails.name)} plan is unlocked. ${soon?`Add your billing details before ${longDay(u.trial.endsAt)} to keep your shop open — you won't be charged until the trial ends.`:`No card needed yet — you'll be asked for billing details when the trial ends. It's ${priceHtml(u,u.plan)}/month after that${offPct(u)?` (${offPct(u)}% off promotion)`:''}.`}</span><button class="btn ${soon?'gold':'plumb'}" type="button" data-bill="checkout">Add billing details</button></div>`}
   // Price moved to the current plan price (promotion changed or ended): shown for two weeks.
   const pc=s.priceChange;
   if(s.status==='active'&&pc&&Date.now()-new Date(pc.at).getTime()<14*864e5){const m=v=>esc(pc.currency+' '+Number(v).toFixed(2));
     return `<div class="billbar" style="background:${pc.to<pc.from?'#e9f7ef;color:#1d5c3c':'#fff4d9;color:#4a1d4f'}"><span><b>${pc.to<pc.from?'Good news: your price is going down.':'Your plan price is changing.'}</b> ${pc.percentOff?`Craftifix's current promotion is ${pc.percentOff}% off.`:'The Craftifix promotion has ended.'} From ${pc.effective?longDay(pc.effective):'your next billing date'}, your plan is <b>${m(pc.to)}</b> a month instead of ${m(pc.from)}. Nothing is charged now.</span>${u.stripe?.customerId?`<button class="btn plumb" type="button" data-bill="portal">Manage billing</button>`:''}</div>`}
-  const msg={trial_ended:needsPlan(u)?`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Choose your plan and add your billing details to reopen it. Your products, orders and settings are all still here.`:`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Add your billing details to reopen it — your products, orders and settings are all still here. ${esc(u.planDetails.name)} plan: ${planLabel(u,u.plan)}/month.`,pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${planLabel(u,u.plan)}/month. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
+  const msg={trial_ended:needsPlan(u)?`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Choose your plan and add your billing details to reopen it. Your products, orders and settings are all still here.`:`<b>Your 30-day free trial has ended, so your shop is closed to customers.</b> Add your billing details to reopen it — your products, orders and settings are all still here. ${esc(u.planDetails.name)} plan: ${priceHtml(u,u.plan)}/month${offTag(u)}.`,pending:`<b>Complete your payment to open your shop.</b> Your ${esc(u.planDetails.name)} plan is ${priceHtml(u,u.plan)}/month${offTag(u)}. Customers can't see your shop until it's paid — you can set up products in the meantime.`,
     past_due:`<b>Your last payment didn't go through.</b> Stripe will try again. Update your card to keep your shop open.`,
     unpaid:`<b>Your subscription is unpaid, so your shop is closed to customers.</b> Pay to reopen it.`,
     canceled:`<b>Your subscription has ended, so your shop is closed to customers.</b> Subscribe again to reopen it.`}[s.status];
@@ -337,7 +341,7 @@ function limitBanner(u,which){
   if(which!=='inquiries')rows.push(row('Product listings',P));
   if(which!=='products')rows.push(row('Orders from inquiries this month',Q,` · resets ${fmtDay(Q.resetsOn)}`));
   const anyFull=P.used>=P.limit||Q.used>=Q.limit;
-  return `<div class="limbar${anyFull?' full':''}"><div class="limhead"><div><b>Standard plan limits</b><span>Up to ${P.limit} product listings and ${Q.limit} confirmed orders from inquiries each month. Orders placed directly from your shop are not limited.</span></div><a class="btn gold" href="/account.html#settings">Upgrade to Premium · ${planLabel(u,'premium')}/mo</a></div><div class="limrows">${rows.join('')}</div></div>`;
+  return `<div class="limbar${anyFull?' full':''}"><div class="limhead"><div><b>Standard plan limits</b><span>Up to ${P.limit} product listings and ${Q.limit} confirmed orders from inquiries each month. Orders placed directly from your shop are not limited.</span></div><a class="btn gold" href="/account.html#settings">Upgrade to Premium · ${planLabel(u,'premium')}/mo${offPct(u)?` · ${offPct(u)}% off`:''}</a></div><div class="limrows">${rows.join('')}</div></div>`;
 }
 
 async function api(path,opts={}){
@@ -581,7 +585,8 @@ function showAccount(u,welcome){
     </div>
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
-      <div><span>Price</span><b>${planLabel(u,u.plan)} / month</b></div>${u.pricing&&u.pricing.currency!=='USD'?`<div><span>Base price</span><b>USD ${p.price} / month</b></div>`:''}
+      <div><span>Price</span><b>${wasLabel(u,u.plan)}${esc(planLabel(u,u.plan))} / month${offTag(u)}</b></div>${u.pricing&&u.pricing.currency!=='USD'?`<div><span>Base price</span><b>${offPct(u)?`<s class="was">USD ${p.price}</s> ${esc(u.pricing.plans[u.plan].baseLabel)}`:`USD ${p.price}`} / month</b></div>`:''}
+      ${offPct(u)?`<div><span>Promotion</span><b>${esc(promoOf(u).label)}: ${offPct(u)}% off, until further notice</b></div>`:''}
       <div><span>Status</span><b style="color:${subLbl(u)[1]}">${esc(subLbl(u)[0])}</b></div>
       <div><span>Payment</span><b>${esc(payRow(u))}</b></div>
       <div><span>Product listings</span><b>${lim(p.limits.products)}</b></div>
@@ -597,9 +602,9 @@ function showAccount(u,welcome){
     <div class="card wide"><h3>What your plan includes</h3><div class="kv">
       ${FEAT.map(([k,t])=>`<div><span>${t}</span><b>${esc(p.features[k])}</b></div>`).join('')}
     </div></div>
-    ${needsPlan(u)?`<div class="card"><h3>Your plan</h3><p class="msg">${choosePlanNow(u)?`It's time to choose: Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`:`During your free trial every feature is unlocked. On <b>${chooseFrom(u)}</b>, a week before the trial ends, we'll ask you to choose Standard (${planLabel(u,'standard')}/month) or Premium (${planLabel(u,'premium')}/month).`}</p>
+    ${needsPlan(u)?`<div class="card"><h3>Your plan</h3><p class="msg">${choosePlanNow(u)?`It's time to choose: Standard (${priceHtml(u,'standard')}/month) or Premium (${priceHtml(u,'premium')}/month)${offTag(u)}.`:`During your free trial every feature is unlocked. On <b>${chooseFrom(u)}</b>, a week before the trial ends, we'll ask you to choose Standard (${priceHtml(u,'standard')}/month) or Premium (${priceHtml(u,'premium')}/month)${offTag(u)}.`}</p>
       ${choosePlanNow(u)?`<button class="btn gold" type="button" data-chooseplan style="margin-top:10px">Choose your plan</button>`:''}${promoNote(u)}${fxNote(u)}<div class="msg" id="pmsg" role="status"></div><div id="plans" hidden></div></div>`:`<div class="card"><h3>Change plan</h3>
-      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}</b><small>${wasLabel(u,id)}${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
+      <div class="plans" id="plans">${ALL.map(([id,n,pr,lm])=>`<div class="pl${id===u.plan?' cur':''}"><b>${n}${offTag(u)}</b><small>${wasLabel(u,id)}${planLabel(u,id)}/month</small><small class="plim">${lm}</small>${id===u.plan?'<span class="badge" style="text-align:center">Current plan</span>':`<button class="btn plumb" type="button" data-plan="${id}">Switch</button>`}</div>`).join('')}</div>
       ${promoNote(u)}${fxNote(u)}
       <div class="msg" id="pmsg" role="status"></div>
     </div>`}
@@ -633,7 +638,7 @@ function showAccount(u,welcome){
     return;
   }
   const ribbons=`${!u.whatsapp?`<div class="ribbon" style="background:#ffe7b0;color:#6b4300">Add your WhatsApp number in <a href="/account.html#settings">Settings</a> so customer orders from your shop reach you on WhatsApp too.</div>`:''}
-  ${billingBanner(u)}${welcome&&u.subscription?.status!=='pending'?`<div class="ribbon">Your account is ready. ${u.trial?`Your 30-day free trial of the ${esc(p.name)} plan has started — your shop is open and no card is needed until ${longDay(u.trial.endsAt)}.`:`Your ${esc(p.name)} plan is active — payment was skipped for now.`}${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
+  ${billingBanner(u)}${welcome&&u.subscription?.status!=='pending'?`<div class="ribbon">Your account is ready. ${u.trial?`Your 30-day free trial of the ${esc(p.name)} plan has started — your shop is open and no card is needed until ${longDay(u.trial.endsAt)}.${offPct(u)?` 🎉 ${esc(promoOf(u).label)}: ${offPct(u)}% off when you subscribe.`:''}`:`Your ${esc(p.name)} plan is active — payment was skipped for now.`}${p.limits.products!==null?` It includes up to ${p.limits.products} product listings and ${p.limits.inquiryOrdersPerMonth} orders from inquiries a month.`:' It includes unlimited product listings and orders from inquiries.'}</div>`:''}`;
   if(view==='orders'){
     main.innerHTML=`${ribbons}<section class="sethead"><div><h1>Orders</h1><p>Orders from your shop and custom orders converted from inquiries. Changing a status notifies the customer.</p></div><a class="mini" href="/shop.html?u=${encodeURIComponent(u.userId)}" target="_blank" rel="noopener">View my shop →</a></section>
     <div class="card"><h3 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">Orders from your shop <span class="pill" id="ocount"></span></h3><div class="ofilter" id="ofilter"></div><div id="orders"><p class="msg">Loading orders…</p></div></div>`;

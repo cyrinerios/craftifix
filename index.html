@@ -211,6 +211,8 @@ details p{color:var(--mute);padding-bottom:16px;margin:0}
 .join p.l{font-size:18.5px;color:#f6d3e2;margin-top:12px}
 .sform{background:var(--panel);color:var(--ink);border-radius:20px;padding:24px}
 .sform .btn{width:100%;margin-top:6px}
+.promo-su{background:#fff4d9;border:1px solid #ffd77a;border-radius:12px;padding:10px 12px;color:#4a1d4f}
+.promo-su s{opacity:.6}
 .promoban{margin:0 auto 22px;max-width:760px;text-align:center;padding:12px 18px;border-radius:14px;background:#fff4d9;border:1px solid #ffd77a;color:#4a1d4f;font-size:16px}
 .offtag{display:inline-block;margin-left:10px;vertical-align:middle;background:#c62f5f;color:#fff;font:700 13px/1 Inter,sans-serif;padding:5px 9px;border-radius:999px}
 .plan s.was{display:block;font-size:.5em;line-height:1.2;opacity:.55;font-weight:600}
@@ -458,7 +460,7 @@ footer a:hover{color:#fff}
     <button class="jm-x" type="button" id="jmClose" aria-label="Close">×</button>
     <h3 id="jmTitle">Use the pricing calculator for free</h3>
     <p>Create your Craftifix account to price your own products and save the price straight to your listings.</p>
-    <ul><li>30 days free</li><li>No card needed</li><li>0% commission</li></ul>
+    <ul><li>30 days free</li><li>No card needed</li><li>0% commission</li><li data-promochip hidden></li></ul>
   </div>
   <div id="jmBody"></div>
 </dialog>
@@ -467,7 +469,8 @@ footer a:hover{color:#fff}
   <div class="wrap">
     <div>
       <h2>Open your Craftifix workspace</h2>
-      <p class="l">Create your account, pick a plan and set up your business profile and logo. Then start adding products and pricing them properly.</p>
+      <p class="l" id="joinPromo" hidden></p>
+      <p class="l">Create your account and set up your business profile and logo. Your 30-day free trial starts straight away, with every feature unlocked. Then start adding products and pricing them properly.</p>
     </div>
     <div class="sform" id="sbox">
       <form id="signup" novalidate autocomplete="on">
@@ -502,6 +505,7 @@ footer a:hover{color:#fff}
           <label><span class="sl">TikTok</span><input id="stt" placeholder="@yourshop or tiktok.com/@yourshop" autocapitalize="none" spellcheck="false"></label>
         </div>
         <div class="pick" id="pick" hidden></div>
+        <p class="paynote promo-su" id="promoSignup" hidden></p>
         <p class="paynote" id="payNote"><b>30 days free, no card needed, every feature unlocked.</b> Your shop opens as soon as you create the account. A week before your trial ends, you'll choose Standard or Premium.</p>
         <div class="err" id="serr" role="alert"></div>
         <button class="btn plumb" type="submit" id="sbtn">Start my 30-day free trial</button>
@@ -660,6 +664,10 @@ async function showPrices(cur){
   for(const el of document.querySelectorAll('[data-pp]')){const x=P&&P[el.dataset.pp];el.innerHTML=x?(off?`<s class="was">${x.fullLabel}</s> ${x.label}`:x.label):base[el.dataset.pp]}
   for(const el of document.querySelectorAll('[data-pk]')){const x=P&&P[el.dataset.pk];el.textContent=(x?x.label:base[el.dataset.pk])+'/mo'}
   for(const el of document.querySelectorAll('[data-off]')){el.hidden=!off;el.textContent=off+'% off'}
+  // Sign-up form, the calculator pop-up and the sign-up section show the promotion too.
+  const sp=$('promoSignup');sp.hidden=!off;if(off&&P)sp.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off</b> when you subscribe after your free trial: Standard <s>${P.standard.fullLabel}</s> <b>${P.standard.label}</b>, Premium <s>${P.premium.fullLabel}</s> <b>${P.premium.label}</b> a month, until further notice.`;
+  for(const c of document.querySelectorAll('[data-promochip]')){c.hidden=!off;c.textContent=off+'% off plans'}
+  const jp=$('joinPromo');jp.hidden=!off;if(off&&P)jp.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off every plan</b>: from ${P.standard.label} a month after your 30-day free trial.`;
   const b=$('promoBan');b.hidden=!off;if(off)b.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off both plans</b>, until further notice. Start with 30 days free, then pay the promo price.`;
   if(P)$('fromPrice').textContent=off?`From ${P.standard.baseLabel} a month (${off}% off)`:`From ${P.standard.baseLabel} a month`;
   const n=$('fxnote');

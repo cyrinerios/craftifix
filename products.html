@@ -374,7 +374,7 @@ function usage(){
   $('useBar').style.width=l===null?'100%':Math.min(100,n/l*100)+'%';
   const ln=$('limNote');ln.hidden=l===null;
   if(l!==null){const full=n>=l;ln.className='limnote'+(full?' full':'');
-    ln.innerHTML=`<span>${full?`<b>You've reached your ${l} product listings on Standard.</b> Upgrade to Premium to post unlimited products and grow your shop.`:`<b>Standard plan:</b> up to ${l} product listings. You have ${l-n} left — upgrade to Premium for unlimited listings.`}</span><a class="btn gold" href="/account.html#settings">Upgrade to Premium · ${state.user&&state.user.pricing?state.user.pricing.plans.premium.label:'USD 15'}/mo</a>`;
+    ln.innerHTML=`<span>${full?`<b>You've reached your ${l} product listings on Standard.</b> Upgrade to Premium to post unlimited products and grow your shop.`:`<b>Standard plan:</b> up to ${l} product listings. You have ${l-n} left — upgrade to Premium for unlimited listings.`}</span><a class="btn gold" href="/account.html#settings">Upgrade to Premium · ${state.user&&state.user.pricing?state.user.pricing.plans.premium.label:'USD 15'}/mo${state.user&&state.user.pricing&&state.user.pricing.promo?` · ${state.user.pricing.promo.percentOff}% off`:''}</a>`;
     $('saveBtn').title=full&&!state.editing?'Product listing limit reached':''}
 }
 function renderList(){
