@@ -1,4 +1,5 @@
 import { stripeEnabled, createCheckout } from '../_stripe.js';
+import { geocode, coords, defaultShipping } from '../_shipping.js';
 import { PLANS, pricingFor, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, normSocial, validCurrency, uploadImage, hashPassword, getUser, saveUser, publicUser, setSession, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 export default async function handler(req, res) {
@@ -13,6 +14,7 @@ export default async function handler(req, res) {
     const email = clean(b.email, 254).toLowerCase();
     const plan = String(b.plan || '').toLowerCase();
     const whatsapp = normWhatsApp(b.whatsapp);
+    const shopAddressText = clean(b.shopAddress, 300);
     const currency = validCurrency(b.currency || 'AED');
     if (!currency) return send(res, 400, { error: 'Please choose your shop currency.', field: 'currency' });
     const social = {};
@@ -29,14 +31,18 @@ export default async function handler(req, res) {
     if (!business) return send(res, 400, { error: 'Please enter your business name.', field: 'business' });
     if (!validEmail(email)) return send(res, 400, { error: 'Please enter a valid email address.', field: 'email' });
     if (!whatsapp) return send(res, 400, { error: 'Please enter a valid WhatsApp number with country code, e.g. +971 55 123 4567.', field: 'whatsapp' });
+    if (shopAddressText.length < 10) return send(res, 400, { error: 'Please enter your full shop address (building, street, area, city).', field: 'shopAddress' });
     if (!PLANS[plan]) return send(res, 400, { error: 'Please choose a plan.', field: 'plan' });
 
     if (await getUser(userId)) return send(res, 409, { error: 'That user ID is already taken. Please choose another.', field: 'userId' });
 
     const now = new Date().toISOString();
     const pricing = await pricingFor(currency);
+    const pin = coords(b.shopLat, b.shopLng) || await geocode(shopAddressText);
     const rec = {
       userId, name, business, email, whatsapp, plan, social, currency,
+      shopAddress: { text: shopAddressText, ...(pin ? { lat: pin.lat, lng: pin.lng } : {}) },
+      shipping: defaultShipping(currency),
       passwordHash: await hashPassword(password),
       subscription: stripeEnabled()
         ? { status: 'pending', billing: 'monthly', provider: 'stripe', paymentStatus: 'pending', startedAt: now,

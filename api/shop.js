@@ -1,9 +1,12 @@
 import { shopPaused } from './_stripe.js';
-import { assertConfigured, normId, validId, getUser, getProducts, send, onlyMethod, fail } from './_lib.js';
+import { publicShipping, quoteShipping } from './_shipping.js';
+import { assertConfigured, normId, validId, getUser, getProducts, body, send, fail } from './_lib.js';
 
 // GET /api/shop?u=<userId> -> public storefront data (published products only, no costs)
+// POST /api/shop?u=<userId>&action=quote { method, region, address, lat, lng, subtotal } -> shipping fee for the cart
 export default async function handler(req, res) {
-  if (!onlyMethod(req, res, 'GET')) return;
+  const quote = String(req.query?.action || '') === 'quote';
+  if (req.method !== (quote ? 'POST' : 'GET')) { res.setHeader('Allow', quote ? 'POST' : 'GET'); return send(res, 405, { error: 'Method not allowed' }); }
   try {
     assertConfigured();
     const uid = normId(req.query?.u);
@@ -12,6 +15,8 @@ export default async function handler(req, res) {
     if (!user || user.subscription?.status === 'suspended') return send(res, 404, { error: 'Shop not found.' });
     const shop = { userId: user.userId, business: user.business, owner: user.name, hasWhatsApp: !!user.whatsapp, logo: user.logo || null, currency: user.currency || 'AED', social: user.social || {} };
     if (shopPaused(user)) return send(res, 200, { shop: { ...shop, paused: true }, products: [] });
+    if (quote) { const q = await quoteShipping(user, body(req)); return send(res, q.ok ? 200 : 400, q); }
+    shop.shipping = publicShipping(user);
     const products = (await getProducts(uid))
       .filter((p) => p.status === 'published')
       .map((p) => ({

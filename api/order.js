@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { shopPaused } from './_stripe.js';
+import { quoteShipping } from './_shipping.js';
 import { money, assertConfigured, normId, validId, validEmail, clean, normWhatsApp, waLink, getUser, getProducts, getOrders, saveOrders, deliver, sendOwnerWhatsApp, escHtml, body, send, onlyMethod, fail } from './_lib.js';
 
 // POST /api/order — a shopper places an order on a shop.
@@ -40,11 +41,18 @@ export default async function handler(req, res) {
       items.push({ productId: p.id, name: p.name, qty, unitPrice: unit, lineTotal: Math.round(unit * qty * 100) / 100, vat: !!p.costing.vat });
     }
     if (!items.length) return send(res, 400, { error: 'Your order is empty, or those products are no longer available.' });
-    const total = Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100;
+    const subtotal = Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100;
+    // Shipping is always worked out here from the shop's own settings, never taken from the browser.
+    const sb = b.shipping || {};
+    const q = await quoteShipping(owner, { method: sb.method === 'pickup' ? 'pickup' : 'delivery', region: sb.region, address: customer.address, lat: sb.lat, lng: sb.lng, subtotal });
+    if (!q.ok) return send(res, 400, { error: q.error, field: q.field === 'address' ? 'address' : 'shipping' });
+    const shipping = { method: q.method, fee: q.fee, label: q.label, ...(q.region ? { region: q.region } : {}), ...(q.km != null ? { km: q.km, road: q.road } : {}), ...(q.free ? { free: true } : {}), ...(q.pending ? { pending: true } : {}) };
+    if (q.to) customer.location = q.to;
+    const total = Math.round((subtotal + q.fee) * 100) / 100;
 
     const now = new Date();
     const orderNo = 'CH-' + now.toISOString().slice(2, 10).replace(/-/g, '') + '-' + crypto.randomBytes(2).toString('hex').toUpperCase();
-    const order = { id: crypto.randomUUID(), orderNo, status: 'new', customer, items, total, currency: cur, createdAt: now.toISOString() };
+    const order = { id: crypto.randomUUID(), orderNo, status: 'new', customer, items, subtotal, shipping, total, currency: cur, createdAt: now.toISOString() };
 
     const orders = await getOrders(uid);
     orders.unshift(order);
@@ -54,7 +62,7 @@ export default async function handler(req, res) {
     const text = [
       `New order ${orderNo} for ${owner.business}`, '',
       `Customer: ${customer.name}`, `Email: ${customer.email}`, `WhatsApp: ${customer.whatsapp}`, `Delivery address: ${customer.address}`, '',
-      'Items:', ...lines, '', `Total: ${aed(total)}`,
+      'Items:', ...lines, '', `Subtotal: ${aed(subtotal)}`, `${shipping.label}: ${shipping.pending ? 'to be confirmed' : aed(shipping.fee)}`, `Total: ${aed(total)}`,
       customer.notes ? `\nNotes: ${customer.notes}` : ''
     ].join('\n').trim();
 
@@ -62,6 +70,7 @@ export default async function handler(req, res) {
       <h2 style="color:#4a1d4f">New order ${escHtml(orderNo)}</h2>
       <p>You have a new order on your Craftifix shop <b>${escHtml(owner.business)}</b>.</p>
       <table style="border-collapse:collapse;width:100%">${items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
+      <tr><td style="padding:6px 0;border-bottom:1px solid #eee">${escHtml(shipping.label)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${shipping.pending ? 'to be confirmed' : aed(shipping.fee)}</td></tr>
       <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(total)}</b></td></tr></table>
       <h3 style="color:#4a1d4f">Customer</h3>
       <p>${escHtml(customer.name)}<br>Email: ${escHtml(customer.email)}<br>WhatsApp: <a href="${waLink(customer.whatsapp)}">${escHtml(customer.whatsapp)}</a><br>Delivery address: ${escHtml(customer.address)}</p>
@@ -83,7 +92,7 @@ export default async function handler(req, res) {
 
     const base = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
     send(res, 201, {
-      orderNo, total, items, currency: cur,
+      orderNo, total, subtotal, shipping, items, currency: cur,
       trackUrl: `${base}/shop.html?u=${encodeURIComponent(uid)}&track=${orderNo}`,
       emailSent: email.sent,
       whatsappSent: wa.sent,

@@ -1,4 +1,5 @@
 import { stripeEnabled, stripeMode, reconcile } from '../_stripe.js';
+import { geocode, defaultShipping } from '../_shipping.js';
 import { assertConfigured, readSession, getUser, saveUser, syncAccount, getProducts, getOrders, planUsage, pricingFor, publicUser, clearSession, send, onlyMethod, fail } from '../_lib.js';
 
 export default async function handler(req, res) {
@@ -9,6 +10,15 @@ export default async function handler(req, res) {
     if (!uid) return send(res, 401, { error: 'Not logged in' });
     const rec = await getUser(uid);
     if (!rec) { clearSession(res); return send(res, 401, { error: 'Not logged in' }); }
+    // One-time: shop address the owner of Hand Made by CRJ gave on 27 Nov 2026 (accounts made before addresses were asked for).
+    if (rec.userId === 'handmadebycrj' && !rec.shopAddress?.text) {
+      const text = 'Al Fairouz Building 504, 25th St, Al Nahda, Sharjah, UAE';
+      const pin = await geocode(text) || await geocode('Al Nahda, Sharjah, United Arab Emirates');
+      rec.shopAddress = { text, ...(pin ? { lat: pin.lat, lng: pin.lng } : {}) };
+      if (!rec.shipping) rec.shipping = defaultShipping(rec.currency);
+      await saveUser(rec);
+    }
+    if (!rec.shipping) rec.shipping = defaultShipping(rec.currency);
     try { if (await reconcile(rec)) { await saveUser(rec); await syncAccount(rec); console.log('stripe: reconciled', uid, rec.subscription.status); } }
     catch (e) { console.warn('stripe reconcile failed', e.message); }
     const [products, orders, pricing] = await Promise.all([getProducts(uid), getOrders(uid), pricingFor(rec.currency)]);

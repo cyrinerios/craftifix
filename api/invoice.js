@@ -22,6 +22,7 @@ export default async function handler(req, res) {
       invoice: { no: o.invoice.no, issuedAt: o.invoice.issuedAt, status: o.status },
       order: {
         orderNo: o.orderNo, createdAt: o.createdAt, currency: o.currency || owner.currency || 'AED', total: o.total,
+        shipping: o.shipping ? { label: o.shipping.label, fee: o.shipping.fee, method: o.shipping.method, pending: !!o.shipping.pending } : null,
         items: o.items.map((i) => ({ name: i.name, qty: i.qty, unitPrice: i.unitPrice ?? (i.qty ? i.lineTotal / i.qty : i.lineTotal), lineTotal: i.lineTotal, vat: !!i.vat })),
         fromInquiry: o.source?.type === 'inquiry' ? o.source.inqNo || true : null
       },

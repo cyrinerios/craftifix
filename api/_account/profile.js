@@ -1,3 +1,4 @@
+import { geocode, coords, cleanShipping } from '../_shipping.js';
 import { pricingFor, assertConfigured, requireUser, getUser, saveUser, publicUser, clean, validEmail, normWhatsApp, normSocial, validCurrency, isBlobUrl, sendOwnerWhatsApp, body, send, onlyMethod, fail , syncAccount } from '../_lib.js';
 
 // POST /api/profile { name, business, email, whatsapp, callmebotKey? } -> update the logged-in owner's details
@@ -14,6 +15,17 @@ export default async function handler(req, res) {
       return send(res, r.sent ? 200 : 400, r.sent ? { ok: true } : { error: rec.callmebotKey ? 'The test message could not be sent. Check your WhatsApp number and CallMeBot API key.' : 'Add your CallMeBot API key first.' });
     }
     const b = body(req);
+    // Shipping settings are saved on their own from the Shipping page.
+    if (String(req.query?.section || '') === 'shipping') {
+      rec.shipping = cleanShipping(b.shipping || {}, rec.currency);
+      if (rec.shipping.mode === 'km' && !(rec.shopAddress?.lat && rec.shopAddress?.lng))
+        return send(res, 400, { error: 'Per-km pricing needs your shop location. Set it in Settings → Edit details (shop address), then try again.', field: 'mode' });
+      if (rec.shipping.mode === 'region' && !rec.shipping.regions.some((r) => r.fee !== null))
+        return send(res, 400, { error: 'Add a fee to at least one region (leave a region empty to not deliver there).', field: 'regions' });
+      rec.updatedAt = new Date().toISOString();
+      await saveUser(rec);
+      return send(res, 200, { user: { ...publicUser(rec), pricing: await pricingFor(rec.currency) } });
+    }
     const name = clean(b.name), business = clean(b.business), email = clean(b.email, 254).toLowerCase(), whatsapp = normWhatsApp(b.whatsapp);
     if (!name) return send(res, 400, { error: 'Please enter your name.', field: 'name' });
     if (!business) return send(res, 400, { error: 'Please enter your business name.', field: 'business' });
@@ -38,6 +50,14 @@ export default async function handler(req, res) {
       const c = validCurrency(b.currency);
       if (!c) return send(res, 400, { error: 'Please choose a valid currency.', field: 'currency' });
       rec.currency = c;
+    }
+    if (b.shopAddress !== undefined) {
+      const t = clean(b.shopAddress, 300);
+      if (t.length < 10) return send(res, 400, { error: 'Please enter your full shop address (building, street, area, city).', field: 'shopAddress' });
+      const pin = coords(b.shopLat, b.shopLng);
+      const changed = t !== rec.shopAddress?.text;
+      let loc = pin || (changed || !rec.shopAddress?.lat ? await geocode(t) : { lat: rec.shopAddress.lat, lng: rec.shopAddress.lng });
+      rec.shopAddress = { text: t, ...(loc ? { lat: loc.lat, lng: loc.lng } : {}) };
     }
     if (b.logo === '' || b.logo === null) delete rec.logo;
     else if (isBlobUrl(b.logo)) rec.logo = b.logo;

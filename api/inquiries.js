@@ -115,11 +115,14 @@ export default async function handler(req, res) {
       const order = {
         id: crypto.randomUUID(), orderNo, status: 'confirmed',
         customer: { ...q.customer, address, notes: clean(b.notes, 800) },
-        items, total: Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100, currency: owner.currency || 'AED',
+        items, subtotal: Math.round(items.reduce((s, x) => s + x.lineTotal, 0) * 100) / 100,
+        shipping: Number(b.deliveryFee) > 0 ? { method: 'delivery', fee: Math.round(Math.min(Number(b.deliveryFee), 1e5) * 100) / 100, label: 'Delivery' } : (b.pickup ? { method: 'pickup', fee: 0, label: 'Self-pickup from the shop (free)' } : null),
+        total: 0, currency: owner.currency || 'AED',
         source: { type: 'inquiry', inqNo: q.inqNo, inquiryId: q.id },
         createdAt: now.toISOString(), updatedAt: now.toISOString(),
         history: [{ status: 'confirmed', at: now.toISOString() }]
       };
+      order.total = Math.round((order.subtotal + (order.shipping?.fee || 0)) * 100) / 100;
       const orders = await getOrders(uid);
       orders.unshift(order);
       await saveOrders(uid, orders.slice(0, 1000));

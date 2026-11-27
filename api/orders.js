@@ -31,6 +31,7 @@ export async function notify(order, owner, trackUrl, invUrl) {
     <h2 style="color:#4a1d4f">Order ${escHtml(order.orderNo)}: ${escHtml(LABEL[order.status])}</h2>
     ${text.split('\n').map((l) => `<p style="margin:6px 0">${escHtml(l)}</p>`).join('')}
     <table style="border-collapse:collapse;width:100%;margin-top:12px">${order.items.map((x) => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${x.qty} × ${escHtml(x.name)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${aed(x.lineTotal)}</td></tr>`).join('')}
+    ${order.shipping ? `<tr><td style="padding:6px 0;border-bottom:1px solid #eee">${escHtml(order.shipping.label)}</td><td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${order.shipping.pending ? 'to be confirmed' : aed(order.shipping.fee)}</td></tr>` : ''}
     <tr><td style="padding:8px 0"><b>Total</b></td><td style="padding:8px 0;text-align:right"><b>${aed(order.total)}</b></td></tr></table>
     ${invUrl ? `<p style="margin:18px 0"><a href="${escHtml(invUrl)}" style="display:inline-block;background:#4a1d4f;color:#fff;text-decoration:none;padding:11px 20px;border-radius:999px;font-weight:bold">View &amp; download invoice ${escHtml(order.invoice?.no || '')}</a></p>` : ''}</div>`;
   const email = await deliver({

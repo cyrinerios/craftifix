@@ -110,8 +110,8 @@ html{scroll-padding-top:76px;scroll-behavior:smooth}
 .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 label{display:block;font-weight:700;font-size:14.5px;margin-bottom:12px}
 label span{display:block;margin-bottom:5px}
-input,select{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
-input:focus,select:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
+input,select,textarea{width:100%;font:16px "Nunito Sans",sans-serif;min-height:46px;padding:8px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink)}
+input:focus,select:focus,textarea:focus{border-color:var(--plum);outline:none;box-shadow:0 0 0 3px rgba(244,143,177,.45)}
 .unit{position:relative}.unit input{padding-left:50px}.unit::before{content:attr(data-u);position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13.5px;font-weight:700;color:var(--mute)}
 .seg{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .seg button{min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:700 14.5px Outfit,sans-serif;cursor:pointer}
@@ -246,6 +246,7 @@ footer a{display:block;text-decoration:none;padding:3px 0}
 footer a:hover{color:#fff}
 .legal{max-width:1240px;margin:26px auto 0;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
 @media(max-width:760px){footer .wrap{grid-template-columns:repeat(2,minmax(0,1fr))}footer .wrap>div:first-child{grid-column:1/-1}}
+.locrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-4px 0 14px}.locrow .hint{margin:0}
 </style>
 </head>
 <body>
@@ -421,6 +422,8 @@ footer a:hover{color:#fff}
           <label><span>WhatsApp number</span><input id="sw" name="whatsapp" type="tel" autocomplete="tel" inputmode="tel" required placeholder="+971 55 123 4567"></label>
         </div>
         <small class="hint" style="margin:-6px 0 12px">Customer orders from your shop are sent to this email and WhatsApp number.</small>
+        <label><span>Shop address</span><textarea id="saddr" name="shopAddress" rows="2" required maxlength="300" placeholder="Building, flat/shop no., street, area, city — e.g. Al Fairouz Building 504, 25th St, Al Nahda, Sharjah"></textarea></label>
+        <div class="locrow"><button type="button" class="btn ghost" id="sloc" style="padding:8px 16px;font-size:14px">📍 I'm at my shop — use my location</button><small class="hint" id="slocMsg">Used to work out delivery fees by distance. You can change it later.</small></div>
         <label><span>User ID</span><input id="su" name="userId" autocomplete="username" required minlength="3" maxlength="20" placeholder="e.g. rosiesloops" autocapitalize="none" spellcheck="false"><small class="hint">3–20 characters: letters, numbers, dot, dash or underscore</small></label>
         <div class="row">
           <label><span>Password</span><input id="spw" name="password" type="password" autocomplete="new-password" required minlength="8"><small class="hint">At least 8 characters, with a letter and a number</small></label>
@@ -583,19 +586,23 @@ async function showPrices(cur){
 }
 $('scur').addEventListener('change',e=>showPrices(e.target.value));
 fetch('/api/rates?currency=AED').then(r=>r.json()).then(j=>{if(j.onlinePayment)$('payNote').innerHTML='After creating your account you’ll pay securely by card on <b>Stripe</b>. Your shop opens to customers as soon as the payment goes through. Cancel any time.'+(j.paymentMode==='test'?' <b>(Test mode — use card 4242 4242 4242 4242; no real money is charged.)</b>':'')}).catch(()=>{});
-const fields={currency:'scur',userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw',instagram:'sig',facebook:'sfb',tiktok:'stt'};
+const fields={currency:'scur',userId:'su',password:'spw',name:'sn',business:'sb',email:'se',whatsapp:'sw',shopAddress:'saddr',instagram:'sig',facebook:'sfb',tiktok:'stt'};
 let logoData='';
 function shrinkLogo(file){return new Promise((ok,no)=>{const img=new Image();img.onload=()=>{const m=400,k=Math.min(1,m/Math.max(img.width,img.height));const cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);ok(file.type==='image/png'?cv.toDataURL('image/png'):cv.toDataURL('image/jpeg',.9))};img.onerror=()=>no(new Error('That file is not an image we can read.'));img.src=URL.createObjectURL(file)})}
 $('slogo').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
   try{logoData=await shrinkLogo(f);$('slogoBox').innerHTML=`<img src="${logoData}" alt="Your logo">`;$('slogoRm').hidden=false}catch(x){$('serr').textContent=x.message}});
 $('slogoRm').addEventListener('click',()=>{logoData='';$('slogoBox').innerHTML='<span>Upload logo</span>';$('slogoRm').hidden=true});
+let shopPin=null;
+$('sloc').addEventListener('click',()=>{const m=$('slocMsg');if(!navigator.geolocation){m.textContent='Your browser can’t share location — the address will be used.';return}
+  m.textContent='Getting your location…';navigator.geolocation.getCurrentPosition(p=>{shopPin={lat:p.coords.latitude,lng:p.coords.longitude};m.textContent='✓ Shop location saved from this device.'},()=>{m.textContent='Location not shared — the address will be used instead.'},{enableHighAccuracy:true,timeout:10000})});
 const normWA=v=>{let x=String(v||'').trim().replace(/[\s\-().]/g,'');if(x.startsWith('00'))x='+'+x.slice(2);if(/^05\d{8}$/.test(x))x='+971'+x.slice(1);return/^\+\d{8,15}$/.test(x)?x:''};
 $('signup').addEventListener('submit',async e=>{e.preventDefault();
   const err=m=>{$('serr').textContent=m};
-  const d={name:$('sn').value.trim(),business:$('sb').value.trim(),email:$('se').value.trim(),whatsapp:normWA($('sw').value),userId:$('su').value.trim().toLowerCase(),password:$('spw').value,plan:(document.querySelector('#pick input:checked')||{}).value,currency:$('scur').value,instagram:$('sig').value.trim(),facebook:$('sfb').value.trim(),tiktok:$('stt').value.trim(),logo:logoData||undefined};
+  const d={name:$('sn').value.trim(),business:$('sb').value.trim(),email:$('se').value.trim(),whatsapp:normWA($('sw').value),userId:$('su').value.trim().toLowerCase(),password:$('spw').value,plan:(document.querySelector('#pick input:checked')||{}).value,currency:$('scur').value,instagram:$('sig').value.trim(),facebook:$('sfb').value.trim(),tiktok:$('stt').value.trim(),logo:logoData||undefined,shopAddress:$('saddr').value.trim(),shopLat:shopPin&&shopPin.lat,shopLng:shopPin&&shopPin.lng};
   if(!d.name||!d.business)return err('Please enter your name and business name.');
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)){$('se').focus();return err('Please enter a valid email address.')}
   if(!d.whatsapp){$('sw').focus();return err('Please enter your WhatsApp number with country code, e.g. +971 55 123 4567.')}
+  if(d.shopAddress.length<10){$('saddr').focus();return err('Please enter your full shop address (building, street, area, city).')}
   if(!/^[a-z0-9][a-z0-9._-]{2,19}$/.test(d.userId)){$('su').focus();return err('User ID must be 3–20 characters: letters, numbers, dot, dash or underscore.')}
   if(d.password.length<8||!/[a-zA-Z]/.test(d.password)||!/[0-9]/.test(d.password)){$('spw').focus();return err('Password must be at least 8 characters with a letter and a number.')}
   if(d.password!==$('spw2').value){$('spw2').focus();return err('The two passwords don’t match.')}

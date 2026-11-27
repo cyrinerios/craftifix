@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       order: {
         orderNo: o.orderNo, status: o.status, createdAt: o.createdAt, updatedAt: o.updatedAt || o.createdAt,
         items: o.items.map((i) => ({ name: i.name, qty: i.qty, lineTotal: i.lineTotal })), total: o.total,
+        shipping: o.shipping ? { label: o.shipping.label, fee: o.shipping.fee, pending: !!o.shipping.pending, method: o.shipping.method } : null,
         customerName: o.customer.name.split(/\s+/)[0], deliveryArea: o.customer.address,
         invoice: o.invoice ? { no: o.invoice.no, url: invoiceUrl(`https://${req.headers['x-forwarded-host'] || req.headers.host}`, uid, o.orderNo) } : null,
         history
