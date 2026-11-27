@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
 import { put, head, list, BlobNotFoundError } from '@vercel/blob';
+import { useDb, q, tx, setFirstRun } from './_db.js';
 
 const scrypt = promisify(crypto.scrypt);
 const SECRET = process.env.AUTH_SECRET || '';
@@ -84,7 +85,7 @@ function decrypt(text) {
   return JSON.parse(Buffer.concat([d.update(Buffer.from(data, 'base64')), d.final()]).toString('utf8'));
 }
 
-export async function getUser(uid) {
+async function blobGetUser(uid) {
   let meta;
   try { meta = await head(pathFor(uid)); }
   catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return null; throw e; }
@@ -93,7 +94,7 @@ export async function getUser(uid) {
   return decrypt(await r.text());
 }
 
-export async function saveUser(rec, { create = false } = {}) {
+async function blobSaveUser(rec, { create = false } = {}) {
   await put(pathFor(rec.userId), encrypt(rec), {
     access: 'public',
     addRandomSuffix: false,
@@ -158,7 +159,7 @@ export function readResetToken(token) {
 export const resetTokenMatches = (t, rec) => !!(t && rec && t.p === pwPrint(rec.passwordHash));
 
 // Find accounts by email (owners may forget their user ID). Reads the stored accounts; fine at small scale.
-export async function findUsersByEmail(email) {
+async function blobFindUsersByEmail(email) {
   const want = String(email || '').trim().toLowerCase();
   if (!want) return [];
   const found = [];
@@ -194,7 +195,7 @@ export function readSession(req) {
 /* ---------- products (one encrypted list per business) ---------- */
 const productsPath = (uid) => 'products/' + crypto.createHmac('sha256', SECRET).update('products:' + uid).digest('hex') + '.json';
 
-export async function getProducts(uid) {
+async function blobGetProducts(uid) {
   let meta;
   try { meta = await head(productsPath(uid)); }
   catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
@@ -202,7 +203,7 @@ export async function getProducts(uid) {
   if (!r.ok) return [];
   return decrypt(await r.text());
 }
-export async function saveProducts(uid, list) {
+async function blobSaveProducts(uid, list) {
   await put(productsPath(uid), encrypt(list), {
     access: 'public', addRandomSuffix: false, allowOverwrite: true,
     contentType: 'application/json', cacheControlMaxAge: 60
@@ -404,14 +405,14 @@ export const waLink = (number, text) => 'https://wa.me/' + String(number).replac
 
 /* ---------- orders (one encrypted list per business) ---------- */
 const ordersPath = (uid) => 'orders/' + crypto.createHmac('sha256', SECRET).update('orders:' + uid).digest('hex') + '.json';
-export async function getOrders(uid) {
+async function blobGetOrders(uid) {
   let meta;
   try { meta = await head(ordersPath(uid)); }
   catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
   const r = await fetch(meta.url + '?v=' + Date.now(), { cache: 'no-store' });
   return r.ok ? decrypt(await r.text()) : [];
 }
-export async function saveOrders(uid, list) {
+async function blobSaveOrders(uid, list) {
   await put(ordersPath(uid), encrypt(list), {
     access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 60
   });
@@ -419,18 +420,155 @@ export async function saveOrders(uid, list) {
 
 /* ---------- custom inquiries (one encrypted list per business) ---------- */
 const inquiriesPath = (uid) => 'inquiries/' + crypto.createHmac('sha256', SECRET).update('inquiries:' + uid).digest('hex') + '.json';
-export async function getInquiries(uid) {
+async function blobGetInquiries(uid) {
   let meta;
   try { meta = await head(inquiriesPath(uid)); }
   catch (e) { if (e instanceof BlobNotFoundError || e?.name === 'BlobNotFoundError') return []; throw e; }
   const r = await fetch(meta.url + '?v=' + Date.now(), { cache: 'no-store' });
   return r.ok ? decrypt(await r.text()) : [];
 }
-export async function saveInquiries(uid, list) {
+async function blobSaveInquiries(uid, list) {
   await put(inquiriesPath(uid), encrypt(list), {
     access: 'public', addRandomSuffix: false, allowOverwrite: true, contentType: 'application/json', cacheControlMaxAge: 60
   });
 }
+
+/* ---------- Prisma Postgres storage ---------- */
+// With a database connected (see _db.js) all reads and writes use Postgres; otherwise the Vercel Blob functions above.
+// Password hashes and the CallMeBot key stay encrypted (same key as before) in accounts.secrets; everything else is
+// stored as readable columns plus the full record in "data".
+const SECRET_FIELDS = ['passwordHash', 'callmebotKey'];
+const ts = (v) => { const d = v ? new Date(v) : null; return d && !isNaN(d) ? d.toISOString() : null; };
+const numOrNull = (v) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : null);
+
+async function dbGetUser(uid) {
+  const [row] = await q('SELECT data, secrets FROM accounts WHERE user_id = $1', [uid]);
+  return row ? { ...row.data, ...(row.secrets ? decrypt(row.secrets) : {}) } : null;
+}
+function accountRow(rec) {
+  const data = { ...rec }, sec = {};
+  for (const f of SECRET_FIELDS) if (f in data) { if (data[f] != null) sec[f] = data[f]; delete data[f]; }
+  return [rec.userId, String(rec.email || ''), String(rec.business || ''), String(rec.plan || ''), String(rec.subscription?.status || 'active'),
+    String(rec.currency || 'AED'), ts(rec.createdAt), JSON.stringify(data), Object.keys(sec).length ? encrypt(sec) : null];
+}
+const ACCOUNT_INSERT = `INSERT INTO accounts (user_id, email, business, plan, status, currency, created_at, data, secrets, updated_at)
+  VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9, now())`;
+async function dbSaveUser(rec, { create = false } = {}, run = q) {
+  const row = accountRow(rec);
+  if (create) {
+    const r = await run(ACCOUNT_INSERT + ' ON CONFLICT (user_id) DO NOTHING RETURNING user_id', row);
+    if (!r.length) throw new Error('This blob already exists');   // same message the signup code checks for
+    return;
+  }
+  await run(ACCOUNT_INSERT + ` ON CONFLICT (user_id) DO UPDATE SET email=EXCLUDED.email, business=EXCLUDED.business, plan=EXCLUDED.plan,
+    status=EXCLUDED.status, currency=EXCLUDED.currency, created_at=COALESCE(accounts.created_at, EXCLUDED.created_at), data=EXCLUDED.data,
+    secrets=EXCLUDED.secrets, updated_at=now()`, row);
+}
+async function dbFindUsersByEmail(email) {
+  const want = String(email || '').trim().toLowerCase();
+  if (!want) return [];
+  const rows = await q('SELECT data, secrets FROM accounts WHERE lower(email) = $1', [want]);
+  return rows.map((r) => ({ ...r.data, ...(r.secrets ? decrypt(r.secrets) : {}) }));
+}
+
+// Lists (products, orders, inquiries) keep the order the app gives them (newest first) via "position".
+const LISTS = {
+  products: { cols: ['name', 'category', 'status', 'price', 'quantity', 'created_at'],
+    vals: (p) => [String(p.name || ''), String(p.category || ''), String(p.status || ''), numOrNull(p.pricing?.customerPrice ?? p.price), Number.isFinite(Number(p.quantity)) ? Math.round(Number(p.quantity)) : null, ts(p.createdAt)] },
+  orders: { cols: ['order_no', 'status', 'total', 'currency', 'customer_name', 'customer_email', 'invoice_no', 'created_at', 'updated_at'],
+    vals: (o) => [String(o.orderNo || ''), String(o.status || ''), numOrNull(o.total), String(o.currency || ''), String(o.customer?.name || ''), String(o.customer?.email || ''), o.invoice?.no || null, ts(o.createdAt), ts(o.updatedAt || o.createdAt)] },
+  inquiries: { cols: ['inq_no', 'status', 'customer_name', 'customer_email', 'created_at'],
+    vals: (x) => [String(x.inqNo || ''), String(x.status || ''), String(x.customer?.name || ''), String(x.customer?.email || ''), ts(x.createdAt)] }
+};
+async function dbGetList(table, uid) {
+  return (await q(`SELECT data FROM ${table} WHERE user_id = $1 ORDER BY position`, [uid])).map((r) => r.data);
+}
+async function insertList(run, table, uid, list) {
+  const { cols, vals } = LISTS[table];
+  const all = ['user_id', 'id', 'position', ...cols, 'data'];
+  const seen = new Set();
+  // Every row needs a unique id; a missing or repeated one gets a stand-in so nothing is dropped.
+  const items = (list || []).filter((it) => it && typeof it === 'object').map((it, n) => {
+    let id = String(it.id || '') || `row-${n}`;
+    while (seen.has(id)) id += '-' + n;
+    seen.add(id); return { id, it };
+  });
+  for (let i = 0; i < items.length; i += 200) {   // batches keep each statement well under Postgres' parameter limit
+    const chunk = items.slice(i, i + 200), params = [];
+    const rows = chunk.map((it, j) => {
+      const v = [uid, it.id, i + j, ...vals(it.it), JSON.stringify(it.it)];
+      const base = params.length; params.push(...v);
+      return '(' + v.map((_, k) => `$${base + k + 1}${k === v.length - 1 ? '::jsonb' : ''}`).join(',') + ')';
+    });
+    await run(`INSERT INTO ${table} (${all.join(',')}) VALUES ${rows.join(',')}`, params);
+  }
+  return items.length;
+}
+async function dbSaveList(table, uid, list) {
+  await tx(async (run) => {
+    await run(`DELETE FROM ${table} WHERE user_id = $1`, [uid]);
+    await insertList(run, table, uid, list);
+  });
+}
+
+// One-time copy of everything stored in Vercel Blob into Postgres, the first time the database is used.
+// Blob data is left untouched as a backup. Accounts already in Postgres are never overwritten.
+setFirstRun(async (run) => {
+  const [done] = await run(`SELECT value FROM app_meta WHERE key = 'blob_import'`);
+  if (done && done.value?.state === 'done') return;
+  const claimed = await run(`INSERT INTO app_meta (key, value) VALUES ('blob_import', '{"state":"running"}'::jsonb)
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+    WHERE app_meta.value->>'state' <> 'done' AND app_meta.updated_at < now() - interval '2 minutes' RETURNING key`);
+  if (!claimed.length) return;   // another server instance is copying right now
+  const counts = { accounts: 0, products: 0, orders: 0, inquiries: 0, skipped: 0, errors: [] };
+  try {
+    let cursor;
+    do {
+      const page = await list({ prefix: 'users/', cursor, limit: 1000 });
+      for (const b of page.blobs) {
+        try {
+          const r = await fetch(b.url + '?v=' + Date.now(), { cache: 'no-store' });
+          if (!r.ok) { counts.errors.push(`read ${r.status}`); continue; }
+          const rec = decrypt(await r.text());
+          const added = await run(ACCOUNT_INSERT + ' ON CONFLICT (user_id) DO NOTHING RETURNING user_id', accountRow(rec));
+          if (!added.length) { counts.skipped++; continue; }
+          counts.accounts++;
+          const uid = rec.userId;
+          const [products, orders, inquiries] = await Promise.all([blobGetProducts(uid), blobGetOrders(uid), blobGetInquiries(uid)]);
+          counts.products += await insertList(run, 'products', uid, products);
+          counts.orders += await insertList(run, 'orders', uid, orders);
+          counts.inquiries += await insertList(run, 'inquiries', uid, inquiries);
+        } catch (e) { counts.errors.push(String(e.message).slice(0, 120)); }
+      }
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    await run(`UPDATE app_meta SET value = $1::jsonb, updated_at = now() WHERE key = 'blob_import'`,
+      [JSON.stringify({ state: 'done', at: new Date().toISOString(), ...counts })]);
+    console.log('blob import done', JSON.stringify(counts));
+  } catch (e) {
+    await run(`DELETE FROM app_meta WHERE key = 'blob_import'`).catch(() => {});
+    throw e;
+  }
+});
+
+// Storage summary (counts only) for checking the move to Postgres.
+export async function storageStatus() {
+  if (!useDb()) return { storage: 'vercel-blob' };
+  const [c] = await q(`SELECT (SELECT count(*) FROM accounts)::int AS accounts, (SELECT count(*) FROM products)::int AS products,
+    (SELECT count(*) FROM orders)::int AS orders, (SELECT count(*) FROM inquiries)::int AS inquiries`);
+  const [m] = await q(`SELECT value FROM app_meta WHERE key = 'blob_import'`);
+  return { storage: 'prisma-postgres', counts: c, blobImport: m?.value || null };
+}
+
+export const getUser = (uid) => (useDb() ? dbGetUser(uid) : blobGetUser(uid));
+export const saveUser = (rec, opts) => (useDb() ? dbSaveUser(rec, opts) : blobSaveUser(rec, opts));
+export const findUsersByEmail = (email) => (useDb() ? dbFindUsersByEmail(email) : blobFindUsersByEmail(email));
+export const getProducts = (uid) => (useDb() ? dbGetList('products', uid) : blobGetProducts(uid));
+export const saveProducts = (uid, list) => (useDb() ? dbSaveList('products', uid, list) : blobSaveProducts(uid, list));
+export const getOrders = (uid) => (useDb() ? dbGetList('orders', uid) : blobGetOrders(uid));
+export const saveOrders = (uid, list) => (useDb() ? dbSaveList('orders', uid, list) : blobSaveOrders(uid, list));
+export const getInquiries = (uid) => (useDb() ? dbGetList('inquiries', uid) : blobGetInquiries(uid));
+export const saveInquiries = (uid, list) => (useDb() ? dbSaveList('inquiries', uid, list) : blobSaveInquiries(uid, list));
 
 /* ---------- email (Resend) ---------- */
 // Sends only when RESEND_API_KEY is set. EMAIL_FROM must be a sender on a domain verified in Resend

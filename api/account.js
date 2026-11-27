@@ -9,8 +9,15 @@ import profile from './_account/profile.js';
 import rates from './_account/rates.js';
 import forgot from './_account/forgot.js';
 import reset from './_account/reset.js';
+import { storageStatus } from './_lib.js';
 
-const ACTIONS = { signup, login, logout, me, plan, profile, rates, forgot, reset };
+// GET /api/account?action=storage -> which database is in use and how many records it holds (counts only).
+async function storage(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
+  try { res.status(200).json(await storageStatus()); }
+  catch (e) { console.error('storage status failed', e); res.status(500).json({ error: 'Database not reachable', detail: String(e.message).slice(0, 200) }); }
+}
+const ACTIONS = { signup, login, logout, me, plan, profile, rates, forgot, reset, storage };
 
 export default function handler(req, res) {
   const fn = ACTIONS[String(req.query?.action || '')];

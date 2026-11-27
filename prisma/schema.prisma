@@ -1,0 +1,88 @@
+// Craftifix database layout (Prisma Postgres).
+// The website creates these tables itself on first use (see api/_db.js) and talks to them with the "pg" driver,
+// so this file is not needed to run the site. It lets you open the data in Prisma Studio:
+//   DATABASE_URL="<connection string from Vercel>" npx prisma studio
+// "data" holds the full record as JSON; the other columns are copies for easy browsing and filtering.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  userId    String    @id @map("user_id")
+  email     String    @default("")
+  business  String    @default("")
+  plan      String    @default("")
+  status    String    @default("")
+  currency  String    @default("AED")
+  createdAt DateTime? @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  data      Json
+  secrets   String?   // password hash and WhatsApp alert key, encrypted with AUTH_SECRET
+
+  @@map("accounts")
+}
+
+model Product {
+  userId    String    @map("user_id")
+  id        String
+  position  Int
+  name      String    @default("")
+  category  String    @default("")
+  status    String    @default("")
+  price     Decimal?  @db.Decimal(14, 2)
+  quantity  Int?
+  createdAt DateTime? @map("created_at") @db.Timestamptz
+  data      Json
+
+  @@id([userId, id])
+  @@map("products")
+}
+
+model Order {
+  userId        String    @map("user_id")
+  id            String
+  position      Int
+  orderNo       String    @default("") @map("order_no")
+  status        String    @default("")
+  total         Decimal?  @db.Decimal(14, 2)
+  currency      String    @default("")
+  customerName  String    @default("") @map("customer_name")
+  customerEmail String    @default("") @map("customer_email")
+  invoiceNo     String?   @map("invoice_no")
+  createdAt     DateTime? @map("created_at") @db.Timestamptz
+  updatedAt     DateTime? @map("updated_at") @db.Timestamptz
+  data          Json
+
+  @@id([userId, id])
+  @@index([userId, orderNo])
+  @@map("orders")
+}
+
+model Inquiry {
+  userId        String    @map("user_id")
+  id            String
+  position      Int
+  inqNo         String    @default("") @map("inq_no")
+  status        String    @default("")
+  customerName  String    @default("") @map("customer_name")
+  customerEmail String    @default("") @map("customer_email")
+  createdAt     DateTime? @map("created_at") @db.Timestamptz
+  data          Json
+
+  @@id([userId, id])
+  @@map("inquiries")
+}
+
+model AppMeta {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("app_meta")
+}

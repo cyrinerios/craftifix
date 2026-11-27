@@ -116,3 +116,18 @@ invoice the first time the owner opens Orders. Items from VAT-registered prices 
 - When the trial ends without a card, the shop closes to customers (`trial_ended`) until billing details are added. Products, orders and settings are kept.
 - In the Google Sheet, the Status column shows *Free trial* / *Trial ended* and the Payment column shows *Trial ends YYYY-MM-DD*.
 - Existing accounts are not affected.
+
+## Database: Prisma Postgres
+
+- Accounts, products, orders and inquiries are stored in **Prisma Postgres** (Vercel Marketplace), connected to the
+  craftifix project. The connection string comes from the environment variable Vercel adds (`DATABASE_URL` or `POSTGRES_URL`).
+- `api/_db.js` creates the tables on first use: `accounts`, `products`, `orders`, `inquiries`, `app_meta`.
+  `prisma/schema.prisma` describes the same tables for Prisma Studio.
+- Each row has readable columns (name, status, totals, customer, dates) plus the full record in `data` (JSON).
+  Password hashes and the CallMeBot key stay encrypted (`accounts.secrets`, same key as before).
+- **One-time copy from Vercel Blob:** the first time the database is used, every account with its products, orders
+  and inquiries is copied from Vercel Blob. The result is in `app_meta` (key `blob_import`). Blob data is left as a backup.
+- Check it any time: `GET /api/account?action=storage` (counts only).
+- **Fallback:** set `STORAGE=blob` in Vercel and redeploy to go back to Vercel Blob. Changes made while on Postgres
+  are not copied back.
+- Product photos and logos stay in Vercel Blob. The Google Sheet keeps getting updates as before.

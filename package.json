@@ -2,9 +2,12 @@
   "name": "craftifix",
   "private": true,
   "type": "module",
-  "description": "Craftifix website with account sign-up and log-in (Vercel Functions + Vercel Blob)",
-  "engines": { "node": "22.x" },
+  "description": "Craftifix website (Vercel Functions, Prisma Postgres, Vercel Blob for photos)",
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
-    "@vercel/blob": "^1.0.0"
+    "@vercel/blob": "^1.0.0",
+    "pg": "^8.13.1"
   }
 }
