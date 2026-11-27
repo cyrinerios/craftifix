@@ -407,16 +407,28 @@ export async function pricingFor(cur) {
   const off = promoPercentOff();
   const plans = {};
   for (const p of Object.values(PLANS)) {
-    // base/amount/label are what the owner pays now (after any promotion); full* are the normal prices.
+    // Subscriptions are priced and charged in US dollars. amount/label = what the owner pays now (after any
+    // promotion); full* = the normal price; local = the same in the shop's currency at today's rate (for reference).
     const base = off ? promoBase(p.price, off) : p.price;
-    const { amount } = convertFromBase(base, currency, fx.rates);
-    const full = convertFromBase(p.price, currency, fx.rates).amount;
-    plans[p.id] = { base, baseLabel: money(base, BASE_CURRENCY), amount, label: money(amount, currency),
-      fullBase: p.price, fullBaseLabel: money(p.price, BASE_CURRENCY), fullAmount: full, fullLabel: money(full, currency), percentOff: off };
+    plans[p.id] = { base, baseLabel: money(base, BASE_CURRENCY), amount: base, label: money(base, BASE_CURRENCY),
+      fullBase: p.price, fullBaseLabel: money(p.price, BASE_CURRENCY), fullAmount: p.price, fullLabel: money(p.price, BASE_CURRENCY), percentOff: off,
+      local: currency === BASE_CURRENCY ? null : (() => { const a = convertFromBase(base, currency, fx.rates).amount, f = convertFromBase(p.price, currency, fx.rates).amount;
+        return { currency, amount: a, label: money(a, currency), fullAmount: f, fullLabel: money(f, currency) }; })() };
   }
-  return { currency, baseCurrency: BASE_CURRENCY, rate: convertFromBase(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
+  return { currency: BASE_CURRENCY, localCurrency: currency, baseCurrency: BASE_CURRENCY, rate: convertFromBase(1, currency, fx.rates).rate, updated: fx.updated, live: fx.live,
     source: 'ExchangeRate-API', sourceUrl: 'https://www.exchangerate-api.com', plans,
     promo: off ? { percentOff: off, label: promoLabel() } : null };
+}
+
+// A plan's current price in a given currency (for subscriptions that were started in another currency before
+// billing moved to US dollars; Stripe can't change an existing subscription's currency).
+export async function planAmountIn(planId, cur) {
+  const currency = validCurrency(cur) || BASE_CURRENCY;
+  const fx = await getFx();
+  const p = PLANS[planId], off = promoPercentOff();
+  const base = off ? promoBase(p.price, off) : p.price;
+  return { currency, amount: convertFromBase(base, currency, fx.rates).amount, fullAmount: convertFromBase(p.price, currency, fx.rates).amount,
+    basePrice: base, baseCurrency: BASE_CURRENCY, percentOff: off, rate: convertFromBase(1, currency, fx.rates).rate };
 }
 
 export const waLink = (number, text) => 'https://wa.me/' + String(number).replace(/\D/g, '') + (text ? '?text=' + encodeURIComponent(text) : '');

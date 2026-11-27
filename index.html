@@ -670,8 +670,10 @@ async function showPrices(cur){
   const jp=$('joinPromo');jp.hidden=!off;if(off&&P)jp.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off every plan</b>: from ${P.standard.label} a month after your 30-day free trial.`;
   const b=$('promoBan');b.hidden=!off;if(off)b.innerHTML=`🎉 <b>${pr.promo.label}: ${off}% off both plans</b>, until further notice. Start with 30 days free, then pay the promo price.`;
   if(P)$('fromPrice').textContent=off?`From ${P.standard.baseLabel} a month (${off}% off)`:`From ${P.standard.baseLabel} a month`;
-  const n=$('fxnote');
-  if(pr&&pr.currency!=='USD'){n.hidden=false;n.innerHTML=`Prices shown in ${pr.currency}, converted from US dollars (Standard ${P.standard.baseLabel}, Premium ${P.premium.baseLabel}${off?`, ${off}% off the normal ${P.standard.fullBaseLabel} and ${P.premium.fullBaseLabel}`:''}) at ${pr.live?'today’s':'an approximate'} rate: 1 USD = ${pr.rate} ${pr.currency}. <a href="${pr.sourceUrl}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`}
+  // Plans are billed in US dollars; for other shop currencies show the approximate amount at today's rate.
+  const n=$('fxnote'),lc=pr&&pr.localCurrency;
+  if(P&&lc&&lc!=='USD'&&P.standard.local){n.hidden=false;n.innerHTML=`Plans are billed in US dollars. In ${lc} that's about ${P.standard.local.label} (Standard) and ${P.premium.local.label} (Premium) a month at ${pr.live?'today’s':'an approximate'} rate: 1 USD = ${pr.rate} ${lc}. Your bank may add a small conversion fee. <a href="${pr.sourceUrl}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`}
+  else if(P){n.hidden=false;n.textContent='Plans are billed in US dollars.'}
   else n.hidden=true;
 }
 $('scur').addEventListener('change',e=>showPrices(e.target.value));

@@ -259,10 +259,10 @@ const offPct=u=>promoOf(u)?promoOf(u).percentOff:0;
 const offTag=u=>offPct(u)?` <span class="offtag">${offPct(u)}% off</span>`:'';
 const priceHtml=(u,id)=>`${wasLabel(u,id)}<b>${esc(planLabel(u,id))}</b>`;   // normal price crossed out + promo price
 const planLabel=(u,id)=>u&&u.pricing&&u.pricing.plans[id]?u.pricing.plans[id].label:'USD '+(ALL.find(x=>x[0]===id)||[0,0,0])[2];
-function fxNote(u){const pr=u&&u.pricing;if(!pr||pr.currency==='USD')return'';
+function fxNote(u){const pr=u&&u.pricing;if(!pr||!pr.plans)return'';
+  const pl=pr.plans,off=pr.promo&&pr.promo.percentOff,lc=pr.localCurrency,loc=lc&&lc!=='USD'&&pl.standard.local;
   const upd=pr.updated?new Date(pr.updated).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
-  const pl=pr.plans,off=pr.promo&&pr.promo.percentOff;
-  return `<p class="msg fxn">Plan prices are set in US dollars (Standard ${esc(pl.standard.baseLabel)}, Premium ${esc(pl.premium.baseLabel)}${off?`, ${off}% off the normal ${esc(pl.standard.fullBaseLabel)} and ${esc(pl.premium.fullBaseLabel)}`:''}) and shown in ${esc(pr.currency)} at ${pr.live?'today’s':'an approximate'} exchange rate: 1 USD = ${pr.rate} ${esc(pr.currency)}${upd?` (updated ${upd})`:''}. The amount follows the rate each month. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a></p>`}
+  return `<p class="msg fxn">Subscriptions are billed in US dollars: Standard ${esc(pl.standard.label)}, Premium ${esc(pl.premium.label)} a month${off?` (${off}% off the normal ${esc(pl.standard.fullLabel)} and ${esc(pl.premium.fullLabel)})`:''}.${loc?` At ${pr.live?'today’s':'an approximate'} rate (1 USD = ${pr.rate} ${esc(lc)}${upd?`, updated ${upd}`:''}) that's about ${esc(pl.standard.local.label)} and ${esc(pl.premium.local.label)} a month. Your bank may add a small currency conversion fee. <a href="${esc(pr.sourceUrl)}" target="_blank" rel="noopener">Rates by Exchange Rate API</a>`:''}</p>`}
 let billingInfo=null;
 const SUBLBL={trial:['Free trial','#2f9e6b'],trial_ended:['Free trial ended','#c62f5f'],active:['Active','#2f9e6b'],pending:['Payment needed','#c62f5f'],past_due:['Payment failed','#c62f5f'],unpaid:['Unpaid','#c62f5f'],canceled:['Cancelled','#c62f5f']};
 const subLbl=u=>SUBLBL[u.subscription?.status||'active']||[String(u.subscription?.status||'Active'),'#c62f5f'];
@@ -585,7 +585,9 @@ function showAccount(u,welcome){
     </div>
     <div class="card"><h3>Subscription</h3><div class="kv">
       <div><span>Plan</span><b>${esc(p.name)}</b></div>
-      <div><span>Price</span><b>${wasLabel(u,u.plan)}${esc(planLabel(u,u.plan))} / month${offTag(u)}</b></div>${u.pricing&&u.pricing.currency!=='USD'?`<div><span>Base price</span><b>${offPct(u)?`<s class="was">USD ${p.price}</s> ${esc(u.pricing.plans[u.plan].baseLabel)}`:`USD ${p.price}`} / month</b></div>`:''}
+      <div><span>Price</span><b>${wasLabel(u,u.plan)}${esc(planLabel(u,u.plan))} / month${offTag(u)}</b></div>
+      ${u.pricing&&u.pricing.plans[u.plan]&&u.pricing.plans[u.plan].local?`<div><span>In ${esc(u.pricing.localCurrency)}</span><b>≈ ${esc(u.pricing.plans[u.plan].local.label)} / month at today's rate</b></div>`:''}
+      ${u.subscription?.provider==='stripe'&&['active','past_due'].includes(u.subscription?.status)&&u.subscription?.currency&&u.subscription.currency!=='USD'&&u.subscription.amount?`<div><span>Billed</span><b>${esc(u.subscription.currency)} ${Number(u.subscription.amount).toFixed(2)} / month (the currency your subscription started in)</b></div>`:''}
       ${offPct(u)?`<div><span>Promotion</span><b>${esc(promoOf(u).label)}: ${offPct(u)}% off, until further notice</b></div>`:''}
       <div><span>Status</span><b style="color:${subLbl(u)[1]}">${esc(subLbl(u)[0])}</b></div>
       <div><span>Payment</span><b>${esc(payRow(u))}</b></div>

@@ -4,7 +4,7 @@
 //   STRIPE_WEBHOOK_SECRET  whsec_... from the webhook endpoint in Stripe
 // Without STRIPE_SECRET_KEY the site behaves as before (payment skipped).
 import crypto from 'node:crypto';
-import { PLANS, BASE_CURRENCY, pricingFor, validCurrency, trialInfo, deliver, money, escHtml } from './_lib.js';
+import { PLANS, BASE_CURRENCY, planAmountIn, validCurrency, trialInfo, deliver, money, escHtml } from './_lib.js';
 
 // Keys are trimmed of stray spaces/quotes from copy-pasting.
 const clean = (v) => String(v || '').trim().replace(/^['"]+|['"]+$/g, '').trim();
@@ -71,9 +71,9 @@ const THREE_DEC = new Set(['KWD', 'BHD', 'OMR', 'JOD']);
 const minor = (amount, cur) => THREE_DEC.has(cur) ? Math.round(amount * 100) * 10 : Math.round(amount * 100);
 
 // Monthly price for a plan in the shop's currency (falls back to AED).
-export async function planPrice(plan, currency) {
-  const p = await pricingFor(validCurrency(currency) || BASE_CURRENCY);
-  return { currency: p.currency, amount: p.plans[plan].amount, fullAmount: p.plans[plan].fullAmount, rate: p.rate, basePrice: p.plans[plan].base, baseCurrency: BASE_CURRENCY, percentOff: p.plans[plan].percentOff };
+// New subscriptions are charged in US dollars; existing ones keep the currency they started in.
+export async function planPrice(plan, currency = BASE_CURRENCY) {
+  return planAmountIn(plan, validCurrency(currency) || BASE_CURRENCY);
 }
 const priceData = (product, price) => ({ currency: price.currency.toLowerCase(), product, unit_amount: minor(price.amount, price.currency), recurring: { interval: 'month' } });
 
@@ -88,7 +88,7 @@ async function ensureCustomer(rec) {
 export async function createCheckout(rec, plan, origin) {
   const product = await ensureProduct(plan);
   const customer = await ensureCustomer(rec);
-  const pre = await planPrice(plan, rec.currency);
+  const pre = await planPrice(plan, BASE_CURRENCY);
   const meta = { userId: rec.userId, plan, basePrice: String(pre.basePrice), percentOff: String(pre.percentOff || 0) };
   // Adding a card during the free trial: the first charge waits until the trial ends.
   // (Stripe needs a trial end at least 2 days away; with less left, billing starts today.)
@@ -103,13 +103,14 @@ export async function createCheckout(rec, plan, origin) {
     success_url: `${origin}/account.html?billing=success#settings`,
     cancel_url: `${origin}/account.html?billing=cancelled#settings`
   });
-  let price = await planPrice(plan, rec.currency);
+  let price = await planPrice(plan, BASE_CURRENCY);
   let session;
   try { session = await make(price); }
   catch (e) {
-    // If Stripe can't charge in this currency, charge the US dollar price instead.
-    if (price.currency === BASE_CURRENCY || !/currency/i.test(e.message)) throw e;
-    price = await planPrice(plan, BASE_CURRENCY);
+    // A Stripe customer who was already billed in another currency can't switch currency: bill that one instead.
+    const prev = validCurrency(rec.subscription?.currency || rec.currency);
+    if (!/currenc/i.test(e.message) || !prev || prev === BASE_CURRENCY) throw e;
+    price = await planPrice(plan, prev);
     session = await make(price);
   }
   return { url: session.url, price };

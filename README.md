@@ -152,3 +152,9 @@ invoice the first time the owner opens Orders. Items from VAT-registered prices 
   `/api/cron/reprice`) and when an owner opens their workspace (at most twice a day). Prices are compared in US
   dollars, so exchange-rate movements alone never change a subscription. Subscriptions set to cancel are left alone.
 - The homepage, the plan chooser and Settings show the normal price crossed out next to the promo price.
+
+## Subscription currency: US dollars
+- Plans are priced and charged in **US dollars** for every shop (Standard USD 5, Premium USD 15, minus any promotion).
+  Pages show the approximate amount in the shop's own currency at today's rate for reference (`plans[id].local`).
+- Subscriptions started earlier in another currency keep that currency (Stripe can't change it); Settings shows a
+  "Billed" row for them, and price changes for them are worked out in that currency.
